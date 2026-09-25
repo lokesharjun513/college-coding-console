@@ -3,7 +3,7 @@
 // requireAnyRole(...roles) – allows users with any of the listed roles
 // Both assume requireAuth has already run and attached req.user
 
-function requireRole(role) {
+function requireRole(role) { console.log('requireRole called with required', role);
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
