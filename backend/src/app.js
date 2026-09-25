@@ -40,6 +40,9 @@ app.use('/api/admin/trainers', adminTrainersRouter);
 const adminBatchesRouter = require('./routes/admin/batches');
 app.use('/api/admin/batches', adminBatchesRouter);
 
+const adminBatchStudentsRouter = require('./routes/admin/batchStudents');
+app.use('/api/admin/batches', adminBatchStudentsRouter);
+
 // Test routes (authorization testing)
 const testRouter = require('./routes/testRoutes');
 app.use('/api/test', testRouter);

@@ -55,20 +55,17 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       endDate,
     });
 
-    // Populate trainer safe fields
-    await batch.populate({ path: 'trainer', select: '-passwordHash' });
-
     const data = {
       id: batch._id,
       name: batch.name,
       code: batch.code,
       description: batch.description,
       trainer: {
-        id: batch.trainer._id,
-        name: batch.trainer.name,
-        email: batch.trainer.email,
-        role: batch.trainer.role,
-        status: batch.trainer.status,
+        id: trainerUser._id,
+        name: trainerUser.name,
+        email: trainerUser.email,
+        role: trainerUser.role,
+        status: trainerUser.status,
       },
       status: batch.status,
       startDate: batch.startDate,
