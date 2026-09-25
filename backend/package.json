@@ -1,0 +1,28 @@
+{
+  "name": "college-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "jest --detectOpenHandles"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "argon2": "*",
+    "jsonwebtoken": "*",
+    "cors": "*",
+    "dotenv": "*",
+    "express": "*",
+    "helmet": "*",
+    "mongoose": "*"
+  },
+  "devDependencies": {
+    "supertest": "*",
+    "jest": "*",
+    "nodemon": "*"
+  }
+}
