@@ -77,6 +77,7 @@ describe('Trainer Batch Management', () => {
   afterEach(async () => {
     await BatchStudent.deleteMany({});
     await Batch.deleteMany({});
+    await User.deleteMany({});
   });
 
   test('unauthenticated request returns 401', async () => {

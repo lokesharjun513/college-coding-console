@@ -296,12 +296,14 @@ describe('Admin Batch Management', () => {
 
   test('should return 409 for duplicate code on update', async () => {
     const { adminToken, trainer } = await createAdminAndTrainer();
-    const batch1 = await createBatch(adminToken, trainer._id, { code: 'CODE1' });
-    const batch2 = await createBatch(adminToken, trainer._id, { code: 'CODE2' });
+    const code1 = `CODE1${Date.now()}`;
+    const code2 = `CODE2${Date.now()}`;
+    const batch1 = await createBatch(adminToken, trainer._id, { code: code1 });
+    const batch2 = await createBatch(adminToken, trainer._id, { code: code2 });
     const res = await request(app)
       .patch(`/api/admin/batches/${batch2.body.data.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ code: 'CODE1' });
+      .send({ code: code1 });
     expect(res.status).toBe(409);
   });
 

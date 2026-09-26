@@ -71,8 +71,9 @@ async function createBatch(adminToken, trainerId, overrides = {}) {
  * Helper to create a problem for a batch.
  */
 async function createProblem(trainerToken, batchId, overrides = {}) {
+  const unique = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
   const defaultData = {
-    title: 'Test Problem',
+    title: `Test Problem ${unique}`,
     description: 'Test problem description',
     difficulty: 'EASY',
     tags: ['array'],
