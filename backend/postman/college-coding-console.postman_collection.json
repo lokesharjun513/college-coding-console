@@ -1,0 +1,12 @@
+{
+  "info": {"name":"College Collection","schema":"https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "item":[
+    {"name":"Login","request":{"method":"POST","header":[],"url":{"raw":"{{baseUrl}}/api/auth/login","host":["{{baseUrl}}"],"path":["api","auth","login"]},"body":{"mode":"raw","raw":"{ "email": "{{adminEmail}}", "password": "{{adminPassword}}" }","options":{"raw":{"language":"json"}}},"event":[{"listen":"test","script":{"exec":["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });","var json = pm.response.json();","pm.environment.set('adminToken', json.token);"],"type":"text/javascript"}}]}
+  ],
+  "variable":[
+    {"key":"baseUrl","value":"http://localhost:3003"},
+    {"key":"adminEmail","value":"admin@example.com"},
+    {"key":"adminPassword","value":"StrongP@ssw0rd"},
+    {"key":"adminToken","value":""}
+  ]
+}
