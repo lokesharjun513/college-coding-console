@@ -10,12 +10,9 @@ describe('User CRUD', () => {
   const testEmail = 'crudtest@testmail.com';
 
   beforeAll(async () => {
-    await connectDB();
+    // DB connection managed globally by setup.js
   });
 
-  afterAll(async () => {
-    await mongoose.connection.close();
-  });
 
   afterEach(async () => {
     await User.deleteMany({ email: testEmail });

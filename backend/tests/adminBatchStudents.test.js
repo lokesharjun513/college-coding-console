@@ -52,7 +52,7 @@ async function createAdminAndTrainer() {
 async function createBatch(adminToken, trainerId, overrides = {}) {
   const defaultData = {
     name: 'Batch Name',
-    code: `CODE${Date.now()}`,
+    code: `CODE${Date.now()}${Math.floor(Math.random() * 1000)}`,
     description: 'Batch description',
     trainer: trainerId,
     status: 'ACTIVE',
@@ -90,18 +90,15 @@ describe('Admin Batch Student Management', () => {
   const password = 'StrongP@ssw0rd';
 
   beforeAll(async () => {
-    const { connectDB } = require('../src/config/db');
-    await connectDB();
+    // DB connection managed globally by setup.js
     // Clean any leftover data from previous runs
+    console.log('[DEBUG] Running beforeAll cleanup');
     await BatchStudent.deleteMany({});
     await Batch.deleteMany({});
     await User.deleteMany({});
+    console.log('[DEBUG] Cleanup complete');
   });
 
-  afterAll(async () => {
-    const mongoose = require('mongoose');
-    await mongoose.connection.close();
-  });
 
   afterEach(async () => {
     // Only delete batch-related test data, preserve users for auth tokens

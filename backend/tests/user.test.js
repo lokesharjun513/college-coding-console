@@ -5,7 +5,7 @@ const User = require('../src/models/User');
 
 describe('User Model', () => {
   beforeAll(async () => {
-    await connectDB();
+    // DB connection managed globally by setup.js
   });
 
   beforeEach(async () => {
@@ -13,9 +13,6 @@ describe('User Model', () => {
     await User.deleteMany({});
   });
 
-  afterAll(async () => {
-    await mongoose.connection.close();
-  });
 
   afterEach(async () => {
     await User.deleteMany({ email: { $regex: '@testmail\\.com$' } });

@@ -38,16 +38,12 @@ describe('Admin Trainer Management', () => {
   const password = 'StrongP@ssw0rd';
 
   beforeAll(async () => {
-    const { connectDB } = require('../src/config/db');
-    await connectDB();
+    
+    // DB connection managed globally by setup.js
     await User.deleteMany({});
   });
 
-  afterAll(async () => {
-    const mongoose = require('mongoose');
-    await mongoose.connection.close();
-  });
-
+  
   afterEach(async () => {
     await User.deleteMany({});
   });

@@ -1,7 +1,7 @@
 // Admin Batch Students (Enrollment) routes
 
 const express = require('express');
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 const requireAuth = require('../../middleware/auth');
 const { requireRole } = require('../../middleware/role');
 const mongoose = require('mongoose');
@@ -13,7 +13,7 @@ const BatchStudent = require('../../models/BatchStudent');
  * ENROLL STUDENT
  * POST /api/admin/batches/:batchId/students
  */
-router.post('/:batchId/students', requireAuth, requireRole('ADMIN'), async (req, res) => {
+router.post('/students', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const { batchId } = req.params;
     const { studentId } = req.body;
@@ -85,7 +85,7 @@ router.post('/:batchId/students', requireAuth, requireRole('ADMIN'), async (req,
  * LIST STUDENTS IN BATCH
  * GET /api/admin/batches/:batchId/students
  */
-router.get('/:batchId/students', requireAuth, requireRole('ADMIN'), async (req, res) => {
+router.get('/students', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const { batchId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(batchId)) {
@@ -123,7 +123,7 @@ router.get('/:batchId/students', requireAuth, requireRole('ADMIN'), async (req, 
  * GET SINGLE ENROLLMENT
  * GET /api/admin/batches/:batchId/students/:studentId
  */
-router.get('/:batchId/students/:studentId', requireAuth, requireRole('ADMIN'), async (req, res) => {
+router.get('/students/:studentId', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const { batchId, studentId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(batchId) || !mongoose.Types.ObjectId.isValid(studentId)) {
@@ -160,7 +160,7 @@ router.get('/:batchId/students/:studentId', requireAuth, requireRole('ADMIN'), a
  * UPDATE ENROLLMENT STATUS
  * PATCH /api/admin/batches/:batchId/students/:studentId
  */
-router.patch('/:batchId/students/:studentId', requireAuth, requireRole('ADMIN'), async (req, res) => {
+router.patch('/students/:studentId', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const { batchId, studentId } = req.params;
     const { status } = req.body;
@@ -205,7 +205,7 @@ router.patch('/:batchId/students/:studentId', requireAuth, requireRole('ADMIN'),
  * DELETE ENROLLMENT
  * DELETE /api/admin/batches/:batchId/students/:studentId
  */
-router.delete('/:batchId/students/:studentId', requireAuth, requireRole('ADMIN'), async (req, res) => {
+router.delete('/students/:studentId', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const { batchId, studentId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(batchId) || !mongoose.Types.ObjectId.isValid(studentId)) {

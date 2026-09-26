@@ -18,15 +18,9 @@ describe('Authentication', () => {
   const testPassword = 'StrongP@ssw0rd';
 
   beforeAll(async () => {
-    // Ensure DB connection (already handled by other tests, but safe)
-    const { connectDB } = require('../src/config/db');
-    await connectDB();
+    // DB connection managed globally by setup.js
   });
 
-  afterAll(async () => {
-    const mongoose = require('mongoose');
-    await mongoose.connection.close();
-  });
 
   afterEach(async () => {
     await User.deleteMany({ email: /authuser@testmail.com$/ });

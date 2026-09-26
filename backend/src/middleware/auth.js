@@ -42,7 +42,7 @@ async function requireAuth(req, res, next) {
       });
     }
     // Attach minimal info to request
-    console.log('auth middleware user', { id: user._id, role: user.role }); req.user = { id: user._id, role: user.role };
+    req.user = { id: user._id, role: user.role };
     next();
   } catch (err) {
     // Token verification failed

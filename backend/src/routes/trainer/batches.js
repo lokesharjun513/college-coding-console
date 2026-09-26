@@ -63,8 +63,7 @@ router.get('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
  * GET SINGLE TRAINER BATCH
  * GET /api/trainer/batches/:id
  */
-router.get('/:id', requireAuth, requireRole('TRAINER'), async (req, res) => { console.log('trainer get batch called', req.params.id);
-  try {
+router.get('/:id', requireAuth, requireRole('TRAINER'), async (req, res) => {   try {
     const { id } = req.params;
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ success: false, message: 'Invalid batch id' });
@@ -78,7 +77,7 @@ router.get('/:id', requireAuth, requireRole('TRAINER'), async (req, res) => { co
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    console.log('batch.trainer', batch.trainer.toString(), 'req.user.id', req.user.id.toString()); const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString(); if (trainerId !== req.user.id.toString()) {
+     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString(); if (trainerId !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -128,7 +127,7 @@ router.get('/:batchId/students', requireAuth, requireRole('TRAINER'), async (req
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    console.log('batch.trainer', batch.trainer.toString(), 'req.user.id', req.user.id.toString()); const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString(); if (trainerId !== req.user.id.toString()) {
+     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString(); if (trainerId !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -175,7 +174,7 @@ router.get('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'),
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    console.log('batch.trainer', batch.trainer.toString(), 'req.user.id', req.user.id.toString()); const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString(); if (trainerId !== req.user.id.toString()) {
+     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString(); if (trainerId !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
