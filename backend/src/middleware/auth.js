@@ -25,7 +25,18 @@ async function requireAuth(req, res, next) {
   }
   const token = parts[1];
   try {
-    const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'testsecret');
+    function getJwtSecret() {
+  const secret = process.env.JWT_ACCESS_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_ACCESS_SECRET is required in production');
+    }
+    // Development / test fallback
+    return 'testsecret';
+  }
+  return secret;
+}
+const payload = jwt.verify(token, getJwtSecret());
     const user = await User.findById(payload.sub);
     if (!user) {
       return res.status(401).json({

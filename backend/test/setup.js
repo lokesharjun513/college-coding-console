@@ -1,4 +1,5 @@
 require('dotenv').config({ path: '.env' });
+console.log('TEST SETUP NODE_ENV', process.env.NODE_ENV);
 
 const mongoose = require('mongoose');
 const { connectDB } = require('../src/config/db');

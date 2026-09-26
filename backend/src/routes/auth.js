@@ -5,6 +5,18 @@ const authService = require('../auth/authService');
 const jwt = require('jsonwebtoken');
 const requireAuth = require('../middleware/auth');
 
+function getJwtSecret() {
+  const secret = process.env.JWT_ACCESS_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_ACCESS_SECRET is required in production');
+    }
+    // Development / test fallback
+    return 'testsecret';
+  }
+  return secret;
+}
+
 /**
  * POST /api/auth/login
  * Body: { email, password }
@@ -54,7 +66,7 @@ router.post('/login', async (req, res) => {
     }
     const token = jwt.sign(
       { sub: user._id.toString(), role: user.role },
-      process.env.JWT_ACCESS_SECRET || 'testsecret',
+      getJwtSecret(),
       { expiresIn: process.env.ACCESS_TOKEN_TTL || '15m' }
     );
     return res.json({ success: true, token });
