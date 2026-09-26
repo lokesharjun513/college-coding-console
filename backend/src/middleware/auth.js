@@ -25,7 +25,7 @@ async function requireAuth(req, res, next) {
   }
   const token = parts[1];
   try {
-    const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'testsecret');
     const user = await User.findById(payload.sub);
     if (!user) {
       return res.status(401).json({
