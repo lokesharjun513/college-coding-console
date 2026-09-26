@@ -11,6 +11,7 @@ const trainerBatchRouter = require('./routes/trainer/batches');
 const trainerProblemRouter = require('./routes/trainer/problems');
 const trainerTestCaseRouter = require('./routes/trainer/testCases');
 const testRouter = require('./routes/testRoutes');
+const studentRouter = require('./routes/student/submissions');
 
 const app = express();
 
@@ -47,5 +48,6 @@ app.use(
 );
 
 app.use('/api/test', testRouter);
+app.use('/api/student/submissions', studentRouter);
 
 module.exports = app;

@@ -1,6 +1,18 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+function getJwtSecret() {
+  const secret = process.env.JWT_ACCESS_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_ACCESS_SECRET is required in production');
+    }
+    // Development / test fallback
+    return 'testsecret';
+  }
+  return secret;
+}
+
 /**
  * Express middleware to protect routes.
  * Expects an Authorization header with a Bearer token.
@@ -25,18 +37,7 @@ async function requireAuth(req, res, next) {
   }
   const token = parts[1];
   try {
-    function getJwtSecret() {
-  const secret = process.env.JWT_ACCESS_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_ACCESS_SECRET is required in production');
-    }
-    // Development / test fallback
-    return 'testsecret';
-  }
-  return secret;
-}
-const payload = jwt.verify(token, getJwtSecret());
+    const payload = jwt.verify(token, getJwtSecret());
     const user = await User.findById(payload.sub);
     if (!user) {
       return res.status(401).json({

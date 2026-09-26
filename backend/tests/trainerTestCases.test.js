@@ -103,7 +103,6 @@ describe('Trainer Test Case Management', () => {
     await TestCase.deleteMany({});
     await Problem.deleteMany({});
     await Batch.deleteMany({});
-    await User.deleteMany({});
   });
 
   // ---------- CREATE TEST CASE ----------
