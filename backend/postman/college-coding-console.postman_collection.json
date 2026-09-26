@@ -1,12 +1,745 @@
 {
-  "info": {"name":"College Collection","schema":"https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
-  "item":[
-    {"name":"Login","request":{"method":"POST","header":[],"url":{"raw":"{{baseUrl}}/api/auth/login","host":["{{baseUrl}}"],"path":["api","auth","login"]},"body":{"mode":"raw","raw":"{ "email": "{{adminEmail}}", "password": "{{adminPassword}}" }","options":{"raw":{"language":"json"}}},"event":[{"listen":"test","script":{"exec":["pm.test('Status code is 200', function () { pm.response.to.have.status(200); });","var json = pm.response.json();","pm.environment.set('adminToken', json.token);"],"type":"text/javascript"}}]}
-  ],
-  "variable":[
-    {"key":"baseUrl","value":"http://localhost:3003"},
-    {"key":"adminEmail","value":"admin@example.com"},
-    {"key":"adminPassword","value":"StrongP@ssw0rd"},
-    {"key":"adminToken","value":""}
+  "info": {
+    "name": "College Coding Console API",
+    "description": "Complete API collection for college coding console backend (Phases 0-9)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has token', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.token).to.exist;",
+                  "    pm.environment.set('adminToken', json.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Trainer Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has token', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.token).to.exist;",
+                  "    pm.environment.set('trainerToken', json.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{trainerEmail}}\",\n  \"password\": \"{{trainerPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains user data', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.user).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Trainers",
+      "item": [
+        {
+          "name": "Create Trainer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Trainer created', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.exist;",
+                  "    pm.environment.set('trainerId', json.data.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Trainer\",\n  \"email\": \"{{trainerEmail}}\",\n  \"password\": \"{{trainerPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/trainers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "trainers"]
+            }
+          }
+        },
+        {
+          "name": "List Trainers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains data array', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/trainers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "trainers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Batches",
+      "item": [
+        {
+          "name": "Create Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Batch created', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.exist;",
+                  "    pm.environment.set('batchId', json.data.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Batch\",\n  \"code\": \"BATCH-{{$timestamp}}\",\n  \"description\": \"Test batch for API verification\",\n  \"trainer\": \"{{trainerId}}\",\n  \"status\": \"ACTIVE\",\n  \"startDate\": \"2026-10-01\",\n  \"endDate\": \"2027-03-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/batches",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "batches"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trainer - Problems",
+      "item": [
+        {
+          "name": "Create Problem",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Problem created', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.exist;",
+                  "    pm.environment.set('problemId', json.data.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Two Sum\",\n  \"description\": \"Find two numbers that add up to a target\",\n  \"difficulty\": \"EASY\",\n  \"constraints\": \"Array length <= 1000\",\n  \"inputFormat\": \"Array of integers and target\",\n  \"outputFormat\": \"Array of two indices\",\n  \"examples\": [{\"input\": \"[2,7,11,15], 9\", \"output\": \"[0,1]\"}],\n  \"starterCode\": {\"python\": \"def two_sum(nums, target):\\n    pass\"},\n  \"allowedLanguages\": [\"python\", \"javascript\"],\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/batches/{{batchId}}/problems",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "batches", "{{batchId}}", "problems"]
+            }
+          }
+        },
+        {
+          "name": "List Problems",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains data array', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/batches/{{batchId}}/problems",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "batches", "{{batchId}}", "problems"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 9 - Test Cases",
+      "item": [
+        {
+          "name": "Create Test Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Test case created', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.exist;",
+                  "    pm.expect(json.data.input).to.equal('[2,7,11,15], 9');",
+                  "    pm.expect(json.data.expectedOutput).to.equal('[0,1]');",
+                  "    pm.environment.set('testCaseId', json.data.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input\": \"[2,7,11,15], 9\",\n  \"expectedOutput\": \"[0,1]\",\n  \"isHidden\": false,\n  \"sampleExplanation\": \"2 + 7 = 9\",\n  \"order\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases"]
+            }
+          }
+        },
+        {
+          "name": "Create Hidden Test Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Hidden test case created', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.isHidden).to.be.true;",
+                  "    pm.environment.set('hiddenTestCaseId', json.data.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input\": \"[3,2,4], 6\",\n  \"expectedOutput\": \"[1,2]\",\n  \"isHidden\": true,\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases"]
+            }
+          }
+        },
+        {
+          "name": "List Test Cases",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains test cases', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    pm.expect(json.data.length).to.be.at.least(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Test Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Test case retrieved', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.equal(pm.environment.get('testCaseId'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases/{{testCaseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases", "{{testCaseId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Test Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Test case updated', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.sampleExplanation).to.equal('Updated explanation');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sampleExplanation\": \"Updated explanation\",\n  \"isHidden\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases/{{testCaseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases", "{{testCaseId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Test Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Test case deleted', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases/{{hiddenTestCaseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases", "{{hiddenTestCaseId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Test Case - Missing Input (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message present', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedOutput\": \"[0,1]\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases"]
+            }
+          }
+        },
+        {
+          "name": "Get Test Case - Invalid Problem ID (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Error message present', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{trainerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/000000000000000000000001/test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "000000000000000000000001", "test-cases"]
+            }
+          }
+        },
+        {
+          "name": "Create Test Case - Unauthenticated (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Error message present', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input\": \"test\",\n  \"expectedOutput\": \"test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases"]
+            }
+          }
+        },
+        {
+          "name": "Create Test Case - Admin Cannot Access (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('Access denied', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input\": \"test\",\n  \"expectedOutput\": \"test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trainer/problems/{{problemId}}/test-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trainer", "problems", "{{problemId}}", "test-cases"]
+            }
+          }
+        }
+      ]
+    }
   ]
 }

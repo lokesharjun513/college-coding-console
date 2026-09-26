@@ -9,6 +9,7 @@ const adminBatchesRouter = require('./routes/admin/batches');
 const adminBatchStudentsRouter = require('./routes/admin/batchStudents');
 const trainerBatchRouter = require('./routes/trainer/batches');
 const trainerProblemRouter = require('./routes/trainer/problems');
+const trainerTestCaseRouter = require('./routes/trainer/testCases');
 const testRouter = require('./routes/testRoutes');
 
 const app = express();
@@ -38,6 +39,11 @@ app.use(
 app.use(
   '/api/trainer/batches/:batchId/problems',
   trainerProblemRouter
+);
+
+app.use(
+  '/api/trainer/problems/:problemId/test-cases',
+  trainerTestCaseRouter
 );
 
 app.use('/api/test', testRouter);
