@@ -8,6 +8,7 @@ const { requireAnyRole } = require('../../middleware/role');
 const Submission = require('../../models/Submission');
 const Problem = require('../../models/Problem');
 const TestCase = require('../../models/TestCase');
+const mongoose = require('mongoose');
 const { execute } = require('../../services/CodeExecutor');
 
 // Helper to map Judge0 status IDs to our verdicts
@@ -122,6 +123,61 @@ router.post('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
       testResults: publicResults,
     },
   });
+});
+
+// GET /api/student/submissions - List all submissions for the authenticated student
+router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
+  try {
+    const submissions = await Submission.find({ student: req.user.id })
+      .sort({ createdAt: -1 })
+      .select('-code -executionResult -testResults');
+
+    const data = submissions.map(sub => ({
+      id: sub._id,
+      problem: sub.problem,
+      language: sub.language,
+      verdict: sub.verdict,
+      createdAt: sub.createdAt,
+    }));
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error listing submissions:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// GET /api/student/submissions/:id - Get a specific submission
+router.get('/:id', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
+  const { id } = req.params;
+
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid submission ID', code: 'INVALID_INPUT' });
+  }
+
+  try {
+    const submission = await Submission.findOne({ _id: id, student: req.user.id })
+      .select('-code -executionResult');
+
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found', code: 'NOT_FOUND' });
+    }
+
+    const data = {
+      id: submission._id,
+      problem: submission.problem,
+      language: submission.language,
+      verdict: submission.verdict,
+      testResults: submission.testResults,
+      createdAt: submission.createdAt,
+    };
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching submission:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 });
 
 module.exports = router;

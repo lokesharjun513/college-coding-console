@@ -104,6 +104,14 @@ beforeEach(async () => {
   });
 });
 
+afterEach(async () => {
+  // Clean up other collections to avoid test interference
+  await User.deleteMany({});
+  await Batch.deleteMany({});
+  await Problem.deleteMany({});
+  await TestCase.deleteMany({});
+});
+
 afterAll(() => {
   jest.restoreAllMocks();
 });
@@ -234,5 +242,173 @@ describe('Student Submission Endpoint', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ problemId: 'dummy', code: 'code', language: 'javascript' });
     expect(res.status).toBe(403);
+  });
+});
+
+// GET endpoint tests
+describe('Student Submission History Endpoints', () => {
+  test('authenticated student can list submissions', async () => {
+    const { adminToken, trainer, password } = await createAdminAndTrainer();
+    const trainerToken = await loginAndGetToken(trainer.email, password);
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    const problemRes = await createProblem(trainerToken, batchId);
+    const problemId = problemRes.body.data.id;
+    await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
+
+    const studentEmail = `student${Date.now()}@test.com`;
+    const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
+    const studentToken = await loginAndGetToken(student.email, password);
+    const submitRes = await request(app)
+      .post('/api/student/submissions')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ problemId, code: 'function solution(){return 3;}', language: 'javascript' });
+    expect(submitRes.status).toBe(201);
+
+    const listRes = await request(app)
+      .get('/api/student/submissions')
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.success).toBe(true);
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data.length).toBeGreaterThan(0);
+    const sub = listRes.body.data[0];
+    expect(sub.id).toBe(submitRes.body.data.id);
+    expect(sub.problem).toBe(problemId);
+    expect(sub.language).toBe('javascript');
+    expect(sub.verdict).toBe('ACCEPTED');
+  });
+
+  test('authenticated student can retrieve a specific submission', async () => {
+    const { adminToken, trainer, password } = await createAdminAndTrainer();
+    const trainerToken = await loginAndGetToken(trainer.email, password);
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    const problemRes = await createProblem(trainerToken, batchId);
+    const problemId = problemRes.body.data.id;
+    await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
+
+    const studentEmail = `student${Date.now()}@test.com`;
+    const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
+    const studentToken = await loginAndGetToken(student.email, password);
+    const submitRes = await request(app)
+      .post('/api/student/submissions')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ problemId, code: 'function solution(){return 3;}', language: 'javascript' });
+    const subId = submitRes.body.data.id;
+
+    const getRes = await request(app)
+      .get(`/api/student/submissions/${subId}`)
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.success).toBe(true);
+    const data = getRes.body.data;
+    expect(data.id).toBe(subId);
+    expect(data.problem).toBe(problemId);
+    expect(data.language).toBe('javascript');
+    expect(data.verdict).toBe('ACCEPTED');
+    expect(Array.isArray(data.testResults)).toBe(true);
+  });
+
+  test('list returns empty array when no submissions', async () => {
+    const { adminToken, trainer, password } = await createAdminAndTrainer();
+    const trainerToken = await loginAndGetToken(trainer.email, password);
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    const problemRes = await createProblem(trainerToken, batchId);
+    const problemId = problemRes.body.data.id;
+
+    const studentEmail = `student${Date.now()}@test.com`;
+    const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
+    const studentToken = await loginAndGetToken(student.email, password);
+
+    const listRes = await request(app)
+      .get('/api/student/submissions')
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.success).toBe(true);
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data.length).toBe(0);
+  });
+
+  test('unauthenticated request returns 401 for list', async () => {
+    const res = await request(app).get('/api/student/submissions');
+    expect(res.status).toBe(401);
+  });
+
+  test('non‑student role returns 403 for list', async () => {
+    const adminEmail = `admin${Date.now()}@test.com`;
+    const admin = await createUser({ name: 'Admin', email: adminEmail, password: 'pwd', role: 'ADMIN' });
+    const adminToken = await loginAndGetToken(admin.email, 'pwd');
+    const res = await request(app)
+      .get('/api/student/submissions')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('invalid submission ID returns 400', async () => {
+    const { adminToken, trainer, password } = await createAdminAndTrainer();
+    const trainerToken = await loginAndGetToken(trainer.email, password);
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    const problemRes = await createProblem(trainerToken, batchId);
+    const problemId = problemRes.body.data.id;
+    await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
+
+    const studentEmail = `student${Date.now()}@test.com`;
+    const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
+    const studentToken = await loginAndGetToken(student.email, password);
+    const res = await request(app)
+      .get('/api/student/submissions/invalid-id')
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  test('nonexistent submission returns 404', async () => {
+    const { adminToken, trainer, password } = await createAdminAndTrainer();
+    const trainerToken = await loginAndGetToken(trainer.email, password);
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    const problemRes = await createProblem(trainerToken, batchId);
+    const problemId = problemRes.body.data.id;
+    await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
+
+    const studentEmail = `student${Date.now()}@test.com`;
+    const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
+    const studentToken = await loginAndGetToken(student.email, password);
+    const nonExistentId = '64b8c8f8c8c8c8c8c8c8c8c8'; // valid ObjectId format but not present
+    const res = await request(app)
+      .get(`/api/student/submissions/${nonExistentId}`)
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  test('student cannot access another student\'s submission', async () => {
+    // Student A creates a submission
+    const { adminToken, trainer, password } = await createAdminAndTrainer();
+    const trainerToken = await loginAndGetToken(trainer.email, password);
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    const problemRes = await createProblem(trainerToken, batchId);
+    const problemId = problemRes.body.data.id;
+    await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
+
+    const studentAEmail = `studentA${Date.now()}@test.com`;
+    const studentA = await createUser({ name: 'StudentA', email: studentAEmail, password, role: 'STUDENT' });
+    const tokenA = await loginAndGetToken(studentA.email, password);
+    const submitRes = await request(app)
+      .post('/api/student/submissions')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ problemId, code: 'function solution(){return 3;}', language: 'javascript' });
+    const subId = submitRes.body.data.id;
+
+    // Student B attempts to fetch Student A's submission
+    const studentBEmail = `studentB${Date.now()}@test.com`;
+    const studentB = await createUser({ name: 'StudentB', email: studentBEmail, password, role: 'STUDENT' });
+    const tokenB = await loginAndGetToken(studentB.email, password);
+    const res = await request(app)
+      .get(`/api/student/submissions/${subId}`)
+      .set('Authorization', `Bearer ${tokenB}`);
+    expect(res.status).toBe(404);
   });
 });
