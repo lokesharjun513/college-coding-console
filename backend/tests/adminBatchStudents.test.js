@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env' });
+const uniqueSuffix = require('./utils/unique');
 const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/models/User');
@@ -28,9 +28,8 @@ async function loginAndGetToken(email, password) {
  * Generate unique email for test isolation
  */
 function generateUniqueEmail(base) {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return `${base.replace('@', `${timestamp}_${random}@`)}`;
+  const suffix = uniqueSuffix();
+  return `${base.replace('@', `${suffix}@`)}`;
 }
 
 /**
@@ -52,7 +51,7 @@ async function createAdminAndTrainer() {
 async function createBatch(adminToken, trainerId, overrides = {}) {
   const defaultData = {
     name: 'Batch Name',
-    code: `CODE${Date.now()}${Math.floor(Math.random() * 1000)}`,
+    code: `CODE${uniqueSuffix()}`,
     description: 'Batch description',
     trainer: trainerId,
     status: 'ACTIVE',

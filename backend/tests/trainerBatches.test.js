@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env' });
+const uniqueSuffix = require('./utils/unique');
 const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/models/User');
@@ -19,9 +19,8 @@ async function loginAndGetToken(email, password) {
 }
 
 function generateUniqueEmail(base) {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return `${base.replace('@', `${timestamp}_${random}@`)}`;
+  const suffix = uniqueSuffix();
+  return `${base.replace('@', `${suffix}@`)}`;
 }
 
 async function createAdminAndTrainer() {
@@ -38,7 +37,7 @@ async function createAdminAndTrainer() {
 async function createBatch(adminToken, trainerId, overrides = {}) {
   const defaultData = {
     name: 'Batch Name',
-    code: `CODE${Date.now()}`,
+    code: `CODE${uniqueSuffix()}`,
     description: 'Batch description',
     trainer: trainerId,
     status: 'ACTIVE',
@@ -131,6 +130,10 @@ describe('Trainer Batch Management', () => {
   test('trainer can get own batch', async () => {
     const { adminToken, trainer, trainerToken } = await createAdminAndTrainer();
     const batchRes = await createBatch(adminToken, trainer._id);
+    if (!batchRes.body.data) {
+      console.log('batchRes status', batchRes.status);
+      console.log('batchRes body', batchRes.body);
+    }
     const batchId = batchRes.body.data.id;
     const res = await request(app)
       .get(`/api/trainer/batches/${batchId}`)

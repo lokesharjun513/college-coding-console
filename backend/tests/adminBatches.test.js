@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env' });
+const uniqueSuffix = require('./utils/unique');
 const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/models/User');
@@ -27,9 +27,8 @@ async function loginAndGetToken(email, password) {
  * Generate unique email for test isolation
  */
 function generateUniqueEmail(base) {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return `${base.replace('@', `${timestamp}_${random}@`)}`;
+  const suffix = uniqueSuffix();
+  return `${base.replace('@', `${suffix}@`)}`;
 }
 
 /**
@@ -51,7 +50,7 @@ async function createAdminAndTrainer() {
 async function createBatch(adminToken, trainerId, overrides = {}) {
   const defaultData = {
     name: 'Batch Name',
-    code: `CODE${Date.now()}`,
+    code: `CODE${uniqueSuffix()}`,
     description: 'Batch description',
     trainer: trainerId,
     status: 'ACTIVE',
@@ -259,6 +258,7 @@ describe('Admin Batch Management', () => {
   test('admin can update batch name and code', async () => {
     const { adminToken, trainer } = await createAdminAndTrainer();
     const createRes = await createBatch(adminToken, trainer._id);
+    expect(createRes.body.success).toBe(true);
     const batchId = createRes.body.data.id;
     const res = await request(app)
       .patch(`/api/admin/batches/${batchId}`)
@@ -273,6 +273,7 @@ describe('Admin Batch Management', () => {
     const { adminToken, trainer } = await createAdminAndTrainer();
     const newTrainer = await createTestUser({ name: 'New Trainer', email: generateUniqueEmail('newtrainer@testmail.com'), password, role: 'TRAINER' });
     const createRes = await createBatch(adminToken, trainer._id);
+    expect(createRes.body.success).toBe(true);
     const batchId = createRes.body.data.id;
     const res = await request(app)
       .patch(`/api/admin/batches/${batchId}`)
@@ -286,6 +287,7 @@ describe('Admin Batch Management', () => {
     const { adminToken, trainer } = await createAdminAndTrainer();
     const student = await createTestUser({ name: 'Student', email: generateUniqueEmail('student@testmail.com'), password, role: 'STUDENT' });
     const createRes = await createBatch(adminToken, trainer._id);
+    expect(createRes.body.success).toBe(true);
     const batchId = createRes.body.data.id;
     const res = await request(app)
       .patch(`/api/admin/batches/${batchId}`)
@@ -296,10 +298,12 @@ describe('Admin Batch Management', () => {
 
   test('should return 409 for duplicate code on update', async () => {
     const { adminToken, trainer } = await createAdminAndTrainer();
-    const code1 = `CODE1${Date.now()}`;
-    const code2 = `CODE2${Date.now()}`;
+    const code1 = `CODE1${uniqueSuffix()}`;
+    const code2 = `CODE2${uniqueSuffix()}`;
     const batch1 = await createBatch(adminToken, trainer._id, { code: code1 });
+    expect(batch1.body.success).toBe(true);
     const batch2 = await createBatch(adminToken, trainer._id, { code: code2 });
+    expect(batch2.body.success).toBe(true);
     const res = await request(app)
       .patch(`/api/admin/batches/${batch2.body.data.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -311,6 +315,7 @@ describe('Admin Batch Management', () => {
   test('admin can delete batch', async () => {
     const { adminToken, trainer } = await createAdminAndTrainer();
     const createRes = await createBatch(adminToken, trainer._id);
+    expect(createRes.body.success).toBe(true);
     const batchId = createRes.body.data.id;
     const res = await request(app)
       .delete(`/api/admin/batches/${batchId}`)

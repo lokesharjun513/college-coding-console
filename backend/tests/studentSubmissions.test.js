@@ -1,7 +1,7 @@
 // backend/tests/studentSubmissions.test.js
 // Tests for student code submission endpoint
 
-require('dotenv').config({ path: '.env' });
+const uniqueSuffix = require('./utils/unique');
 const request = require('supertest');
 const app = require('../src/app');
 const mongoose = require('mongoose');
@@ -26,8 +26,8 @@ async function loginAndGetToken(email, password) {
 
 // Helper to create admin and trainer (reuse from trainer tests)
 async function createAdminAndTrainer() {
-  const adminEmail = `admin${Date.now()}@test.com`;
-  const trainerEmail = `trainer${Date.now()}@test.com`;
+  const adminEmail = `admin${uniqueSuffix()}@test.com`;
+  const trainerEmail = `trainer${uniqueSuffix()}@test.com`;
   const password = 'StrongP@ssw0rd';
   await createUser({ name: 'Admin', email: adminEmail, password, role: 'ADMIN' });
   const adminToken = await loginAndGetToken(adminEmail, password);
@@ -40,7 +40,7 @@ async function createAdminAndTrainer() {
 async function createBatch(adminToken, trainerId, overrides = {}) {
   const defaultData = {
     name: 'Batch Name',
-    code: `CODE${Date.now()}`,
+    code: `CODE${uniqueSuffix()}`,
     description: 'Batch description',
     trainer: trainerId,
     status: 'ACTIVE',
@@ -56,7 +56,7 @@ async function createBatch(adminToken, trainerId, overrides = {}) {
 
 // Helper to create a problem (trainer only)
 async function createProblem(trainerToken, batchId, overrides = {}) {
-  const unique = Date.now();
+  const unique = uniqueSuffix();
   const defaultData = {
     title: `Test Problem ${unique}`,
     description: 'Test problem description',
@@ -143,7 +143,7 @@ describe('Student Submission Endpoint', () => {
     });
 
     // Act: student submits code
-    const studentEmail = `student${Date.now()}@test.com`;
+    const studentEmail = `student${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
     const res = await request(app)
@@ -180,7 +180,7 @@ describe('Student Submission Endpoint', () => {
       }),
     });
 
-    const studentEmail = `student2${Date.now()}@test.com`;
+    const studentEmail = `student2${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
     const res = await request(app)
@@ -214,7 +214,7 @@ describe('Student Submission Endpoint', () => {
       }),
     });
 
-    const studentEmail = `student3${Date.now()}@test.com`;
+    const studentEmail = `student3${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
     const res = await request(app)
@@ -234,7 +234,7 @@ describe('Student Submission Endpoint', () => {
   });
 
   test('non‑student role returns 403', async () => {
-    const adminEmail = `admin2${Date.now()}@test.com`;
+    const adminEmail = `admin2${uniqueSuffix()}@test.com`;
     const admin = await createUser({ name: 'Admin', email: adminEmail, password: 'pwd', role: 'ADMIN' });
     const adminToken = await loginAndGetToken(admin.email, 'pwd');
     const res = await request(app)
@@ -256,7 +256,7 @@ describe('Student Submission History Endpoints', () => {
     const problemId = problemRes.body.data.id;
     await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
 
-    const studentEmail = `student${Date.now()}@test.com`;
+    const studentEmail = `student${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
     const submitRes = await request(app)
@@ -288,7 +288,7 @@ describe('Student Submission History Endpoints', () => {
     const problemId = problemRes.body.data.id;
     await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
 
-    const studentEmail = `student${Date.now()}@test.com`;
+    const studentEmail = `student${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
     const submitRes = await request(app)
@@ -318,7 +318,7 @@ describe('Student Submission History Endpoints', () => {
     const problemRes = await createProblem(trainerToken, batchId);
     const problemId = problemRes.body.data.id;
 
-    const studentEmail = `student${Date.now()}@test.com`;
+    const studentEmail = `student${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
 
@@ -337,7 +337,7 @@ describe('Student Submission History Endpoints', () => {
   });
 
   test('non‑student role returns 403 for list', async () => {
-    const adminEmail = `admin${Date.now()}@test.com`;
+    const adminEmail = `admin${uniqueSuffix()}@test.com`;
     const admin = await createUser({ name: 'Admin', email: adminEmail, password: 'pwd', role: 'ADMIN' });
     const adminToken = await loginAndGetToken(admin.email, 'pwd');
     const res = await request(app)
@@ -355,7 +355,7 @@ describe('Student Submission History Endpoints', () => {
     const problemId = problemRes.body.data.id;
     await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
 
-    const studentEmail = `student${Date.now()}@test.com`;
+    const studentEmail = `student${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
     const res = await request(app)
@@ -373,7 +373,7 @@ describe('Student Submission History Endpoints', () => {
     const problemId = problemRes.body.data.id;
     await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
 
-    const studentEmail = `student${Date.now()}@test.com`;
+    const studentEmail = `student${uniqueSuffix()}@test.com`;
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
     const studentToken = await loginAndGetToken(student.email, password);
     const nonExistentId = '64b8c8f8c8c8c8c8c8c8c8c8'; // valid ObjectId format but not present
@@ -393,7 +393,7 @@ describe('Student Submission History Endpoints', () => {
     const problemId = problemRes.body.data.id;
     await addTestCase(trainerToken, problemId, { input: '1 2', expectedOutput: '3' });
 
-    const studentAEmail = `studentA${Date.now()}@test.com`;
+    const studentAEmail = `studentA${uniqueSuffix()}@test.com`;
     const studentA = await createUser({ name: 'StudentA', email: studentAEmail, password, role: 'STUDENT' });
     const tokenA = await loginAndGetToken(studentA.email, password);
     const submitRes = await request(app)
@@ -403,7 +403,7 @@ describe('Student Submission History Endpoints', () => {
     const subId = submitRes.body.data.id;
 
     // Student B attempts to fetch Student A's submission
-    const studentBEmail = `studentB${Date.now()}@test.com`;
+    const studentBEmail = `studentB${uniqueSuffix()}@test.com`;
     const studentB = await createUser({ name: 'StudentB', email: studentBEmail, password, role: 'STUDENT' });
     const tokenB = await loginAndGetToken(studentB.email, password);
     const res = await request(app)

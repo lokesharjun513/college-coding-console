@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env' });
+const uniqueSuffix = require('./utils/unique');
 const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/models/User');
@@ -26,33 +26,34 @@ async function loginAndGetToken(email, password) {
  * Generate unique email for test isolation
  */
 function generateUniqueEmail(base) {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return `${base.replace('@', `${timestamp}_${random}@`)}`;
+  const suffix = uniqueSuffix();
+  return `${base.replace('@', `${suffix}@`)}`;
+}
+
+/**
+ * Helper to create an admin and return their token.
+ * Uses unique emails to avoid cleanup races.
+ */
+async function createAdminAndGetToken() {
+  const adminEmail = generateUniqueEmail('admin@testmail.com');
+  const password = 'StrongP@ssw0rd';
+  await createTestUser({ name: 'Admin', email: adminEmail, password, role: 'ADMIN' });
+  return loginAndGetToken(adminEmail, password);
 }
 
 describe('Admin Trainer Management', () => {
-  const adminEmail = generateUniqueEmail('admin@testmail.com');
-  const trainerEmail = generateUniqueEmail('trainer@testmail.com');
-  const studentEmail = generateUniqueEmail('student@testmail.com');
-  const password = 'StrongP@ssw0rd';
-
   beforeAll(async () => {
-    
     // DB connection managed globally by setup.js
     await User.deleteMany({});
   });
 
-  
   afterEach(async () => {
     await User.deleteMany({});
   });
 
   describe('CREATE TRAINER', () => {
     test('should create trainer successfully', async () => {
-      // Create admin user
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -74,8 +75,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for missing name', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -91,8 +91,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for missing email', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -108,8 +107,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for missing password', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -125,8 +123,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for invalid email format', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -143,8 +140,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for weak password (less than 8 chars)', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -161,17 +157,14 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 409 for duplicate email', async () => {
-      // Create admin user
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      // Create existing trainer with same email
+      const token = await createAdminAndGetToken();
+      // Create existing trainer
       await createTestUser({
         name: 'Existing Trainer',
         email: 'trainer@example.com',
         password: 'existingpass123',
         role: 'TRAINER'
       });
-
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -188,8 +181,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should force role to TRAINER even if ADMIN requested', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .post('/api/admin/trainers')
@@ -209,16 +201,13 @@ describe('Admin Trainer Management', () => {
 
   describe('LIST TRAINERS', () => {
     test('should list only trainers', async () => {
-      // Create admin user
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       // Create trainers
-      await createTestUser({ name: 'Trainer 1', email: 'trainer1@example.com', password, role: 'TRAINER' });
-      await createTestUser({ name: 'Trainer 2', email: 'trainer2@example.com', password, role: 'TRAINER', status: 'INACTIVE' });
+      await createTestUser({ name: 'Trainer 1', email: 'trainer1@example.com', password: 'password', role: 'TRAINER' });
+      await createTestUser({ name: 'Trainer 2', email: 'trainer2@example.com', password: 'password', role: 'TRAINER', status: 'INACTIVE' });
       // Create admin and student (should not appear in list)
-      await createTestUser({ name: 'Admin 2', email: 'admin2@example.com', password, role: 'ADMIN' });
-      await createTestUser({ name: 'Student 1', email: 'student1@example.com', password, role: 'STUDENT' });
-
-      const token = await loginAndGetToken(adminEmail, password);
+      await createTestUser({ name: 'Admin 2', email: 'admin2@example.com', password: 'password', role: 'ADMIN' });
+      await createTestUser({ name: 'Student 1', email: 'student1@example.com', password: 'password', role: 'STUDENT' });
 
       const res = await request(app)
         .get('/api/admin/trainers')
@@ -242,8 +231,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return empty array when no trainers exist', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       const res = await request(app)
         .get('/api/admin/trainers')
@@ -258,14 +246,13 @@ describe('Admin Trainer Management', () => {
 
   describe('GET SINGLE TRAINER', () => {
     test('should get trainer by id', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .get(`/api/admin/trainers/${trainer._id}`)
@@ -282,8 +269,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 404 for nonexistent trainer id', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
       const fakeId = '000000000000000000000000';
 
       const res = await request(app)
@@ -296,14 +282,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 404 for admin id supplied to trainer endpoint', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const adminUser = await createTestUser({
         name: 'Another Admin',
         email: 'admin2@example.com',
-        password,
+        password: 'password',
         role: 'ADMIN'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .get(`/api/admin/trainers/${adminUser._id}`)
@@ -315,14 +300,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 404 for student id supplied to trainer endpoint', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const studentUser = await createTestUser({
         name: 'Student User',
         email: 'student@example.com',
-        password,
+        password: 'password',
         role: 'STUDENT'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .get(`/api/admin/trainers/${studentUser._id}`)
@@ -336,14 +320,13 @@ describe('Admin Trainer Management', () => {
 
   describe('UPDATE TRAINER', () => {
     test('should update trainer name successfully', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .patch(`/api/admin/trainers/${trainer._id}`)
@@ -361,14 +344,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should update trainer email successfully', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .patch(`/api/admin/trainers/${trainer._id}`)
@@ -386,14 +368,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should update trainer status successfully', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .patch(`/api/admin/trainers/${trainer._id}`)
@@ -411,14 +392,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for invalid status value', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .patch(`/api/admin/trainers/${trainer._id}`)
@@ -433,20 +413,19 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for duplicate email on update', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer1 = await createTestUser({
         name: 'Trainer 1',
         email: 'trainer1@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
       const trainer2 = await createTestUser({
         name: 'Trainer 2',
         email: 'trainer2@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .patch(`/api/admin/trainers/${trainer1._id}`)
@@ -461,14 +440,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should not allow role modification through update', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .patch(`/api/admin/trainers/${trainer._id}`)
@@ -483,8 +461,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 404 for nonexistent trainer id on update', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
       const fakeId = '000000000000000000000000';
 
       const res = await request(app)
@@ -502,14 +479,13 @@ describe('Admin Trainer Management', () => {
 
   describe('DELETE TRAINER', () => {
     test('should delete trainer successfully', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .delete(`/api/admin/trainers/${trainer._id}`)
@@ -521,8 +497,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 404 for nonexistent trainer id on delete', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
       const fakeId = '000000000000000000000000';
 
       const res = await request(app)
@@ -535,14 +510,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should not delete admin user through trainer endpoint', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const adminUser = await createTestUser({
         name: 'Another Admin',
         email: 'admin2@example.com',
-        password,
+        password: 'password',
         role: 'ADMIN'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .delete(`/api/admin/trainers/${adminUser._id}`)
@@ -554,14 +528,13 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should not delete student user through trainer endpoint', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const studentUser = await createTestUser({
         name: 'Student User',
         email: 'student@example.com',
-        password,
+        password: 'password',
         role: 'STUDENT'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       const res = await request(app)
         .delete(`/api/admin/trainers/${studentUser._id}`)
@@ -591,6 +564,8 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 403 for trainer accessing admin trainer endpoints', async () => {
+      const trainerEmail = generateUniqueEmail('trainer@testmail.com');
+      const password = 'StrongP@ssw0rd';
       await createTestUser({ name: 'Trainer User', email: trainerEmail, password, role: 'TRAINER' });
       const token = await loginAndGetToken(trainerEmail, password);
 
@@ -630,6 +605,8 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 403 for student accessing admin trainer endpoints', async () => {
+      const studentEmail = generateUniqueEmail('student@testmail.com');
+      const password = 'StrongP@ssw0rd';
       await createTestUser({ name: 'Student User', email: studentEmail, password, role: 'STUDENT' });
       const token = await loginAndGetToken(studentEmail, password);
 
@@ -671,14 +648,13 @@ describe('Admin Trainer Management', () => {
 
   describe('SECURITY', () => {
     test('should never expose passwordHash in responses', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
+      const token = await createAdminAndGetToken();
       const trainer = await createTestUser({
         name: 'John Trainer',
         email: 'trainer@example.com',
-        password,
+        password: 'password',
         role: 'TRAINER'
       });
-      const token = await loginAndGetToken(adminEmail, password);
 
       // Test create response
       let res = await request(app)
@@ -714,8 +690,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should prevent plaintext password storage in database', async () => {
-      await createTestUser({ name: 'Admin User', email: adminEmail, password, role: 'ADMIN' });
-      const token = await loginAndGetToken(adminEmail, password);
+      const token = await createAdminAndGetToken();
 
       await request(app)
         .post('/api/admin/trainers')
