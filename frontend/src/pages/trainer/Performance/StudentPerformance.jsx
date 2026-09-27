@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getStudentPerformance } from '../../api/trainer';
-import Spinner from '../../components/ui/Spinner';
+import { getStudentPerformance } from '../../../api/trainer';
+import Spinner from '../../../components/ui/Spinner';
 
 export default function StudentPerformance() {
   const { studentId, batchId } = useParams();

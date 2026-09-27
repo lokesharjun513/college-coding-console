@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import Login from '../components/Login';
 import api from '../api';
@@ -30,10 +31,10 @@ describe('Auth flow', () => {
     };
 
     render(
-      <AuthProvider>
+      <MemoryRouter><AuthProvider>
         <Login />
         <TestComponent />
-      </AuthProvider>
+      </AuthProvider></MemoryRouter>
     );
 
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
@@ -47,9 +48,9 @@ describe('Auth flow', () => {
   test('login failure shows error', async () => {
     api.post.mockRejectedValueOnce({ response: { data: { message: 'Invalid credentials' } } });
     render(
-      <AuthProvider>
+      <MemoryRouter><AuthProvider>
         <Login />
-      </AuthProvider>
+      </AuthProvider></MemoryRouter>
     );
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'bad@example.com' } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrong' } });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getProblemPerformance } from '../../api/trainer';
-import Spinner from '../../components/ui/Spinner';
+import { getProblemPerformance } from '../../../api/trainer';
+import Spinner from '../../../components/ui/Spinner';
 
 export default function ProblemPerformance() {
   const { problemId } = useParams();

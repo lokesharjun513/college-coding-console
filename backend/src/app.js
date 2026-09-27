@@ -15,6 +15,9 @@ const studentRouter = require('./routes/student/submissions');
 
 const app = express();
 
+// Trust proxy for proper IP detection behind proxies (Render/Railway/etc.)
+app.set('trust proxy', 1);
+
 app.use(helmet());
 const corsOptions = {
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
