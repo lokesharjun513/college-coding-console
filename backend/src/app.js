@@ -20,7 +20,10 @@ app.set('trust proxy', 1);
 
 app.use(helmet());
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
+  origin: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',')
+    : ['http://localhost:3000', 'https://college-coding-console.vercel.app'],
+  credentials: true,
   optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
