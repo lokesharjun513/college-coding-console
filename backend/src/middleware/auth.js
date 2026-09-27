@@ -41,10 +41,18 @@ async function requireAuth(req, res, next) {
     try {
       payload = jwt.verify(token, getJwtSecret());
     } catch (err) {
-      // Fallback to default secret for test environments where env may not be loaded early
-      try {
-        payload = jwt.verify(token, 'testsecret');
-      } catch (e) {
+      // Fallback to default secret ONLY in non-production environments
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          payload = jwt.verify(token, 'testsecret');
+        } catch (e) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid token',
+            code: 'AUTHENTICATION_REQUIRED',
+          });
+        }
+      } else {
         return res.status(401).json({
           success: false,
           message: 'Invalid token',

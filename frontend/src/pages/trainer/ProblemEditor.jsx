@@ -44,7 +44,7 @@ export default function ProblemEditor() {
       } else {
         await createProblem(batchId, { title, description, difficulty, status });
       }
-      navigate(`/trainer/batches/${batchId}/pro``);
+      navigate(`/trainer/batches/${batchId}/problems`);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to save problem');
     } finally {

@@ -4,6 +4,7 @@ const User = require('../models/User');
 const authService = require('../auth/authService');
 const jwt = require('jsonwebtoken');
 const requireAuth = require('../middleware/auth');
+const rateLimiter = require('../middleware/rateLimiter');
 
 function getJwtSecret() {
   const secret = process.env.JWT_ACCESS_SECRET;
@@ -21,7 +22,7 @@ function getJwtSecret() {
  * POST /api/auth/login
  * Body: { email, password }
  */
-router.post('/login', async (req, res) => {
+router.post('/login', rateLimiter, async (req, res) => {
   const { email, password } = req.body;
   // Basic validation
   if (!email || !password) {
