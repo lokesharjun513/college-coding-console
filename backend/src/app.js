@@ -18,7 +18,6 @@ const app = express();
 // Trust proxy for proper IP detection behind proxies (Render/Railway/etc.)
 app.set('trust proxy', 1);
 
-app.use(helmet());
 const corsOptions = {
   origin: process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',')
@@ -27,6 +26,11 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
+
+// Preflight handling before helmet so OPTIONS always succeeds
+app.options('*', cors(corsOptions));
+
+app.use(helmet());
 app.use(express.json());
 
 app.use('/api', healthRouter);
