@@ -27,8 +27,6 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Preflight handling before helmet so OPTIONS always succeeds
-app.options('/*', cors(corsOptions));
 
 app.use(helmet());
 app.use(express.json());
