@@ -32,9 +32,11 @@ async function connectDB() {
   try {
     await mongoose.connect(mongoUri, options);
 
-    console.log(
-      `[DB] MongoDB connected readyState=${mongoose.connection.readyState}`
-    );
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(
+        `[DB] MongoDB connected readyState=${mongoose.connection.readyState}`
+      );
+    }
 
     return mongoose.connection;
   } catch (error) {
@@ -48,16 +50,20 @@ async function disconnectDB() {
     return;
   }
 
-  console.log(
-    `[DB] Disconnecting MongoDB readyState=${mongoose.connection.readyState}`
-  );
+  if (process.env.NODE_ENV !== 'test') {
+    console.log(
+      `[DB] Disconnecting MongoDB readyState=${mongoose.connection.readyState}`
+    );
+  }
 
   // mongoose.disconnect() closes the underlying MongoDB client/pool.
   await mongoose.disconnect();
 
-  console.log(
-    `[DB] MongoDB disconnected readyState=${mongoose.connection.readyState}`
-  );
+  if (process.env.NODE_ENV !== 'test') {
+    console.log(
+      `[DB] MongoDB disconnected readyState=${mongoose.connection.readyState}`
+    );
+  }
 }
 
 module.exports = {

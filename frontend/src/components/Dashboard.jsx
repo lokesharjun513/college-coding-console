@@ -1,29 +1,21 @@
 import { useEffect, useState } from 'react';
+import api from '../api';
 
-export default function Dashboard({ token, onLogout }) {
+export default function Dashboard({ onLogout }) {
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch('/api/auth/me', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || 'Failed to fetch user');
-        }
-        setUser(data);
+        const res = await api.get('/auth/me');
+        setUser(res.data);
       } catch (err) {
-        setError(err.message);
+        setError(err.response?.data?.message || 'Failed to fetch user');
       }
     };
     fetchUser();
-  }, [token]);
+  }, []);
 
   return (
     <div style={{ padding: '2rem' }}>

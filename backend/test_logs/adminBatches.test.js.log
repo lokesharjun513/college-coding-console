@@ -1,0 +1,262 @@
+  console.error
+    ◇ injected env (6) from .env.test
+
+    [0m [90m 1 |[39m [36mconst[39m path [33m=[39m require([32m'path'[39m)[33m;[39m
+     [90m 2 |[39m [36mconst[39m envFile [33m=[39m process[33m.[39menv[33m.[39m[33mNODE_ENV[39m [33m===[39m [32m'test'[39m [33m?[39m [32m'.env.test'[39m [33m:[39m [32m'.env'[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 3 |[39m require([32m'dotenv'[39m)[33m.[39mconfig({ path[33m:[39m path[33m.[39mjoin(__dirname[33m,[39m [32m'..'[39m[33m,[39m envFile) })[33m;[39m
+     [90m   |[39m                   [31m[1m^[22m[39m
+     [90m 4 |[39m
+     [90m 5 |[39m [36mconst[39m mongoose [33m=[39m require([32m'mongoose'[39m)[33m;[39m
+     [90m 6 |[39m [36mconst[39m { connectDB } [33m=[39m require([32m'../src/config/db'[39m)[33m;[39m[0m
+
+      at se (node_modules/dotenv/dist/index.cjs:7:155)
+      at Object.ce [as configDotenv] (node_modules/dotenv/dist/index.cjs:7:1059)
+      at Object.ae [as config] (node_modules/dotenv/dist/index.cjs:7:1168)
+      at Object.config (test/setup.js:3:19)
+
+  console.log
+    [DB] MongoDB connected readyState=1
+
+      at log (src/config/db.js:35:13)
+
+  console.error
+    Error creating batch: MongoServerError: E11000 duplicate key error collection: student_platform_console_test.batches index: code_1 dup key: { code: "DUPLICATE" }
+        at InsertOneOperation.handleOk (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\operations\insert.ts:90:13)
+        at executeOperationWithRetries (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\operations\execute_operation.ts:290:26)
+        at processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at executeOperation (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\operations\execute_operation.ts:127:12)
+        at Collection.insertOne (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\collection.ts:294:12)
+        at model.$__save (D:\Projects\Portal\coding-console\college\backend\node_modules\mongoose\lib\model.js:435:16)
+        at maybeTracedSave (D:\Projects\Portal\coding-console\college\backend\node_modules\mongoose\lib\model.js:676:7)
+        at model.create (D:\Projects\Portal\coding-console\college\backend\node_modules\mongoose\lib\model.js:2807:5)
+        at D:\Projects\Portal\coding-console\college\backend\src\routes\admin\batches.js:48:19 {
+      errorLabelSet: Set(0) {},
+      errorResponse: {
+        index: 0,
+        code: 11000,
+        errmsg: 'E11000 duplicate key error collection: student_platform_console_test.batches index: code_1 dup key: { code: "DUPLICATE" }',
+        keyPattern: { code: 1 },
+        keyValue: { code: 'DUPLICATE' }
+      },
+      index: 0,
+      code: 11000,
+      keyPattern: { code: 1 },
+      keyValue: { code: 'DUPLICATE' }
+    }
+
+    [0m [90m 77 |[39m     res[33m.[39mstatus([35m201[39m)[33m.[39mjson({ success[33m:[39m [36mtrue[39m[33m,[39m data })[33m;[39m
+     [90m 78 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 79 |[39m     console[33m.[39merror([32m'Error creating batch:'[39m[33m,[39m error)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 80 |[39m     [36mif[39m (error[33m.[39mcode [33m===[39m [35m11000[39m) {
+     [90m 81 |[39m       [90m// duplicate key[39m
+     [90m 82 |[39m       [36mreturn[39m res[33m.[39mstatus([35m409[39m)[33m.[39mjson({ success[33m:[39m [36mfalse[39m[33m,[39m message[33m:[39m [32m'Batch code already exists'[39m })[33m;[39m[0m
+
+      at error (src/routes/admin/batches.js:79:13)
+
+  console.log
+    [TEARDOWN] starting readyState=1
+
+      at log (test/teardown.js:8:11)
+
+  console.log
+    [TEARDOWN] closing mongoose connection
+
+      at log (test/teardown.js:14:15)
+
+  console.log
+    [DB] Disconnecting MongoDB readyState=1
+
+      at log (src/config/db.js:51:11)
+
+  console.log
+    [DB] MongoDB disconnected readyState=0
+
+      at log (src/config/db.js:58:11)
+
+  console.log
+    [TEARDOWN] mongoose disconnected readyState=0
+
+      at log (test/teardown.js:18:13)
+
+  console.log
+    [TEARDOWN] complete
+
+      at log (test/teardown.js:25:11)
+
+FAIL tests/adminBatches.test.js (49.73 s)
+  ● Admin Batch Management › should return 400 for missing name
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+    [0m [90m  99 |[39m         trainer[33m:[39m trainer[33m.[39m_id[33m,[39m
+     [90m 100 |[39m       })[33m;[39m
+    [31m[1m>[22m[39m[90m 101 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m400[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 102 |[39m     expect(res[33m.[39mbody[33m.[39msuccess)[33m.[39mtoBe([36mfalse[39m)[33m;[39m
+     [90m 103 |[39m   })[33m;[39m
+     [90m 104 |[39m[0m
+
+      at Object.toBe (tests/adminBatches.test.js:101:24)
+
+  ● Admin Batch Management › should return 400 for invalid trainer id
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+    [0m [90m 138 |[39m       })[33m;[39m
+     [90m 139 |[39m     [90m// Mongoose will treat invalid ObjectId as not found, so we expect 400 from our validation[39m
+    [31m[1m>[22m[39m[90m 140 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m400[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 141 |[39m   })[33m;[39m
+     [90m 142 |[39m
+     [90m 143 |[39m   test([32m'should return 400 when trainer does not exist'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (tests/adminBatches.test.js:140:24)
+
+  ● Admin Batch Management › should return 400 when trainer does not exist
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+    [0m [90m 152 |[39m         trainer[33m:[39m fakeId[33m,[39m
+     [90m 153 |[39m       })[33m;[39m
+    [31m[1m>[22m[39m[90m 154 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m400[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 155 |[39m   })[33m;[39m
+     [90m 156 |[39m
+     [90m 157 |[39m   test([32m'should return 400 when trainer is not a TRAINER'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (tests/adminBatches.test.js:154:24)
+
+  ● Admin Batch Management › should return 400 when trainer is not a TRAINER
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+    [0m [90m 169 |[39m         trainer[33m:[39m student[33m.[39m_id[33m,[39m
+     [90m 170 |[39m       })[33m;[39m
+    [31m[1m>[22m[39m[90m 171 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m400[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 172 |[39m   })[33m;[39m
+     [90m 173 |[39m
+     [90m 174 |[39m   test([32m'should return 409 for duplicate batch code'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (tests/adminBatches.test.js:171:24)
+
+  ● Admin Batch Management › should return 400 when endDate before startDate
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+    [0m [90m 206 |[39m         endDate[33m:[39m [32m'2026-01-01'[39m[33m,[39m
+     [90m 207 |[39m       })[33m;[39m
+    [31m[1m>[22m[39m[90m 208 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m400[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 209 |[39m   })[33m;[39m
+     [90m 210 |[39m
+     [90m 211 |[39m   [90m// ---------- LIST ----------[39m[0m
+
+      at Object.toBe (tests/adminBatches.test.js:208:24)
+
+  ● Admin Batch Management › should return 400 for invalid batch id
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+    [0m [90m 243 |[39m       [33m.[39m[36mget[39m([32m'/api/admin/batches/invalidid'[39m)
+     [90m 244 |[39m       [33m.[39m[36mset[39m([32m'Authorization'[39m[33m,[39m [32m`Bearer ${adminToken}`[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 245 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m400[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 246 |[39m   })[33m;[39m
+     [90m 247 |[39m
+     [90m 248 |[39m   test([32m'should return 404 for non‑existent batch'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (tests/adminBatches.test.js:245:24)
+
+  ● Admin Batch Management › should return 404 for non‑existent batch
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+    [0m [90m 252 |[39m       [33m.[39m[36mget[39m([32m`/api/admin/batches/${fakeId}`[39m)
+     [90m 253 |[39m       [33m.[39m[36mset[39m([32m'Authorization'[39m[33m,[39m [32m`Bearer ${adminToken}`[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 254 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m404[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 255 |[39m   })[33m;[39m
+     [90m 256 |[39m
+     [90m 257 |[39m   [90m// ---------- UPDATE ----------[39m[0m
+
+      at Object.toBe (tests/adminBatches.test.js:254:24)
+
+  ● Admin Batch Management › admin can change trainer
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    [0m [90m 274 |[39m     [36mconst[39m newTrainer [33m=[39m [36mawait[39m createTestUser({ name[33m:[39m [32m'New Trainer'[39m[33m,[39m email[33m:[39m generateUniqueEmail([32m'newtrainer@testmail.com'[39m)[33m,[39m password[33m,[39m role[33m:[39m [32m'TRAINER'[39m })[33m;[39m
+     [90m 275 |[39m     [36mconst[39m createRes [33m=[39m [36mawait[39m createBatch(adminToken[33m,[39m trainer[33m.[39m_id)[33m;[39m
+    [31m[1m>[22m[39m[90m 276 |[39m     expect(createRes[33m.[39mbody[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m     |[39m                                    [31m[1m^[22m[39m
+     [90m 277 |[39m     [36mconst[39m batchId [33m=[39m createRes[33m.[39mbody[33m.[39mdata[33m.[39mid[33m;[39m
+     [90m 278 |[39m     [36mconst[39m res [33m=[39m [36mawait[39m request(app)
+     [90m 279 |[39m       [33m.[39mpatch([32m`/api/admin/batches/${batchId}`[39m)[0m
+
+      at Object.toBe (tests/adminBatches.test.js:276:36)
+
+  ● Admin Batch Management › should return 409 for duplicate code on update
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    [0m [90m 302 |[39m     [36mconst[39m code2 [33m=[39m [32m`CODE2${uniqueSuffix()}`[39m[33m;[39m
+     [90m 303 |[39m     [36mconst[39m batch1 [33m=[39m [36mawait[39m createBatch(adminToken[33m,[39m trainer[33m.[39m_id[33m,[39m { code[33m:[39m code1 })[33m;[39m
+    [31m[1m>[22m[39m[90m 304 |[39m     expect(batch1[33m.[39mbody[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m     |[39m                                 [31m[1m^[22m[39m
+     [90m 305 |[39m     [36mconst[39m batch2 [33m=[39m [36mawait[39m createBatch(adminToken[33m,[39m trainer[33m.[39m_id[33m,[39m { code[33m:[39m code2 })[33m;[39m
+     [90m 306 |[39m     expect(batch2[33m.[39mbody[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m 307 |[39m     [36mconst[39m res [33m=[39m [36mawait[39m request(app)[0m
+
+      at Object.toBe (tests/adminBatches.test.js:304:33)
+
+  ● Admin Batch Management › student cannot access admin batch routes
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 401
+
+    [0m [90m 355 |[39m       [33m.[39m[36mget[39m([32m'/api/admin/batches'[39m)
+     [90m 356 |[39m       [33m.[39m[36mset[39m([32m'Authorization'[39m[33m,[39m [32m`Bearer ${token}`[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 357 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m403[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 358 |[39m   })[33m;[39m
+     [90m 359 |[39m
+     [90m 360 |[39m   test([32m'unauthenticated request returns 401'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (tests/adminBatches.test.js:357:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       10 failed, 13 passed, 23 total
+Snapshots:   0 total
+Time:        50.458 s
+Ran all test suites matching tests/adminBatches.test.js.

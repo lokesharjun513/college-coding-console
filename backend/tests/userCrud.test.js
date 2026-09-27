@@ -37,7 +37,7 @@ describe('User CRUD', () => {
     const updated = await User.findByIdAndUpdate(
       created._id,
       { name: 'Updated Name' },
-      { new: true }
+      { returnDocument: 'after' }
     );
     expect(updated.name).toBe('Updated Name');
 

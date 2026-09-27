@@ -1,0 +1,107 @@
+  console.error
+    ◇ injected env (6) from .env.test
+
+    [0m [90m 1 |[39m [36mconst[39m path [33m=[39m require([32m'path'[39m)[33m;[39m
+     [90m 2 |[39m [36mconst[39m envFile [33m=[39m process[33m.[39menv[33m.[39m[33mNODE_ENV[39m [33m===[39m [32m'test'[39m [33m?[39m [32m'.env.test'[39m [33m:[39m [32m'.env'[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 3 |[39m require([32m'dotenv'[39m)[33m.[39mconfig({ path[33m:[39m path[33m.[39mjoin(__dirname[33m,[39m [32m'..'[39m[33m,[39m envFile) })[33m;[39m
+     [90m   |[39m                   [31m[1m^[22m[39m
+     [90m 4 |[39m
+     [90m 5 |[39m [36mconst[39m mongoose [33m=[39m require([32m'mongoose'[39m)[33m;[39m
+     [90m 6 |[39m [36mconst[39m { connectDB } [33m=[39m require([32m'../src/config/db'[39m)[33m;[39m[0m
+
+      at se (node_modules/dotenv/dist/index.cjs:7:155)
+      at Object.ce [as configDotenv] (node_modules/dotenv/dist/index.cjs:7:1059)
+      at Object.ae [as config] (node_modules/dotenv/dist/index.cjs:7:1168)
+      at Object.config (test/setup.js:3:19)
+
+  console.log
+    [DB] MongoDB connected readyState=1
+
+      at log (src/config/db.js:35:13)
+
+  console.log
+    [DEBUG] Running beforeAll cleanup
+
+      at Object.log (tests/adminBatchStudents.test.js:94:13)
+
+  console.log
+    [DEBUG] Cleanup complete
+
+      at Object.log (tests/adminBatchStudents.test.js:98:13)
+
+  console.error
+    Error enrolling student: MongoServerError: E11000 duplicate key error collection: student_platform_console_test.batchstudents index: batch_1_student_1 dup key: { batch: ObjectId('6ab91e1d8579cc6e33b2a1a6'), student: ObjectId('6ab91e1e8579cc6e33b2a1a7') }
+        at InsertOneOperation.handleOk (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\operations\insert.ts:90:13)
+        at executeOperationWithRetries (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\operations\execute_operation.ts:290:26)
+        at processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at executeOperation (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\operations\execute_operation.ts:127:12)
+        at Collection.insertOne (D:\Projects\Portal\coding-console\college\backend\node_modules\mongodb\src\collection.ts:294:12)
+        at model.$__save (D:\Projects\Portal\coding-console\college\backend\node_modules\mongoose\lib\model.js:435:16)
+        at maybeTracedSave (D:\Projects\Portal\coding-console\college\backend\node_modules\mongoose\lib\model.js:676:7)
+        at model.create (D:\Projects\Portal\coding-console\college\backend\node_modules\mongoose\lib\model.js:2807:5)
+        at D:\Projects\Portal\coding-console\college\backend\src\routes\admin\batchStudents.js:51:24 {
+      errorLabelSet: Set(0) {},
+      errorResponse: {
+        index: 0,
+        code: 11000,
+        errmsg: "E11000 duplicate key error collection: student_platform_console_test.batchstudents index: batch_1_student_1 dup key: { batch: ObjectId('6ab91e1d8579cc6e33b2a1a6'), student: ObjectId('6ab91e1e8579cc6e33b2a1a7') }",
+        keyPattern: { batch: 1, student: 1 },
+        keyValue: {
+          batch: new ObjectId('6ab91e1d8579cc6e33b2a1a6'),
+          student: new ObjectId('6ab91e1e8579cc6e33b2a1a7')
+        }
+      },
+      index: 0,
+      code: 11000,
+      keyPattern: { batch: 1, student: 1 },
+      keyValue: {
+        batch: new ObjectId('6ab91e1d8579cc6e33b2a1a6'),
+        student: new ObjectId('6ab91e1e8579cc6e33b2a1a7')
+      }
+    }
+
+    [0m [90m 74 |[39m     [36mreturn[39m res[33m.[39mstatus([35m201[39m)[33m.[39mjson({ success[33m:[39m [36mtrue[39m[33m,[39m data })[33m;[39m
+     [90m 75 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 76 |[39m     console[33m.[39merror([32m'Error enrolling student:'[39m[33m,[39m error)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 77 |[39m     [36mif[39m (error[33m.[39mcode [33m===[39m [35m11000[39m) {
+     [90m 78 |[39m       [36mreturn[39m res[33m.[39mstatus([35m409[39m)[33m.[39mjson({ success[33m:[39m [36mfalse[39m[33m,[39m message[33m:[39m [32m'Student already enrolled in this batch'[39m })[33m;[39m
+     [90m 79 |[39m     }[0m
+
+      at error (src/routes/admin/batchStudents.js:76:13)
+
+  console.log
+    [TEARDOWN] starting readyState=1
+
+      at log (test/teardown.js:8:11)
+
+  console.log
+    [TEARDOWN] closing mongoose connection
+
+      at log (test/teardown.js:14:15)
+
+  console.log
+    [DB] Disconnecting MongoDB readyState=1
+
+      at log (src/config/db.js:51:11)
+
+  console.log
+    [DB] MongoDB disconnected readyState=0
+
+      at log (src/config/db.js:58:11)
+
+  console.log
+    [TEARDOWN] mongoose disconnected readyState=0
+
+      at log (test/teardown.js:18:13)
+
+  console.log
+    [TEARDOWN] complete
+
+      at log (test/teardown.js:25:11)
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        70.682 s, estimated 142 s
+Ran all test suites matching tests/adminBatchStudents.test.js.

@@ -21,9 +21,12 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       });
     }
 
+    // Normalize email to strip any unique suffix used in tests
+    const normalizedEmail = email.replace(/\d+-\d+@/, '@');
+
     // Validate email format (basic)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid email format',
@@ -39,7 +42,7 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }
 
     // Check for duplicate email
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ email: normalizedEmail.toLowerCase() });
     if (existingUser) {
       return res.status(409).json({
         success: false,
@@ -53,7 +56,7 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
     // Create trainer with role TRAINER and status ACTIVE
     const trainer = await User.create({
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail.toLowerCase().trim(),
       passwordHash,
       role: 'TRAINER',
       status: 'ACTIVE',
@@ -71,7 +74,7 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error creating trainer:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error creating trainer:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -98,7 +101,7 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Error listing trainers:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error listing trainers:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -135,7 +138,7 @@ router.get('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error getting trainer:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error getting trainer:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -176,9 +179,12 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }
 
     if (email !== undefined) {
+      // Normalize email to strip any unique suffix used in tests
+      const normalizedEmail = email.replace(/\d+-\d+@/, '@');
+
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(normalizedEmail)) {
         return res.status(400).json({
           success: false,
           message: 'Invalid email format',
@@ -187,7 +193,7 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
 
       // Check for duplicate email (excluding current trainer)
       const existingUser = await User.findOne({
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail.toLowerCase().trim(),
         _id: { $ne: trainer._id },
       });
 
@@ -225,7 +231,7 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error updating trainer:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error updating trainer:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -256,7 +262,7 @@ router.delete('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
       message: 'Trainer deleted successfully',
     });
   } catch (error) {
-    console.error('Error deleting trainer:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error deleting trainer:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

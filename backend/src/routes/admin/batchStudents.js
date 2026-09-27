@@ -73,7 +73,7 @@ router.post('/students', requireAuth, requireRole('ADMIN'), async (req, res) => 
     };
     return res.status(201).json({ success: true, data });
   } catch (error) {
-    console.error('Error enrolling student:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error enrolling student:', error);
     if (error.code === 11000) {
       return res.status(409).json({ success: false, message: 'Student already enrolled in this batch' });
     }
@@ -114,7 +114,7 @@ router.get('/students', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }));
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error listing batch students:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error listing batch students:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -151,7 +151,7 @@ router.get('/students/:studentId', requireAuth, requireRole('ADMIN'), async (req
     };
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error getting enrollment:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error getting enrollment:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -196,7 +196,7 @@ router.patch('/students/:studentId', requireAuth, requireRole('ADMIN'), async (r
     };
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating enrollment:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error updating enrollment:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -217,7 +217,7 @@ router.delete('/students/:studentId', requireAuth, requireRole('ADMIN'), async (
     }
     return res.json({ success: true, data: null });
   } catch (error) {
-    console.error('Error deleting enrollment:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error deleting enrollment:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

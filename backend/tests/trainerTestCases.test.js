@@ -90,12 +90,10 @@ describe('Trainer Test Case Management', () => {
   const password = 'StrongP@ssw0rd';
 
   beforeAll(async () => {
-    console.log('[DEBUG] Running beforeAll cleanup');
     await TestCase.deleteMany({});
     await Problem.deleteMany({});
     await Batch.deleteMany({});
     await User.deleteMany({});
-    console.log('[DEBUG] Cleanup complete');
   });
 
   afterEach(async () => {

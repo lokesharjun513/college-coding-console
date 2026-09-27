@@ -1,9 +1,18 @@
+// Suppress dotenv injected env debug messages
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('injected env')) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
+
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+require('dotenv').config({ path: path.join(__dirname, '..', envFile), silent: true, debug: false });
 
 const mongoose = require('mongoose');
-const { connectDB } = require('../src/config/db');
-const teardownDB = require('./teardown');
+const { connectDB, disconnectDB } = require('../src/config/db');
 
 async function cleanCollections() {
   const collections = mongoose.connection.collections;
@@ -16,13 +25,19 @@ async function cleanCollections() {
   }
 }
 
-// Runs in each worker (see jest.config.js). The worker owns its Mongoose
-// connection, so it connects before the tests and disconnects after them.
+// Single connection managed per Jest worker
+let connectionPromise = null;
+
 beforeAll(async () => {
-  await connectDB();
+  if (!connectionPromise) {
+    connectionPromise = connectDB();
+  }
+  await connectionPromise;
   await cleanCollections();
 });
 
 afterAll(async () => {
-  await teardownDB();
+  await disconnectDB();
 });
+
+

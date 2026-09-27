@@ -138,7 +138,7 @@ router.post('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
 
     return res.status(201).json({ success: true, data });
   } catch (error) {
-    console.error('Error creating problem:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error creating problem:', error);
     if (error.code === 11000) {
       // Duplicate slug
       return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
@@ -193,7 +193,7 @@ router.get('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error listing problems:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error listing problems:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -272,7 +272,7 @@ router.get('/:problemId', requireAuth, requireRole('TRAINER'), async (req, res) 
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error getting problem:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error getting problem:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -385,7 +385,7 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), async (req, res
     if (allowedLanguages !== undefined) problem.allowedLanguages = Array.isArray(allowedLanguages) ? allowedLanguages : [];
     if (status !== undefined) problem.status = status;
 
-    const updatedProblem = await Problem.findOneAndUpdate(
+    let updatedProblem = await Problem.findOneAndUpdate(
       { _id: problemId },
       {
         title: problem.title,
@@ -399,14 +399,13 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), async (req, res
         allowedLanguages: problem.allowedLanguages,
         status: problem.status,
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
-
     if (!updatedProblem) {
       return res.status(404).json({ success: false, message: 'Problem not found' });
     }
-
-    await updatedProblem.populate([
+    // Populate related fields to include batch and creator details
+    updatedProblem = await Problem.findById(updatedProblem._id).populate([
       { path: 'createdBy', select: '-passwordHash' },
       { path: 'batch', select: '-__v' }
     ]);
@@ -442,7 +441,7 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), async (req, res
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating problem:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error updating problem:', error);
     if (error.code === 11000) {
       return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
     }
@@ -490,7 +489,7 @@ router.delete('/:problemId', requireAuth, requireRole('TRAINER'), async (req, re
     const updatedProblem = await Problem.findOneAndUpdate(
       { _id: problemId },
       { status: 'ARCHIVED' },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updatedProblem) {
@@ -499,7 +498,7 @@ router.delete('/:problemId', requireAuth, requireRole('TRAINER'), async (req, re
 
     return res.json({ success: true, data: null });
   } catch (error) {
-    console.error('Error deleting problem:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error deleting problem:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

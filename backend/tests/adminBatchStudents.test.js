@@ -91,11 +91,9 @@ describe('Admin Batch Student Management', () => {
   beforeAll(async () => {
     // DB connection managed globally by setup.js
     // Clean any leftover data from previous runs
-    console.log('[DEBUG] Running beforeAll cleanup');
     await BatchStudent.deleteMany({});
     await Batch.deleteMany({});
     await User.deleteMany({});
-    console.log('[DEBUG] Cleanup complete');
   });
 
 

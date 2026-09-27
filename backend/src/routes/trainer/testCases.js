@@ -41,7 +41,7 @@ async function verifyProblemOwnership(req, res, next) {
     req.problem = problem;
     next();
   } catch (error) {
-    console.error('Error verifying problem ownership:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error verifying problem ownership:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
@@ -94,7 +94,7 @@ router.post('/', requireAuth, requireRole('TRAINER'), verifyProblemOwnership, as
 
     return res.status(201).json({ success: true, data });
   } catch (error) {
-    console.error('Error creating test case:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error creating test case:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -125,7 +125,7 @@ router.get('/', requireAuth, requireRole('TRAINER'), verifyProblemOwnership, asy
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error listing test cases:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error listing test cases:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -161,7 +161,7 @@ router.get('/:testCaseId', requireAuth, requireRole('TRAINER'), verifyProblemOwn
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error getting test case:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error getting test case:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -210,7 +210,7 @@ router.patch('/:testCaseId', requireAuth, requireRole('TRAINER'), verifyProblemO
     const updatedTestCase = await TestCase.findOneAndUpdate(
       { _id: testCaseId, problem: problemId },
       updateFields,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!updatedTestCase) {
@@ -231,7 +231,7 @@ router.patch('/:testCaseId', requireAuth, requireRole('TRAINER'), verifyProblemO
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating test case:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error updating test case:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -255,7 +255,7 @@ router.delete('/:testCaseId', requireAuth, requireRole('TRAINER'), verifyProblem
 
     return res.json({ success: true, data: null });
   } catch (error) {
-    console.error('Error deleting test case:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error deleting test case:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

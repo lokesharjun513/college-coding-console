@@ -45,7 +45,7 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }
 
     // Create batch
-    const batch = await Batch.create({
+    const batchData = {
       name: name.trim(),
       code: code.trim(),
       description,
@@ -53,7 +53,9 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       status: status || 'ACTIVE',
       startDate,
       endDate,
-    });
+    };
+
+    const batch = await Batch.create(batchData);
 
     const data = {
       id: batch._id,
@@ -74,13 +76,14 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       updatedAt: batch.updatedAt,
     };
 
+
     res.status(201).json({ success: true, data });
   } catch (error) {
-    console.error('Error creating batch:', error);
-    if (error.code === 11000) {
+    if (error && error.code == 11000) {
       // duplicate key
       return res.status(409).json({ success: false, message: 'Batch code already exists' });
     }
+    if (process.env.NODE_ENV !== 'test') console.error('Error creating batch:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -114,7 +117,7 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }));
     res.json({ success: true, data });
   } catch (error) {
-    console.error('Error listing batches:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error listing batches:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -155,7 +158,7 @@ router.get('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     };
     res.json({ success: true, data });
   } catch (error) {
-    console.error('Error getting batch:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error getting batch:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -237,10 +240,10 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     };
     res.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating batch:', error);
-    if (error.code === 11000) {
+    if (error && error.code == 11000) {
       return res.status(409).json({ success: false, message: 'Batch code already exists' });
     }
+    if (process.env.NODE_ENV !== 'test') console.error('Error updating batch:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -261,7 +264,7 @@ router.delete('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }
     res.json({ success: true, data: null });
   } catch (error) {
-    console.error('Error deleting batch:', error);
+    if (process.env.NODE_ENV !== 'test') console.error('Error deleting batch:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

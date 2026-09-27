@@ -55,12 +55,14 @@ describe('Admin Trainer Management', () => {
     test('should create trainer successfully', async () => {
       const token = await createAdminAndGetToken();
 
+      const trainerEmail = generateUniqueEmail('trainer@example.com');
+
       const res = await request(app)
         .post('/api/admin/trainers')
         .set('Authorization', `Bearer ${token}`)
         .send({
           name: 'John Trainer',
-          email: 'trainer@example.com',
+          email: trainerEmail,
           password: 'Password123'
         });
 

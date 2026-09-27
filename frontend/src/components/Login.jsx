@@ -1,28 +1,24 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-export default function Login({ onLogin }) {
+export default function Login() {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-      // Assuming backend returns { token: '<jwt>' }
-      onLogin(data.token);
+      await login(email, password);
+      // Redirect will be handled by AuthProvider or router after login
     } catch (err) {
-      setError(err.message);
+      setError(err?.response?.data?.message || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -32,14 +28,16 @@ export default function Login({ onLogin }) {
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Email:</label><br />
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label htmlFor="email">Email:</label><br />
+          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
         </div>
         <div style={{ marginTop: '1rem' }}>
-          <label>Password:</label><br />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <label htmlFor="password">Password:</label><br />
+          <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
         </div>
-        <button type="submit" style={{ marginTop: '1rem' }}>Login</button>
+        <button type="submit" style={{ marginTop: '1rem' }} disabled={loading}>
+          {loading ? 'Logging in…' : 'Login'}
+        </button>
       </form>
     </div>
   );

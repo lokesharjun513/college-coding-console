@@ -1,0 +1,56 @@
+  console.error
+    ◇ injected env (6) from .env.test
+
+    [0m [90m 1 |[39m [36mconst[39m path [33m=[39m require([32m'path'[39m)[33m;[39m
+     [90m 2 |[39m [36mconst[39m envFile [33m=[39m process[33m.[39menv[33m.[39m[33mNODE_ENV[39m [33m===[39m [32m'test'[39m [33m?[39m [32m'.env.test'[39m [33m:[39m [32m'.env'[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 3 |[39m require([32m'dotenv'[39m)[33m.[39mconfig({ path[33m:[39m path[33m.[39mjoin(__dirname[33m,[39m [32m'..'[39m[33m,[39m envFile) })[33m;[39m
+     [90m   |[39m                   [31m[1m^[22m[39m
+     [90m 4 |[39m
+     [90m 5 |[39m [36mconst[39m mongoose [33m=[39m require([32m'mongoose'[39m)[33m;[39m
+     [90m 6 |[39m [36mconst[39m { connectDB } [33m=[39m require([32m'../src/config/db'[39m)[33m;[39m[0m
+
+      at se (node_modules/dotenv/dist/index.cjs:7:155)
+      at Object.ce [as configDotenv] (node_modules/dotenv/dist/index.cjs:7:1059)
+      at Object.ae [as config] (node_modules/dotenv/dist/index.cjs:7:1168)
+      at Object.config (test/setup.js:3:19)
+
+  console.log
+    [DB] MongoDB connected readyState=1
+
+      at log (src/config/db.js:35:13)
+
+  console.log
+    [TEARDOWN] starting readyState=1
+
+      at log (test/teardown.js:8:11)
+
+  console.log
+    [TEARDOWN] closing mongoose connection
+
+      at log (test/teardown.js:14:15)
+
+  console.log
+    [DB] Disconnecting MongoDB readyState=1
+
+      at log (src/config/db.js:51:11)
+
+  console.log
+    [DB] MongoDB disconnected readyState=0
+
+      at log (src/config/db.js:58:11)
+
+  console.log
+    [TEARDOWN] mongoose disconnected readyState=0
+
+      at log (test/teardown.js:18:13)
+
+  console.log
+    [TEARDOWN] complete
+
+      at log (test/teardown.js:25:11)
+
+Test Suites: 1 passed, 1 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        109.753 s
+Ran all test suites matching tests/studentSubmissions.test.js.

@@ -7,7 +7,14 @@ const argon2 = require('argon2');
  */
 async function hashPassword(password) {
   // Argon2id provides resistance against side‑channel attacks.
-  return await argon2.hash(password, { type: argon2.argon2id });
+  const options = { type: argon2.argon2id };
+  if (process.env.NODE_ENV === 'test') {
+    // Reduce cost for test environment to speed up hashing
+    options.timeCost = 2;
+    options.memoryCost = 64 * 1024; // 64 MB
+    options.parallelism = 1;
+  }
+  return await argon2.hash(password, options);
 }
 
 /**
