@@ -208,4 +208,69 @@ router.get('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'),
   }
 });
 
+// POST /api/trainer/batches/:batchId/students
+router.post('/:batchId/students', requireAuth, requireRole('TRAINER'), async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const { studentId } = req.body;
+
+    const batch = await Batch.findById(batchId);
+    if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
+
+    const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
+    if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
+
+    const enrollment = await BatchStudent.create({ batch: batchId, student: studentId });
+    await enrollment.populate({ path: 'student', select: '-passwordHash' });
+
+    return res.status(201).json({ success: true, data: enrollment });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ success: false, message: 'Student already enrolled' });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// PATCH /api/trainer/batches/:batchId/students/:studentId
+router.patch('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'), async (req, res) => {
+  try {
+    const { batchId, studentId } = req.params;
+    const { status } = req.body;
+
+    const batch = await Batch.findById(batchId);
+    if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
+
+    const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
+    if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
+
+    const enrollment = await BatchStudent.findOne({ batch: batchId, student: studentId });
+    if (!enrollment) return res.status(404).json({ success: false, message: 'Enrollment not found' });
+
+    enrollment.status = status;
+    await enrollment.save();
+    return res.json({ success: true, data: enrollment });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// DELETE /api/trainer/batches/:batchId/students/:studentId
+router.delete('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'), async (req, res) => {
+  try {
+    const { batchId, studentId } = req.params;
+
+    const batch = await Batch.findById(batchId);
+    if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
+
+    const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
+    if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
+
+    const result = await BatchStudent.findOneAndDelete({ batch: batchId, student: studentId });
+    if (!result) return res.status(404).json({ success: false, message: 'Enrollment not found' });
+
+    return res.json({ success: true, data: null });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 module.exports = router;

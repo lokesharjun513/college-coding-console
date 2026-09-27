@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
+import { useNavigate } from 'react-router-dom';
+
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -14,13 +17,20 @@ export default function Login() {
     setError(null);
     try {
       await login(email, password);
-      // Redirect will be handled by AuthProvider or router after login
     } catch (err) {
       setError(err?.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
+
+  // Redirect after successful login based on role
+  React.useEffect(() => {
+    if (user?.role) {
+      const target = user.role === 'ADMIN' ? '/admin' : user.role === 'TRAINER' ? '/trainer' : '/student';
+      navigate(target, { replace: true });
+    }
+  }, [user, navigate]);
 
   return (
     <div style={{ maxWidth: '400px', margin: 'auto', padding: '2rem' }}>

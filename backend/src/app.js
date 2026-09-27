@@ -42,6 +42,9 @@ app.use(
   trainerProblemRouter
 );
 
+// Trainer performance endpoints
+app.use('/api/trainer/performance', require('./routes/trainer/performance'));
+
 app.use(
   '/api/trainer/problems/:problemId/test-cases',
   trainerTestCaseRouter
