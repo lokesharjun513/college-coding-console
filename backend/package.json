@@ -13,16 +13,16 @@
   "license": "ISC",
   "dependencies": {
     "argon2": "*",
-    "jsonwebtoken": "*",
     "cors": "*",
     "dotenv": "*",
     "express": "*",
     "helmet": "*",
+    "jsonwebtoken": "*",
     "mongoose": "*"
   },
   "devDependencies": {
-    "supertest": "*",
     "jest": "*",
-    "nodemon": "*"
+    "nodemon": "*",
+    "supertest": "*"
   }
 }
