@@ -54,7 +54,7 @@ async function createBatch(adminToken, trainerId, overrides = {}) {
 
 async function createProblem(trainerToken, batchId, overrides = {}) {
   const defaultData = {
-    title: 'Sample Problem',
+    title: `Sample Problem ${uniqueSuffix()}`,
     description: 'Sample problem description',
     difficulty: 'EASY',
     examples: [{ input: '1', output: '2', explanation: 'just add 1' }],
@@ -138,8 +138,8 @@ describe('Trainer Problem Management', () => {
     const res = await createProblem(trainerToken, batchId);
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.title).toBe('Sample Problem');
-    expect(res.body.data.slug).toBe('sample-problem');
+    expect(res.body.data.title).toMatch(/Sample Problem/);
+    expect(res.body.data.slug).toMatch(/^sample-problem-/);
     expect(res.body.data.createdBy.id).toBe(trainer._id.toString());
   });
 

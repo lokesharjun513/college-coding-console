@@ -64,9 +64,10 @@ router.post('/login', async (req, res) => {
         code: 'AUTHENTICATION_REQUIRED',
       });
     }
+    const secret = getJwtSecret();
     const token = jwt.sign(
       { sub: user._id.toString(), role: user.role },
-      getJwtSecret(),
+      secret,
       { expiresIn: process.env.ACCESS_TOKEN_TTL || '15m' }
     );
     return res.json({ success: true, token });
