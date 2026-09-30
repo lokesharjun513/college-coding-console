@@ -5,11 +5,13 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../middleware/auth');
 const { requireAnyRole } = require('../../middleware/role');
+const { submissionLimiter } = require('../../middleware/rateLimiter');
 const Submission = require('../../models/Submission');
 const Problem = require('../../models/Problem');
 const TestCase = require('../../models/TestCase');
 const mongoose = require('mongoose');
 const { execute } = require('../../services/CodeExecutor');
+const { getCompilerById, LEGACY_TO_COMPILER } = require('../../services/compilerRegistry');
 
 // Helper to map Judge0 status IDs to our verdicts
 function mapJudgeStatusToVerdict(status) {
@@ -30,10 +32,33 @@ function mapJudgeStatusToVerdict(status) {
   }
 }
 
-router.post('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
-  const { problemId, code, language } = req.body;
-  if (!problemId || !code || !language) {
+router.post('/', submissionLimiter, requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
+  const { problemId, code, language, compilerId } = req.body;
+  if (!problemId || !code) {
     return res.status(400).json({ success: false, message: 'Missing fields', code: 'INVALID_INPUT' });
+  }
+
+  // Resolve language: prefer explicit compilerId, fall back to legacy language key
+  let resolvedLanguage = language;
+  if (!resolvedLanguage && compilerId) {
+    // Find the legacy language that maps to this compilerId
+    const entry = await getCompilerById(compilerId);
+    if (entry) {
+      resolvedLanguage = entry.language;
+    }
+    // Also check LEGACY_TO_COMPILER
+    if (!resolvedLanguage) {
+      for (const [legacy, cid] of Object.entries(LEGACY_TO_COMPILER)) {
+        if (cid === compilerId) {
+          resolvedLanguage = legacy;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!resolvedLanguage) {
+    return res.status(400).json({ success: false, message: 'Missing language or compilerId', code: 'INVALID_INPUT' });
   }
 
   // Find problem and verify it exists
@@ -43,7 +68,7 @@ router.post('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
   }
 
   // Verify language is allowed for the problem
-  if (!problem.allowedLanguages.includes(language)) {
+  if (!problem.allowedLanguages.includes(resolvedLanguage)) {
     return res.status(400).json({ success: false, message: 'Language not allowed', code: 'INVALID_INPUT' });
   }
 
@@ -56,7 +81,7 @@ router.post('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
 
   for (const tc of testCases) {
     try {
-      const execResult = await execute({ source: code, language, stdin: tc.input });
+      const execResult = await execute({ source: code, language: resolvedLanguage, stdin: tc.input, compilerId });
       lastExecResult = execResult;
 
 

@@ -1,30 +1,38 @@
-const argon2 = require('argon2');
+const bcrypt = require('bcryptjs');
 
 /**
- * Hash a plaintext password using Argon2id.
+ * Hash a plaintext password using bcrypt.
  * @param {string} password - Plaintext password.
  * @returns {Promise<string>} - The hashed password.
  */
 async function hashPassword(password) {
-  // Argon2id provides resistance against side‑channel attacks.
-  const options = { type: argon2.argon2id };
-  if (process.env.NODE_ENV === 'test') {
-    // Reduce cost for test environment to speed up hashing
-    options.timeCost = 2;
-    options.memoryCost = 64 * 1024; // 64 MB
-    options.parallelism = 1;
-  }
-  return await argon2.hash(password, options);
+  // Use bcrypt with a reasonable salt rounds.
+  const saltRounds = process.env.NODE_ENV === 'test' ? 1 : 10;
+  return await bcrypt.hash(password, saltRounds);
 }
 
 /**
- * Verify a plaintext password against a stored Argon2 hash.
+ * Verify a plaintext password against a stored bcrypt hash.
  * @param {string} password - Plaintext password to verify.
- * @param {string} hash - Stored Argon2 hash.
+ * @param {string} hash - Stored bcrypt hash.
  * @returns {Promise<boolean>} - True if the password matches the hash.
  */
 async function verifyPassword(password, hash) {
-  return await argon2.verify(hash, password);
+  return await bcrypt.compare(password, hash);
 }
 
-module.exports = { hashPassword, verifyPassword };
+/**
+ * Generate initial password from email address.
+ * Extracts everything before "@" symbol.
+ * @param {string} email - Email address.
+ * @returns {string} - Generated password (part before @).
+ */
+function generatePasswordFromEmail(email) {
+  const atIndex = email.indexOf('@');
+  if (atIndex === -1) {
+    throw new Error('Invalid email address');
+  }
+  return email.substring(0, atIndex);
+}
+
+module.exports = { hashPassword, verifyPassword, generatePasswordFromEmail };

@@ -63,14 +63,14 @@ describe('Admin Trainer Management', () => {
         .send({
           name: 'John Trainer',
           email: trainerEmail,
-          password: 'Password123'
+          trainerId: 'T001'
         });
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('id');
       expect(res.body.data.name).toBe('John Trainer');
-      expect(res.body.data.email).toBe('trainer@example.com');
+      expect(res.body.data.email).toBe(trainerEmail);
       expect(res.body.data.role).toBe('TRAINER');
       expect(res.body.data.status).toBe('ACTIVE');
       expect(res.body.data).not.toHaveProperty('passwordHash');
@@ -84,12 +84,12 @@ describe('Admin Trainer Management', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({
           email: 'trainer@example.com',
-          password: 'Password123'
+          trainerId: 'T001'
         });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Name, email, and password are required');
+      expect(res.body.message).toContain('Name, email, and trainerId are required');
     });
 
     test('should return 400 for missing email', async () => {
@@ -100,15 +100,15 @@ describe('Admin Trainer Management', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({
           name: 'John Trainer',
-          password: 'Password123'
+          trainerId: 'T001'
         });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Name, email, and password are required');
+      expect(res.body.message).toContain('Name, email, and trainerId are required');
     });
 
-    test('should return 400 for missing password', async () => {
+    test('should return 400 for missing trainer ID', async () => {
       const token = await createAdminAndGetToken();
 
       const res = await request(app)
@@ -121,7 +121,7 @@ describe('Admin Trainer Management', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Name, email, and password are required');
+      expect(res.body.message).toContain('Name, email, and trainerId are required');
     });
 
     test('should return 400 for invalid email format', async () => {
@@ -133,7 +133,7 @@ describe('Admin Trainer Management', () => {
         .send({
           name: 'John Trainer',
           email: 'invalid-email',
-          password: 'Password123'
+          trainerId: 'T001'
         });
 
       expect(res.status).toBe(400);
@@ -142,20 +142,7 @@ describe('Admin Trainer Management', () => {
     });
 
     test('should return 400 for weak password (less than 8 chars)', async () => {
-      const token = await createAdminAndGetToken();
-
-      const res = await request(app)
-        .post('/api/admin/trainers')
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          name: 'John Trainer',
-          email: 'trainer@example.com',
-          password: '123'
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Password must be at least 8 characters long');
+      // Skipped since password is auto-generated
     });
 
     test('should return 409 for duplicate email', async () => {
@@ -174,7 +161,7 @@ describe('Admin Trainer Management', () => {
         .send({
           name: 'John Trainer',
           email: 'trainer@example.com',
-          password: 'Password123'
+          trainerId: 'T001'
         });
 
       expect(res.status).toBe(409);
@@ -191,7 +178,7 @@ describe('Admin Trainer Management', () => {
         .send({
           name: 'John Trainer',
           email: 'trainer@example.com',
-          password: 'Password123',
+          trainerId: 'T001',
           role: 'ADMIN' // Attempt to set role to ADMIN
         });
 
@@ -249,9 +236,10 @@ describe('Admin Trainer Management', () => {
   describe('GET SINGLE TRAINER', () => {
     test('should get trainer by id', async () => {
       const token = await createAdminAndGetToken();
+      const email = 'trainer@example.com';
       const trainer = await createTestUser({
         name: 'John Trainer',
-        email: 'trainer@example.com',
+        email: email,
         password: 'password',
         role: 'TRAINER'
       });
@@ -264,7 +252,7 @@ describe('Admin Trainer Management', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.id).toBe(trainer._id.toString());
       expect(res.body.data.name).toBe('John Trainer');
-      expect(res.body.data.email).toBe('trainer@example.com');
+      expect(res.body.data.email).toBe(email);
       expect(res.body.data.role).toBe('TRAINER');
       expect(res.body.data.status).toBe('ACTIVE');
       expect(res.body.data).not.toHaveProperty('passwordHash');
@@ -323,9 +311,10 @@ describe('Admin Trainer Management', () => {
   describe('UPDATE TRAINER', () => {
     test('should update trainer name successfully', async () => {
       const token = await createAdminAndGetToken();
+      const email = 'trainer@example.com';
       const trainer = await createTestUser({
         name: 'John Trainer',
-        email: 'trainer@example.com',
+        email: email,
         password: 'password',
         role: 'TRAINER'
       });
@@ -340,7 +329,7 @@ describe('Admin Trainer Management', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.name).toBe('Johnny Trainer');
-      expect(res.body.data.email).toBe('trainer@example.com'); // Unchanged
+      expect(res.body.data.email).toBe(email); // Unchanged
       expect(res.body.data.role).toBe('TRAINER'); // Unchanged
       expect(res.body.data.status).toBe('ACTIVE'); // Unchanged
     });
@@ -371,9 +360,10 @@ describe('Admin Trainer Management', () => {
 
     test('should update trainer status successfully', async () => {
       const token = await createAdminAndGetToken();
+      const email = 'trainer@example.com';
       const trainer = await createTestUser({
         name: 'John Trainer',
-        email: 'trainer@example.com',
+        email: email,
         password: 'password',
         role: 'TRAINER'
       });
@@ -389,7 +379,7 @@ describe('Admin Trainer Management', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.status).toBe('INACTIVE');
       expect(res.body.data.name).toBe('John Trainer'); // Unchanged
-      expect(res.body.data.email).toBe('trainer@example.com'); // Unchanged
+      expect(res.body.data.email).toBe(email); // Unchanged
       expect(res.body.data.role).toBe('TRAINER'); // Unchanged
     });
 
@@ -589,7 +579,7 @@ describe('Admin Trainer Management', () => {
           res = await request(app)
             .post(endpoint.path)
             .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Test', email: 'test@test.com', password: 'test123' });
+            .send({ name: 'Test', email: 'test@test.com', trainerId: 'T999' });
         } else if (endpoint.method === 'patch') {
           res = await request(app)
             .patch(endpoint.path)
@@ -630,7 +620,7 @@ describe('Admin Trainer Management', () => {
           res = await request(app)
             .post(endpoint.path)
             .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Test', email: 'test@test.com', password: 'test123' });
+            .send({ name: 'Test', email: 'test@test.com', trainerId: 'T999' });
         } else if (endpoint.method === 'patch') {
           res = await request(app)
             .patch(endpoint.path)
@@ -665,7 +655,7 @@ describe('Admin Trainer Management', () => {
         .send({
           name: 'New Trainer',
           email: 'newtrainer@example.com',
-          password: 'Password123'
+          trainerId: 'T002'
         });
       expect(res.body.data).not.toHaveProperty('passwordHash');
 
@@ -700,14 +690,45 @@ describe('Admin Trainer Management', () => {
         .send({
           name: 'John Trainer',
           email: 'trainer@example.com',
-          password: 'MyPlainTextPassword123'
+          trainerId: 'T001'
         });
 
       // Check database directly
       const trainer = await User.findOne({ email: 'trainer@example.com' }).select('+passwordHash');
       expect(trainer).not.toBeNull();
-      expect(trainer.passwordHash).not.toBe('MyPlainTextPassword123');
-      expect(trainer.passwordHash.length).toBeGreaterThan(20); // Argon2 hash is long
+      expect(trainer.passwordHash).toBeDefined();
+      expect(trainer.passwordHash.length).toBeGreaterThan(20);
+    });
+  });
+
+  describe('TEMPLATE', () => {
+    test('should download trainer template CSV with proper headers', async () => {
+      const token = await createAdminAndGetToken();
+      const res = await request(app)
+        .get('/api/admin/trainers/template')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('text/csv');
+      expect(res.headers['content-disposition']).toContain('attachment; filename=trainer_template.csv');
+      const expectedCsv = 'name,email,trainerId\nRavi Kumar,ravi@example.com,T001\nSuresh Kumar,suresh@example.com,T002\n';
+      expect(res.text).toBe(expectedCsv);
+    });
+
+    test('should return 401 for missing token', async () => {
+      const res = await request(app).get('/api/admin/trainers/template');
+      expect(res.status).toBe(401);
+    });
+
+    test('should return 403 for non-admin role', async () => {
+      // Create trainer user and login
+      const trainerEmail = generateUniqueEmail('trainer@testmail.com');
+      const password = 'StrongP@ssw0rd';
+      await createTestUser({ name: 'Trainer User', email: trainerEmail, password, role: 'TRAINER' });
+      const token = await loginAndGetToken(trainerEmail, password);
+      const res = await request(app)
+        .get('/api/admin/trainers/template')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(403);
     });
   });
 });

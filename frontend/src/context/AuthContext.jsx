@@ -1,10 +1,20 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import PropTypes from 'prop-types';
 import api from '../api';
 
-const AuthContext = createContext(null);
+/**
+ * AuthContext – provides authentication state and helpers.
+ */
+export const AuthContext = createContext(null);
 
+/**
+ * Hook to consume AuthContext.
+ */
 export const useAuth = () => useContext(AuthContext);
 
+/**
+ * AuthProvider – wraps the app and manages token/user state.
+ */
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(null);
@@ -61,4 +71,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 };

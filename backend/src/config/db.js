@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('./logger');
 
 async function connectDB() {
   const mongoUri = process.env.MONGO_URI;
@@ -33,14 +34,18 @@ async function connectDB() {
     await mongoose.connect(mongoUri, options);
 
     if (process.env.NODE_ENV !== 'test') {
-      console.log(
-        `[DB] MongoDB connected readyState=${mongoose.connection.readyState}`
-      );
+      logger.info('MongoDB connected', {
+        event: 'database.connected',
+        readyState: mongoose.connection.readyState,
+      });
     }
 
     return mongoose.connection;
   } catch (error) {
-    console.error('[DB] MongoDB connection error:', error.message);
+    logger.error('MongoDB connection error', {
+      event: 'database.error',
+      message: error.message,
+    });
     throw error;
   }
 }
@@ -51,18 +56,19 @@ async function disconnectDB() {
   }
 
   if (process.env.NODE_ENV !== 'test') {
-    console.log(
-      `[DB] Disconnecting MongoDB readyState=${mongoose.connection.readyState}`
-    );
+    logger.info('Disconnecting MongoDB', {
+      event: 'database.disconnecting',
+      readyState: mongoose.connection.readyState,
+    });
   }
 
-  // mongoose.disconnect() closes the underlying MongoDB client/pool.
   await mongoose.disconnect();
 
   if (process.env.NODE_ENV !== 'test') {
-    console.log(
-      `[DB] MongoDB disconnected readyState=${mongoose.connection.readyState}`
-    );
+    logger.info('MongoDB disconnected', {
+      event: 'database.disconnected',
+      readyState: mongoose.connection.readyState,
+    });
   }
 }
 

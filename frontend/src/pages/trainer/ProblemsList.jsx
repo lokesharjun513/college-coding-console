@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getBatchProblems, deleteProblem } from '../../api/trainer';
 import Spinner from '../../components/ui/Spinner';
@@ -9,7 +9,7 @@ export default function ProblemsList() {
   const [error, setError] = useState(null);
   const [problems, setProblems] = useState([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const res = await getBatchProblems(batchId);
       setProblems(res.data?.data || []);
@@ -18,18 +18,18 @@ export default function ProblemsList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [batchId]);
 
   useEffect(() => {
     fetchData();
-  }, [batchId]);
+  }, [fetchData]);
 
   const handleDelete = async (problemId) => {
     if (!window.confirm('Archive this problem?')) return;
     try {
       await deleteProblem(batchId, problemId);
       await fetchData();
-    } catch (err) {}
+    } catch (err) { /* handle error silently */ }
   };
 
   if (loading) return <Spinner />;

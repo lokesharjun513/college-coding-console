@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import api from '../api';
 
+/**
+ * Simple dashboard component used for testing.
+ * Expects an `onLogout` callback.
+ */
 export default function Dashboard({ onLogout }) {
-  const [user, setUser] = useState(null);
-  const [error, setError] = useState(null);
+  const [user, setUser] = React.useState(null);
+  const [error, setError] = React.useState(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchUser = async () => {
       try {
         const res = await api.get('/auth/me');
@@ -30,3 +35,7 @@ export default function Dashboard({ onLogout }) {
     </div>
   );
 }
+
+Dashboard.propTypes = {
+  onLogout: PropTypes.func.isRequired,
+};

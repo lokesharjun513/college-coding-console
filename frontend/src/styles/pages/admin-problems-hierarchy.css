@@ -1,0 +1,467 @@
+/* =================================================================
+   ADMIN PROBLEMS — ACCORDION HIERARCHY STYLING
+   ================================================================= */
+
+/* ── Hierarchy Container ────────────────────────────────────────── */
+.admin-problems__hierarchy {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── Collection Accordion ────────────────────────────────────────── */
+.admin-problems__collection {
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--duration-fast) var(--apple-ease);
+  overflow: hidden;
+}
+
+.admin-problems__collection:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.admin-problems__collection-header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast);
+  position: relative;
+}
+
+.admin-problems__collection-header:hover {
+  background: var(--bg-app);
+}
+
+.admin-problems__collection-header:focus {
+  outline: none;
+}
+
+.admin-problems__collection-header:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--interactive);
+}
+
+.admin-problems__collection-toggle {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--space-3);
+  transition: transform var(--duration-normal) var(--apple-ease);
+  color: var(--text-secondary);
+}
+
+.admin-problems__collection-toggle svg {
+  transition: transform var(--duration-normal) var(--apple-ease);
+}
+
+.admin-problems__collection.expanded .admin-problems__collection-toggle {
+  transform: rotate(90deg);
+}
+
+.admin-problems__collection-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-problems__collection-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.admin-problems__collection-meta {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.admin-problems__collection-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.admin-problems__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.admin-problems__icon-btn:hover {
+  background: var(--interactive);
+  border-color: var(--interactive);
+  color: #fff;
+}
+
+.admin-problems__icon-btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.admin-problems__icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Collection Content ────────────────────────────────────────── */
+.admin-problems__collection-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height var(--duration-normal) var(--apple-ease), opacity var(--duration-normal) var(--apple-ease);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.admin-problems__collection.expanded .admin-problems__collection-content {
+  max-height: 2000px;
+  opacity: 1;
+  transition: max-height var(--duration-normal) var(--apple-ease), opacity var(--duration-fast) var(--apple-ease);
+}
+
+/* ── Topic Accordion ────────────────────────────────────────────── */
+.admin-problems__topic {
+  margin-left: var(--space-6);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  overflow: hidden;
+}
+
+.admin-problems__topic-header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast);
+}
+
+.admin-problems__topic-header:hover {
+  background: var(--bg-surface);
+}
+
+.admin-problems__topic-header:focus {
+  outline: none;
+}
+
+.admin-problems__topic-header:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--interactive);
+}
+
+.admin-problems__topic-toggle {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--space-2);
+  transition: transform var(--duration-normal) var(--apple-ease);
+  color: var(--text-secondary);
+}
+
+.admin-problems__topic-toggle svg {
+  transition: transform var(--duration-normal) var(--apple-ease);
+}
+
+.admin-problems__topic.expanded .admin-problems__topic-toggle {
+  transform: rotate(90deg);
+}
+
+.admin-problems__topic-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-problems__topic-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-0-5);
+}
+
+.admin-problems__topic-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.admin-problems__topic-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.admin-problems__topic-actions .admin-problems__icon-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.admin-problems__topic-actions .admin-problems__icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Topic Content ──────────────────────────────────────────────── */
+.admin-problems__topic-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height var(--duration-normal) var(--apple-ease), opacity var(--duration-normal) var(--apple-ease);
+}
+
+.admin-problems__topic.expanded .admin-problems__topic-content {
+  max-height: 3000px;
+  opacity: 1;
+  transition: max-height var(--duration-normal) var(--apple-ease), opacity var(--duration-fast) var(--apple-ease);
+}
+
+/* ── Problem List ───────────────────────────────────────────────── */
+.admin-problems__problem-list {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.admin-problems__problem {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.admin-problems__problem:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-problems__problem-info {
+  flex: 1;
+}
+
+.admin-problems__problem-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.admin-problems__problem-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin-problems__problem-meta {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.admin-problems__problem-tag {
+  font-size: var(--font-size-xs);
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
+}
+
+.admin-problems__problem-tag.difficulty-easy {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.admin-problems__problem-tag.difficulty-medium {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.admin-problems__problem-tag.difficulty-hard {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.admin-problems__problem-tag.status-draft {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.admin-problems__problem-tag.status-published {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.admin-problems__problem-tag.status-archived {
+  background: rgba(156, 163, 175, 0.1);
+  color: #9ca3af;
+}
+
+.admin-problems__problem-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.admin-problems__problem-actions .admin-problems__icon-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.admin-problems__problem-actions .admin-problems__icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Empty States ───────────────────────────────────────────────── */
+.admin-problems__empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.admin-problems__empty p {
+  margin-bottom: var(--space-3);
+}
+
+/* ── Add Button ─────────────────────────────────────────────────── */
+.admin-problems__add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.admin-problems__add-btn:hover {
+  background: var(--interactive);
+  border-color: var(--interactive);
+  color: #fff;
+}
+
+.admin-problems__add-btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.admin-problems__add-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Loading State ──────────────────────────────────────────────── */
+.admin-problems__loading {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────── */
+.admin-problems__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+}
+
+.admin-problems__search {
+  flex: 1;
+  min-width: 200px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-app);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.admin-problems__search:focus {
+  outline: none;
+  border-color: var(--interactive);
+  box-shadow: var(--focus-ring);
+}
+
+.admin-problems__filter-select {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-app);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.admin-problems__filter-select:focus {
+  outline: none;
+  border-color: var(--interactive);
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Responsive Adjustments ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .admin-problems__collection-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .admin-problems__collection-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .admin-problems__topic {
+    margin-left: var(--space-4);
+  }
+
+  .admin-problems__problem {
+    padding: var(--space-3);
+  }
+
+  .admin-problems__problem-actions {
+    margin-left: 0;
+    margin-top: var(--space-2);
+  }
+
+  .admin-problems__toolbar {
+    flex-direction: column;
+  }
+
+  .admin-problems__search {
+    width: 100%;
+  }
+}

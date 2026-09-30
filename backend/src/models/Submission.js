@@ -56,4 +56,7 @@ const submissionSchema = new mongoose.Schema({
   memory: Number,
 }, { timestamps: true });
 
+submissionSchema.index({ createdAt: -1 });
+submissionSchema.index({ verdict: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Submission', submissionSchema);

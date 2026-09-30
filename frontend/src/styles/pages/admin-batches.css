@@ -1,0 +1,467 @@
+/* =================================================================
+   ADMIN BATCHES PAGE — APPLE-INSPIRED iOS × ENTERPRISE SaaS
+   ================================================================ */
+
+.admin-batches {
+  padding: var(--space-6);
+  width: 100%;
+  margin: 0 auto;
+  animation: fadeIn var(--duration-normal) var(--apple-ease);
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background-color: var(--bg-app);
+  min-height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Sticky Apple Header ─────────────────────────────────────────── */
+.admin-batches__header {
+  position: sticky;
+  top: 64px;
+  z-index: 90;
+  background: linear-gradient(235deg, rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(37, 99, 235, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  transition: all 0.3s ease;
+}
+
+.admin-batches__header:hover {
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.1);
+}
+
+.admin-batches__header h1,
+.admin-batches__header p,
+.admin-batches__eyebrow {
+  color: var(--text-primary) !important;
+}
+
+.admin-batches__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.admin-batches__eyebrow {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  margin-bottom: var(--space-1);
+}
+
+.admin-batches__header h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.admin-batches__header p {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── KPI Summary Cards ───────────────────────────────────────────── */
+.admin-batches__kpi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.admin-batches__kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-fast) var(--apple-ease), box-shadow var(--duration-fast) var(--apple-ease);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.admin-batches__kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.admin-batches__kpi-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+}
+
+.admin-batches__kpi-value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+}
+
+.admin-batches__kpi-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* ── Search & Filter Toolbar ─────────────────────────────────────── */
+.admin-batches__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-xs);
+}
+
+.admin-batches__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.admin-batches__search {
+  flex: 1;
+  min-width: 240px;
+  padding: 10px var(--space-3);
+  background: var(--bg-app);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.admin-batches__search:focus {
+  outline: none;
+  border-color: var(--interactive);
+  box-shadow: var(--focus-ring);
+  background: var(--bg-surface);
+}
+
+.admin-batches__toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-app);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+.admin-batches__toggle-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.admin-batches__toggle-btn.active {
+  background: var(--interactive);
+  color: #fff;
+  border-color: var(--interactive);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.admin-batches__toggle-btn:hover:not(.active) {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--text-primary);
+}
+
+.admin-batches__clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--interactive);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast);
+}
+
+.admin-batches__clear-btn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* ── States (Error, Empty) ──────────────────────────────────────── */
+.admin-batches__error,
+.admin-batches__empty {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-batches__error h3,
+.admin-batches__empty h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.admin-batches__error p,
+.admin-batches__empty p {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2) 0;
+  max-width: 400px;
+}
+
+/* ── Table Styling ──────────────────────────────────────────────── */
+.admin-batches__card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: box-shadow var(--duration-normal) var(--apple-ease);
+}
+
+.admin-batches__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-batches__table th {
+  background: var(--bg-subtle, #F5F5F7);
+  color: var(--text-secondary, #86868B);
+  font-weight: var(--font-weight-semibold, 600);
+  font-size: var(--font-size-xs, 12px);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider, 0.05em);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-default, #D2D2D7);
+  text-align: left;
+}
+
+.admin-batches__table td {
+  padding: 12px 16px;
+  font-size: var(--font-size-base, 14px);
+  color: var(--text-primary, #1D1D1F);
+  border-bottom: 1px solid var(--border-subtle, #E5E5EA);
+  vertical-align: middle;
+}
+
+.admin-batches__table tbody tr {
+  transition: background-color 100ms ease;
+}
+
+.admin-batches__table tbody tr:hover {
+  background-color: rgba(189, 216, 237, 0.15);
+}
+
+/* ── Forms inside Modals ────────────────────────────────────────── */
+.admin-batches__form-group {
+  margin-bottom: var(--space-4);
+}
+
+.admin-batches__form-group label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1-5);
+}
+
+.admin-batches__form-group input,
+.admin-batches__form-group select,
+.admin-batches__form-group textarea {
+  width: 100%;
+  padding: 10px var(--space-3);
+  background: var(--bg-app);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.admin-batches__form-group input:focus,
+.admin-batches__form-group select:focus,
+.admin-batches__form-group textarea:focus {
+  outline: none;
+  border-color: var(--interactive);
+  box-shadow: var(--focus-ring);
+  background: var(--bg-surface);
+}
+
+.admin-batches__form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.admin-batches__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Glass Modal Overlay */
+.admin-batches__modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.40);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: overlayFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.admin-batches__modal-glass {
+  width: min(640px, calc(100vw - 32px));
+  max-height: 88vh;
+  height: auto;
+  overflow-y: auto;
+  padding: 32px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(40px) saturate(210%);
+  -webkit-backdrop-filter: blur(40px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25),
+              0 0 0 1px rgba(255, 255, 255, 0.4) inset,
+              inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  animation: modalSpringIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Confirmation modal variant – subtle tint for critical dialogs */
+.admin-batches__modal-confirm {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(35px) saturate(200%);
+  -webkit-backdrop-filter: blur(35px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+.admin-batches__btn-danger-gradient {
+  background: linear-gradient(135deg, #ff5f6d 0%, #ff416c 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full, 9999px);
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.admin-batches__btn-danger-gradient:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.admin-batches__btn-success-gradient {
+  background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full, 9999px);
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.admin-batches__btn-success-gradient:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+@keyframes modalSpringIn {
+  0% { opacity: 0; transform: scale(0.92) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Status Badges ────────────────────────────────────────────────── */
+.admin-batches__badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.admin-batches__badge--active {
+  background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+  color: #fff;
+}
+
+.admin-batches__badge--inactive {
+  background: linear-gradient(135deg, #ff5f6d 0%, #ff416c 100%);
+  color: #fff;
+}
+
+.admin-batches__badge--completed {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+}
+
+@media (max-width: 1024px) {
+  .admin-batches {
+    padding: var(--space-4);
+  }
+  .admin-batches__kpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-batches__kpi {
+    grid-template-columns: 1fr;
+  }
+  .admin-batches__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-batches__search {
+    width: 100%;
+  }
+  .admin-batches__form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

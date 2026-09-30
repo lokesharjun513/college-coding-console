@@ -2,3 +2,12 @@ node_modules/
 .env
 .env.*
 postman/*.json
+
+# Database backups and dumps
+*.dump
+*.archive
+*.bson
+backup/
+backups/
+database-backups/
+

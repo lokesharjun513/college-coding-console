@@ -1,0 +1,206 @@
+/* Apple-inspired Enterprise UI Components */
+
+/* ── Spinner ─────────────────────────────────── */
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.spinner__track {
+  opacity: 0.2;
+}
+
+.spinner__arc {
+  transform-origin: 12px 12px;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(-90deg); }
+  to   { transform: rotate(270deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner__arc {
+    animation-duration: 2s;
+  }
+}
+
+/* Cards */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--duration-normal) var(--motion-ease);
+}
+
+.card-interactive:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.card-elevated {
+  box-shadow: var(--shadow-md);
+  border: none;
+}
+
+.card-flat {
+  box-shadow: none;
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--motion-ease);
+  border: 1px solid transparent;
+  gap: var(--space-2);
+}
+
+.btn-primary {
+  background-color: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-secondary);
+}
+
+.btn-secondary {
+  background-color: var(--bg-surface);
+  color: var(--color-ink);
+  border-color: var(--border-subtle);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--bg-subtle);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-ink);
+  border-color: var(--border-subtle);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--bg-subtle);
+}
+
+.btn-danger {
+  background-color: var(--color-secondary);
+  color: var(--color-canvas);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Inputs */
+.input, .select, .textarea {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-primary);
+  width: 100%;
+  transition: border-color var(--duration-fast) var(--motion-ease), box-shadow var(--duration-fast) var(--motion-ease);
+}
+
+.input:focus, .select:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px rgba(92, 107, 115, 0.15);
+}
+
+.input:disabled {
+  background-color: var(--color-surface-secondary);
+  cursor: not-allowed;
+}
+
+/* Tables */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-surface, #FFFFFF);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--font-size-sm);
+}
+
+.table th {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.table td {
+  padding: 12px var(--space-4);
+  height: 52px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.table tr:hover td {
+  background-color: var(--color-surface-secondary);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-pill);
+}
+
+.badge-success {
+  background-color: rgba(52, 199, 89, 0.15);
+  color: #248a3d;
+}
+
+.badge-warning {
+  background-color: rgba(255, 149, 0, 0.15);
+  color: #b26800;
+}
+
+.badge-danger {
+  background-color: rgba(255, 59, 48, 0.15);
+  color: #c91c14;
+}
+
+.badge-info {
+  background-color: rgba(88, 86, 214, 0.15);
+  color: #3f3d91;
+}
+
+.badge-neutral {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+}

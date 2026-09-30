@@ -44,6 +44,7 @@ router.post('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
       starterCode,
       allowedLanguages,
       status,
+      practiceDate,
     } = req.body;
 
     // Validate required fields
@@ -84,6 +85,14 @@ router.post('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
       return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
     }
 
+    // Validate practiceDate if provided
+    if (practiceDate) {
+      const pd = new Date(practiceDate);
+      if (isNaN(pd.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid practiceDate' });
+      }
+    }
+
     // Create problem
     const problem = await Problem.create({
       title: title.trim(),
@@ -99,6 +108,7 @@ router.post('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
       batch: batchId,
       createdBy: req.user.id,
       status: status || 'DRAFT',
+      practiceDate: practiceDate ? new Date(practiceDate) : null,
     });
 
     // Populate createdBy and batch for response (without sensitive fields)
@@ -132,6 +142,7 @@ router.post('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
         status: problem.createdBy.status,
       } : null,
       status: problem.status,
+      practiceDate: problem.practiceDate,
       createdAt: problem.createdAt,
       updatedAt: problem.updatedAt,
     };
@@ -329,6 +340,7 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), async (req, res
       starterCode,
       allowedLanguages,
       status,
+      practiceDate,
     } = req.body;
 
     // Prevent changing batch or createdBy via this endpoint
@@ -384,6 +396,13 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), async (req, res
     if (starterCode !== undefined) problem.starterCode = starterCode && typeof starterCode === 'object' ? starterCode : {};
     if (allowedLanguages !== undefined) problem.allowedLanguages = Array.isArray(allowedLanguages) ? allowedLanguages : [];
     if (status !== undefined) problem.status = status;
+    if (practiceDate !== undefined) {
+      const pd = new Date(practiceDate);
+      if (isNaN(pd.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid practiceDate' });
+      }
+      problem.practiceDate = pd;
+    }
 
     let updatedProblem = await Problem.findOneAndUpdate(
       { _id: problemId },
@@ -398,6 +417,7 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), async (req, res
         starterCode: problem.starterCode,
         allowedLanguages: problem.allowedLanguages,
         status: problem.status,
+        practiceDate: problem.practiceDate,
       },
       { returnDocument: 'after' }
     );

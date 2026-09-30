@@ -16,9 +16,9 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const { name, code, description, trainer, status, startDate, endDate } = req.body;
 
-    // Validate required fields
-    if (!name || !code || !trainer) {
-      return res.status(400).json({ success: false, message: 'Name, code, and trainer are required' });
+    // Validate required fields (trainer is now optional)
+    if (!name || !code) {
+      return res.status(400).json({ success: false, message: 'Name and code are required' });
     }
 
     // Validate status
@@ -32,16 +32,19 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'endDate cannot be before startDate' });
     }
 
-    // Verify trainer exists and is TRAINER
-    if (!mongoose.Types.ObjectId.isValid(trainer)) {
-      return res.status(400).json({ success: false, message: 'Invalid trainer id' });
-    }
-    const trainerUser = await User.findById(trainer);
-    if (!trainerUser) {
-      return res.status(400).json({ success: false, message: 'Trainer not found' });
-    }
-    if (trainerUser.role !== 'TRAINER') {
-      return res.status(400).json({ success: false, message: 'User is not a trainer' });
+    // Verify trainer if provided
+    let trainerUser = null;
+    if (trainer) {
+      if (!mongoose.Types.ObjectId.isValid(trainer)) {
+        return res.status(400).json({ success: false, message: 'Invalid trainer id' });
+      }
+      trainerUser = await User.findById(trainer);
+      if (!trainerUser) {
+        return res.status(400).json({ success: false, message: 'Trainer not found' });
+      }
+      if (trainerUser.role !== 'TRAINER') {
+        return res.status(400).json({ success: false, message: 'User is not a trainer' });
+      }
     }
 
     // Create batch
@@ -49,7 +52,7 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       name: name.trim(),
       code: code.trim(),
       description,
-      trainer,
+      trainer: trainer || undefined,
       status: status || 'ACTIVE',
       startDate,
       endDate,
@@ -62,20 +65,19 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       name: batch.name,
       code: batch.code,
       description: batch.description,
-      trainer: {
+      trainer: trainerUser ? {
         id: trainerUser._id,
         name: trainerUser.name,
         email: trainerUser.email,
         role: trainerUser.role,
         status: trainerUser.status,
-      },
+      } : null,
       status: batch.status,
       startDate: batch.startDate,
       endDate: batch.endDate,
       createdAt: batch.createdAt,
       updatedAt: batch.updatedAt,
     };
-
 
     res.status(201).json({ success: true, data });
   } catch (error) {
@@ -102,13 +104,13 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       name: b.name,
       code: b.code,
       description: b.description,
-      trainer: {
+      trainer: b.trainer ? {
         id: b.trainer._id,
         name: b.trainer.name,
         email: b.trainer.email,
         role: b.trainer.role,
         status: b.trainer.status,
-      },
+      } : null,
       status: b.status,
       startDate: b.startDate,
       endDate: b.endDate,
@@ -143,13 +145,13 @@ router.get('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
       name: batch.name,
       code: batch.code,
       description: batch.description,
-      trainer: {
+      trainer: batch.trainer ? {
         id: batch.trainer._id,
         name: batch.trainer.name,
         email: batch.trainer.email,
         role: batch.trainer.role,
         status: batch.trainer.status,
-      },
+      } : null,
       status: batch.status,
       startDate: batch.startDate,
       endDate: batch.endDate,
@@ -194,19 +196,25 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'endDate cannot be before startDate' });
     }
 
-    // Validate trainer if changed
-    if (trainer) {
-      if (!mongoose.Types.ObjectId.isValid(trainer)) {
-        return res.status(400).json({ success: false, message: 'Invalid trainer id' });
+    // Validate trainer if changed (including removal)
+    if (Object.prototype.hasOwnProperty.call(req.body, 'trainer')) {
+      // Trainer field is present in request (could be null/empty to remove)
+      if (trainer) {
+        if (!mongoose.Types.ObjectId.isValid(trainer)) {
+          return res.status(400).json({ success: false, message: 'Invalid trainer id' });
+        }
+        const trainerUser = await User.findById(trainer);
+        if (!trainerUser) {
+          return res.status(400).json({ success: false, message: 'Trainer not found' });
+        }
+        if (trainerUser.role !== 'TRAINER') {
+          return res.status(400).json({ success: false, message: 'User is not a trainer' });
+        }
+        batch.trainer = trainer;
+      } else {
+        // Remove trainer assignment
+        batch.trainer = undefined;
       }
-      const trainerUser = await User.findById(trainer);
-      if (!trainerUser) {
-        return res.status(400).json({ success: false, message: 'Trainer not found' });
-      }
-      if (trainerUser.role !== 'TRAINER') {
-        return res.status(400).json({ success: false, message: 'User is not a trainer' });
-      }
-      batch.trainer = trainer;
     }
 
     // Apply other fields
@@ -225,13 +233,13 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
       name: batch.name,
       code: batch.code,
       description: batch.description,
-      trainer: {
+      trainer: batch.trainer ? {
         id: batch.trainer._id,
         name: batch.trainer.name,
         email: batch.trainer.email,
         role: batch.trainer.role,
         status: batch.trainer.status,
-      },
+      } : null,
       status: batch.status,
       startDate: batch.startDate,
       endDate: batch.endDate,
@@ -258,10 +266,29 @@ router.delete('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ success: false, message: 'Invalid batch id' });
     }
-    const batch = await Batch.findByIdAndDelete(id);
+
+    const batch = await Batch.findById(id).populate({ path: 'trainer', select: '-passwordHash' });
     if (!batch) {
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
+
+    // Check if batch is assigned to a trainer
+    if (batch.trainer) {
+      // Return trainer info so frontend can show confirmation dialog
+      return res.json({
+        success: true,
+        hasTrainer: true,
+        trainer: {
+          id: batch.trainer._id,
+          name: batch.trainer.name,
+          email: batch.trainer.email,
+        },
+        message: 'Batch is assigned to a trainer. Confirm removal and deletion.'
+      });
+    }
+
+    // Delete batch without trainer assignment
+    await Batch.findByIdAndDelete(id);
     res.json({ success: true, data: null });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error deleting batch:', error);

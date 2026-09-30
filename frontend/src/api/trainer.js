@@ -4,7 +4,11 @@ import api from './client';
 export const getTrainerBatches = () => api.get('/trainer/batches');
 export const getTrainerBatch = (batchId) => api.get(`/trainer/batches/${batchId}`);
 export const getBatchStudents = (batchId) => api.get(`/trainer/batches/${batchId}/students`);
-export const enrollStudent = (batchId, studentId) => api.post(`/trainer/batches/${batchId}/students`, { studentId });
+export const getTrainerStudents = () => api.get('/trainer/students');
+export const getAvailableBatchStudents = (batchId, params) => api.get(`/trainer/batches/${batchId}/students/available`, { params });
+export const bulkUnenrollStudents = (batchId, studentIds) => api.delete(`/trainer/batches/${batchId}/students`, { data: { studentIds } });
+export const bulkEnrollStudents = (batchId, studentIds) => api.post(`/trainer/batches/${batchId}/students`, { studentIds });
+export const enrollStudent = (batchId, studentId) => api.post(`/trainer/batches/${batchId}/students`, { studentIds: Array.isArray(studentId) ? studentId : [studentId] });
 export const updateStudentEnrollment = (batchId, studentId, status) => api.patch(`/trainer/batches/${batchId}/students/${studentId}`, { status });
 export const deleteStudentEnrollment = (batchId, studentId) => api.delete(`/trainer/batches/${batchId}/students/${studentId}`);
 

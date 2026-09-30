@@ -1,0 +1,206 @@
+/* --------------------------------------------------
+   PREMIUM APPLE-INSPIRED STICKY HEADER
+   -------------------------------------------------- */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  min-height: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid rgba(15, 36, 65, 0.07);
+  box-shadow: 0 1px 0 rgba(15, 36, 65, 0.03), 0 6px 24px rgba(15, 36, 65, 0.035);
+  display: flex;
+  align-items: center;
+  transition: background-color 160ms ease;
+}
+
+.header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 24px;
+}
+
+@media (min-width: 1280px) {
+  .header__inner {
+    padding: 0 32px;
+  }
+}
+
+.header__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Sidebar Toggle Button */
+.header__toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #0f2441;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.header__toggle:hover {
+  background: rgba(15, 36, 65, 0.045);
+  border-color: rgba(15, 36, 65, 0.06);
+}
+
+.header__toggle:active {
+  transform: scale(0.96);
+}
+
+.header__toggle:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.3);
+  outline-offset: 2px;
+}
+
+/* College Identity */
+.header__identity {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.header__college-name {
+  font-size: 14px;
+  font-weight: 650;
+  color: #0f2441;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.header__workspace-role {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(15, 36, 65, 0.55);
+  line-height: 1.2;
+}
+
+/* Right Side Controls */
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Notification Button */
+.header__icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(15, 36, 65, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.header__icon-btn:hover {
+  background: rgba(15, 36, 65, 0.045);
+  color: #0f2441;
+}
+
+.header__icon-btn:active {
+  transform: scale(0.96);
+}
+
+.header__icon-btn:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.3);
+  outline-offset: 2px;
+}
+
+/* Profile Control */
+.header__profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.header__profile:hover {
+  background: rgba(15, 36, 65, 0.045);
+}
+
+.header__profile:active {
+  transform: scale(0.98);
+}
+
+.header__profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+}
+
+.header__profile-meta {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.header__username {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f2441;
+  line-height: 1.25;
+}
+
+.header__user-role {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: rgba(15, 36, 65, 0.5);
+  line-height: 1.2;
+}
+
+.header__profile-chevron {
+  color: rgba(15, 36, 65, 0.4);
+  margin-left: 2px;
+}
+
+/* ── Responsive & Mobile ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .header {
+    min-height: 58px;
+    height: 58px;
+  }
+  .header__inner {
+    padding: 0 16px;
+  }
+  .header__workspace-role,
+  .header__user-role,
+  .header__profile-chevron {
+    display: none;
+  }
+  .header__college-name {
+    font-size: 13px;
+  }
+}

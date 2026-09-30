@@ -46,10 +46,14 @@ const problemSchema = new mongoose.Schema({
     type: String,
     enum: ['c', 'cpp', 'java', 'python', 'javascript'],
   }],
+  scope: {
+    type: String,
+    enum: ['GLOBAL', 'BATCH'],
+    default: 'GLOBAL',
+  },
   batch: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Batch',
-    required: true,
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -60,6 +64,11 @@ const problemSchema = new mongoose.Schema({
     type: String,
     enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
     default: 'DRAFT',
+  },
+  practiceDate: {
+    type: Date,
+    default: null,
+    index: true,
   },
 }, { timestamps: true });
 

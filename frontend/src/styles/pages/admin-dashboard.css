@@ -1,0 +1,282 @@
+/* ── Admin Dashboard Premium Styles ───────────────────────────────── */
+
+.admin-dashboard {
+  max-width: var(--content-max-width, 1200px);
+  margin: 0 auto;
+  padding: 32px;
+  animation: dashboard-fade-in 220ms var(--apple-ease);
+}
+
+@keyframes dashboard-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header & Greeting */
+.admin-dashboard__header {
+  margin-bottom: 32px;
+}
+
+.admin-dashboard__eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--color-accent, #3B67B0);
+  margin-bottom: 6px;
+}
+
+.admin-dashboard__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-ink, #0F2441);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+.admin-dashboard__description {
+  font-size: 14px;
+  color: rgba(15, 36, 65, 0.62);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* KPI Grid */
+.admin-dashboard__kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+/* StatCard */
+.admin-dashboard__stat-card {
+  background: var(--bg-surface, #FFFFFF);
+  border: 1px solid rgba(15, 36, 65, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  min-height: 128px;
+  box-shadow: 0 4px 16px rgba(15, 36, 65, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition:
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.admin-dashboard__stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(15, 36, 65, 0.08);
+  border-color: rgba(15, 36, 65, 0.14);
+}
+
+.admin-dashboard__stat-card:active {
+  transform: scale(0.985);
+}
+
+.admin-dashboard__stat-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-dashboard__stat-label {
+  font-size: 13px;
+  color: rgba(15, 36, 65, 0.58);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.admin-dashboard__stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(59, 103, 176, 0.08);
+  color: #3B67B0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-dashboard__stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-ink, #0F2441);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.admin-dashboard__stat-meta {
+  font-size: 12px;
+  color: rgba(15, 36, 65, 0.48);
+}
+
+/* Sections */
+.admin-dashboard__section {
+  background: var(--bg-surface, #FFFFFF);
+  border: 1px solid rgba(15, 36, 65, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(15, 36, 65, 0.05);
+  margin-bottom: 24px;
+}
+
+.admin-dashboard__section-header {
+  margin-bottom: 20px;
+}
+
+.admin-dashboard__section-title {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--color-ink, #0F2441);
+  margin: 0 0 4px 0;
+}
+
+.admin-dashboard__section-desc {
+  font-size: 13px;
+  color: rgba(15, 36, 65, 0.58);
+  margin: 0;
+}
+
+/* Two-column layout for Activity & Health */
+.admin-dashboard__grid-2col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* Health items */
+.admin-dashboard__health-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-dashboard__health-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(15, 36, 65, 0.02);
+  border: 1px solid rgba(15, 36, 65, 0.05);
+}
+
+.admin-dashboard__health-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-ink, #0F2441);
+}
+
+.admin-dashboard__health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-dashboard__health-badge--operational {
+  background: rgba(59, 103, 176, 0.10);
+  color: #3B67B0;
+}
+
+.admin-dashboard__health-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Quick Actions */
+.admin-dashboard__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.admin-dashboard__action-btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 160ms var(--apple-ease);
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+.admin-dashboard__action-btn--primary {
+  background: var(--color-ink, #0F2441);
+  color: #FFFFFF;
+}
+
+.admin-dashboard__action-btn--primary:hover {
+  background: #1a3859;
+}
+
+.admin-dashboard__action-btn--secondary {
+  background: #FFFFFF;
+  border-color: rgba(15, 36, 65, 0.12);
+  color: var(--color-ink, #0F2441);
+}
+
+.admin-dashboard__action-btn--secondary:hover {
+  background: rgba(189, 216, 237, 0.25);
+  border-color: rgba(59, 103, 176, 0.3);
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1280px) {
+  .admin-dashboard__kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .admin-dashboard {
+    padding: 24px;
+  }
+  .admin-dashboard__grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard {
+    padding: 16px;
+  }
+  .admin-dashboard__kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-dashboard__title {
+    font-size: 24px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard,
+  .admin-dashboard__stat-card {
+    animation: none;
+    transition: none;
+  }
+}

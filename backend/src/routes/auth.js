@@ -4,7 +4,7 @@ const User = require('../models/User');
 const authService = require('../auth/authService');
 const jwt = require('jsonwebtoken');
 const requireAuth = require('../middleware/auth');
-const rateLimiter = require('../middleware/rateLimiter');
+const { rateLimiter } = require('../middleware/rateLimiter');
 
 function getJwtSecret() {
   const secret = process.env.JWT_ACCESS_SECRET;

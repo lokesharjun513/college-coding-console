@@ -68,7 +68,7 @@ describe('Admin Batch Management', () => {
   const password = 'StrongP@ssw0rd';
 
   beforeAll(async () => {
-    
+
     // DB connection managed globally by setup.js
   });
 
@@ -114,7 +114,7 @@ describe('Admin Batch Management', () => {
     expect(res.status).toBe(400);
   });
 
-  test('should return 400 for missing trainer', async () => {
+  test('should return 201 for batch without trainer (trainer is optional)', async () => {
     const { adminToken } = await createAdminAndTrainer();
     const res = await request(app)
       .post('/api/admin/batches')
@@ -123,7 +123,9 @@ describe('Admin Batch Management', () => {
         name: 'No trainer',
         code: 'NOTR',
       });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.trainer).toBeNull();
   });
 
   test('should return 400 for invalid trainer id', async () => {
@@ -322,7 +324,12 @@ describe('Admin Batch Management', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data).toBeNull();
+    if (res.body.hasTrainer) {
+      expect(res.body.hasTrainer).toBe(true);
+      expect(res.body.trainer).toBeDefined();
+    } else {
+      expect(res.body.data).toBeNull();
+    }
   });
 
   test('should return 404 when deleting non‑existent batch', async () => {
@@ -355,6 +362,83 @@ describe('Admin Batch Management', () => {
       .get('/api/admin/batches')
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(403);
+  });
+
+  test('admin can remove trainer', async () => {
+    const { adminToken, trainer } = await createAdminAndTrainer();
+    const createRes = await createBatch(adminToken, trainer._id);
+    const batchId = createRes.body.data.id;
+    // Remove trainer
+    const res = await request(app)
+      .patch(`/api/admin/batches/${batchId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ trainer: null });
+    expect(res.status).toBe(200);
+    expect(res.body.data.trainer).toBeNull();
+  });
+
+  test('admin can assign another trainer after removal', async () => {
+    const { adminToken, trainer } = await createAdminAndTrainer();
+    const newTrainer = await createTestUser({ name: 'New Trainer', email: generateUniqueEmail('newtrainer@testmail.com'), password, role: 'TRAINER' });
+    const createRes = await createBatch(adminToken, trainer._id);
+    const batchId = createRes.body.data.id;
+    // Remove current trainer
+    await request(app)
+      .patch(`/api/admin/batches/${batchId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ trainer: null });
+    // Assign new trainer
+    const res = await request(app)
+      .patch(`/api/admin/batches/${batchId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ trainer: newTrainer._id });
+    expect(res.status).toBe(200);
+    expect(res.body.data.trainer.id).toBe(String(newTrainer._id));
+  });
+
+  // Trainer access isolation after removal
+  test('trainer access isolation after removal', async () => {
+    const { adminToken, trainer, password } = await createAdminAndTrainer();
+    // Create batch assigned to trainer
+    const createRes = await createBatch(adminToken, trainer._id);
+    const batchId = createRes.body.data.id;
+    // Trainer login
+    const trainerToken = await loginAndGetToken(trainer.email, password);
+    // Trainer can list own batch
+    const listRes = await request(app)
+      .get('/api/trainer/batches')
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.success).toBe(true);
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data.length).toBe(1);
+    expect(listRes.body.data[0].id).toBe(batchId);
+    // Trainer can get single batch
+    const singleRes = await request(app)
+      .get(`/api/trainer/batches/${batchId}`)
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(singleRes.status).toBe(200);
+    expect(singleRes.body.success).toBe(true);
+    expect(singleRes.body.data.id).toBe(batchId);
+    // Admin removes trainer
+    await request(app)
+      .patch(`/api/admin/batches/${batchId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ trainer: null });
+    // Trainer list should be empty
+    const listAfterRes = await request(app)
+      .get('/api/trainer/batches')
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(listAfterRes.status).toBe(200);
+    expect(listAfterRes.body.success).toBe(true);
+    expect(Array.isArray(listAfterRes.body.data)).toBe(true);
+    expect(listAfterRes.body.data.length).toBe(0);
+    // Trainer cannot access single batch
+    const singleAfterRes = await request(app)
+      .get(`/api/trainer/batches/${batchId}`)
+      .set('Authorization', `Bearer ${trainerToken}`);
+    // Should be 403 Access denied
+    expect(singleAfterRes.status).toBe(403);
   });
 
   test('unauthenticated request returns 401', async () => {

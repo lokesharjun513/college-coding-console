@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getTestCases, createTestCase, deleteTestCase } from '../../api/trainer';
 import Spinner from '../../components/ui/Spinner';
@@ -13,7 +13,7 @@ export default function TestCasesList() {
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const res = await getTestCases(problemId);
       setTestCases(res.data?.data || []);
@@ -22,11 +22,11 @@ export default function TestCasesList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [problemId]);
 
   useEffect(() => {
     fetchData();
-  }, [problemId]);
+  }, [fetchData]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ export default function TestCasesList() {
     try {
       await deleteTestCase(problemId, testCaseId);
       await fetchData();
-    } catch (err) {}
+    } catch (err) { /* handle error silently */ }
   };
 
   if (loading) return <Spinner />;

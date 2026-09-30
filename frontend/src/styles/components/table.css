@@ -1,0 +1,45 @@
+/**
+ * Table compact styling for admin tables – Apple-inspired premium UI.
+ */
+
+.table--compact th,
+.table--compact td {
+  padding: var(--space-2) var(--space-3);
+  height: 56px; /* target row height */
+  font-size: 13px;
+}
+
+.table--compact th {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.table--compact td {
+  color: var(--color-text-primary);
+}
+
+/* Header height approx 44px */
+.table--compact thead tr {
+  height: 44px;
+}
+
+/* Border radius on container */
+.table-container {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Reduce horizontal padding on container */
+.table-container > table {
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table--compact th,
+  .table--compact td {
+    padding: var(--space-2) var(--space-2);
+    font-size: 12px;
+  }
+}

@@ -32,6 +32,30 @@ const userSchema = new mongoose.Schema({
     required: true,
     default: 'ACTIVE',
   },
+  trainerId: {
+    type: String,
+    sparse: true,
+    unique: true,
+    index: true,
+  },
+  rollNumber: {
+    type: String,
+    sparse: true,
+    unique: true,
+    index: true,
+  },
+  department: {
+    type: String,
+    enum: ['CSE', 'IT', 'ECE', 'EEE', 'MECH', 'CIVIL'],
+  },
+  section: {
+    type: String,
+    trim: true,
+  },
+  academicBatch: {
+    startYear: { type: Number },
+    endYear: { type: Number },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

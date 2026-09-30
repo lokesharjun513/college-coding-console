@@ -1,19 +1,21 @@
 require('dotenv').config({ path: '.env' });
 
+const logger = require('./config/logger');
 const { connectDB, disconnectDB } = require('./config/db');
 const app = require('./app');
 
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 3000;
 
 async function shutdown(server, signal) {
-  console.log(`[SERVER] ${signal} received, shutting down`);
+  logger.info(`Server shutting down due to signal`, { event: 'server.shutdown', signal });
   server.close(async () => {
     await disconnectDB();
+    logger.info('Server shutdown complete', { event: 'server.shutdown.complete' });
     process.exit(0);
   });
   // Force-exit if connections don't drain in time.
   setTimeout(() => {
-    console.error('[SERVER] Forced shutdown after timeout');
+    logger.error('Forced shutdown after timeout', { event: 'server.shutdown.timeout' });
     process.exit(1);
   }, 10000).unref();
 }
@@ -21,11 +23,11 @@ async function shutdown(server, signal) {
 connectDB()
   .then(() => {
     const server = app.listen(PORT, () => {
-      console.log(`[SERVER] API running on http://localhost:${PORT}`);
+      logger.info(`API running on http://localhost:${PORT}`, { event: 'server.started', port: PORT });
     });
 
     server.on('error', (err) => {
-      console.error('[SERVER] HTTP server error:', err);
+      logger.error('HTTP server error', { event: 'server.error', message: err.message });
       process.exit(1);
     });
 
@@ -33,6 +35,6 @@ connectDB()
     process.on('SIGTERM', () => shutdown(server, 'SIGTERM'));
   })
   .catch((err) => {
-    console.error('[SERVER] Failed to start server due to DB error:', err);
+    logger.error('Failed to start server due to DB error', { event: 'server.start.error', message: err.message });
     process.exit(1);
   });

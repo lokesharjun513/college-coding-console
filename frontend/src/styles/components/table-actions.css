@@ -1,0 +1,72 @@
+/**
+ * TableActions Component Styles
+ * Apple-inspired compact icon action buttons for data tables
+ *
+ * Design tokens referenced:
+ * --color-deep-blue: #0F2441
+ * --color-serene-blue: #3B67B0
+ * --color-sky-blue: #BDD8ED
+ * --color-rouge-red: #C34954
+ */
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+}
+
+.table-actions__btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-deep-blue, #0F2441);
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  outline: none;
+}
+
+.table-actions__btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-surface, #FFFFFF), 0 0 0 4px var(--color-sky-blue, #BDD8ED);
+}
+
+.table-actions__btn:hover:not(.table-actions__btn--disabled) {
+  background: rgba(189, 216, 237, 0.3);
+  border-color: rgba(15, 36, 65, 0.08);
+}
+
+.table-actions__btn:active:not(.table-actions__btn--disabled) {
+  transform: scale(0.97);
+}
+
+.table-actions__btn--danger {
+  color: var(--color-rouge-red, #C34954);
+}
+
+.table-actions__btn--danger:hover:not(.table-actions__btn--disabled) {
+  background: rgba(195, 73, 84, 0.08);
+  border-color: rgba(195, 73, 84, 0.12);
+}
+
+.table-actions__btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-actions__btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .table-actions {
+    gap: 2px;
+  }
+}

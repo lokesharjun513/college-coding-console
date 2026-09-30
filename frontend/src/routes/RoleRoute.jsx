@@ -1,7 +1,11 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+/**
+ * RoleRoute – protects routes based on allowedRoles.
+ */
 export default function RoleRoute({ allowedRoles, children }) {
   const { user, isAuthenticated, loading } = useAuth();
   if (loading) {
@@ -17,3 +21,8 @@ export default function RoleRoute({ allowedRoles, children }) {
   }
   return children;
 }
+
+RoleRoute.propTypes = {
+  allowedRoles: PropTypes.arrayOf(PropTypes.string).isRequired,
+  children: PropTypes.node.isRequired,
+};
