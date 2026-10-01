@@ -24,6 +24,7 @@ export default function Icon({ name, size = 20, color = 'currentColor', ariaLabe
     chartBar: 'BarChart',
     logOut: 'LogOut',
     menu: 'Menu',
+    moreHorizontal: 'MoreHorizontal',
     x: 'X',
     // Add more mappings as needed.
     chevronLeft: 'ChevronLeft',

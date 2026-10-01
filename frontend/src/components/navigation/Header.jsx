@@ -27,7 +27,7 @@ export default function Header() {
       <div className="header__inner">
         <div className="header__left">
           <button
-            className="header__toggle"
+            className="header__toggle sidebar__mobile-toggle-btn"
             onClick={toggleSidebar}
             aria-label="Toggle Sidebar"
           >

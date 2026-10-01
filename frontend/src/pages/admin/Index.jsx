@@ -108,7 +108,7 @@ export default function AdminDashboard() {
             <div className="admin-dashboard__stat-header">
               <span className="admin-dashboard__stat-label">Active Trainers</span>
               <div className="admin-dashboard__stat-icon">
-                <Icon name="user" size={18} color="#3B67B0" />
+                <Icon name="user" size={18} color="#FFFFFF" />
               </div>
             </div>
             {loadingKPI ? (
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
             <div className="admin-dashboard__stat-header">
               <span className="admin-dashboard__stat-label">Academic Batches</span>
               <div className="admin-dashboard__stat-icon">
-                <Icon name="settings" size={18} color="#3B67B0" />
+                <Icon name="settings" size={18} color="#FFFFFF" />
               </div>
             </div>
             {loadingKPI ? (
@@ -140,10 +140,10 @@ export default function AdminDashboard() {
             <div className="admin-dashboard__stat-header">
               <span className="admin-dashboard__stat-label">System Status</span>
               <div className="admin-dashboard__stat-icon">
-                <Icon name="check" size={18} color="#3B67B0" />
+                <Icon name="check" size={18} color="#FFFFFF" />
               </div>
             </div>
-            <div className="admin-dashboard__stat-value" style={{ fontSize: '24px', color: '#3B67B0' }}>
+            <div className="admin-dashboard__stat-value" style={{ fontSize: '24px', color: '#FFFFFF' }}>
               Operational
             </div>
             <div className="admin-dashboard__stat-meta">All services running normally</div>
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
             <div className="admin-dashboard__stat-header">
               <span className="admin-dashboard__stat-label">Platform Core</span>
               <div className="admin-dashboard__stat-icon">
-                <Icon name="code" size={18} color="#3B67B0" />
+                <Icon name="code" size={18} color="#FFFFFF" />
               </div>
             </div>
             <div className="admin-dashboard__stat-value" style={{ fontSize: '24px' }}>

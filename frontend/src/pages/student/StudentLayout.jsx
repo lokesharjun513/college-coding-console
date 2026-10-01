@@ -1,14 +1,14 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import AppShell from '../../layouts/AppShell';
+import SaasLayout from '../../components/common/SaasLayout';
 
 /**
- * StudentLayout – wraps student routes with the shared AppShell.
+ * StudentLayout – wraps student routes with the shared SaasLayout.
  */
 export default function StudentLayout() {
   return (
-    <AppShell>
+    <SaasLayout>
       <Outlet />
-    </AppShell>
+    </SaasLayout>
   );
 }

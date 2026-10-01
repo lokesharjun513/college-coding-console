@@ -1,5 +1,5 @@
 import React from 'react';
-import AppShell from '../layouts/AppShell';
+import SaasLayout from '../components/common/SaasLayout';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -13,7 +13,7 @@ export default function Profile() {
   }
 
   return (
-    <AppShell>
+    <SaasLayout>
       <PageHeader
         title="Profile"
         description="Your account information"
@@ -24,6 +24,6 @@ export default function Profile() {
         <p><strong>Role:</strong> {user.role}</p>
         <p><strong>Email:</strong> {user.email || 'N/A'}</p>
       </Card>
-    </AppShell>
+    </SaasLayout>
   );
 }

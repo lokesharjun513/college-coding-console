@@ -1,0 +1,119 @@
+/* ── Mobile SaaS Navigation ─────────────────────────── */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(252, 253, 253, 0.92);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  border-top: 1px solid rgba(198, 209, 215, 0.45);
+  box-shadow: 0 -8px 28px rgba(15, 36, 65, 0.055);
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: none;
+  animation: mobileNavEnter 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (max-width: 767px) {
+  .mobile-nav {
+    display: block;
+  }
+}
+
+.mobile-nav__items {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  min-height: 64px;
+  height: 64px;
+  padding: 0 8px;
+  gap: 4px;
+}
+
+.mobile-nav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: 12px;
+  transition: color 180ms ease, background-color 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+  min-width: 0;
+  max-width: 96px;
+  min-height: 52px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav__item:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .mobile-nav__item:hover {
+    background-color: rgba(47, 126, 218, 0.045);
+  }
+}
+
+/* ── Active State ─────────────────────────────────── */
+.mobile-nav__item--active {
+  color: var(--color-action);
+  background: rgba(47, 126, 218, 0.09);
+}
+
+.mobile-nav__icon {
+  width: 21px;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mobile-nav__item--active .mobile-nav__icon {
+  transform: scale(1.03);
+}
+
+.mobile-nav__label {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  text-align: center;
+}
+
+.mobile-nav__item--active .mobile-nav__label {
+  font-weight: 600;
+}
+
+/* ── Accessibility & Motion ─────────────────────────── */
+.mobile-nav__item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.16);
+}
+
+@keyframes mobileNavEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav,
+  .mobile-nav *,
+  .mobile-nav *::before,
+  .mobile-nav *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

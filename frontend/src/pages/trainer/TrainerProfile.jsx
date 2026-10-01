@@ -1,5 +1,5 @@
 import React from 'react';
-import AppShell from '../../layouts/AppShell';
+import SaasLayout from '../../components/common/SaasLayout';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import PageHeader from '../../components/ui/PageHeader';
@@ -13,7 +13,7 @@ export default function TrainerProfile() {
   }
 
   return (
-    <AppShell>
+    <SaasLayout>
       <PageHeader
         title="Trainer Profile"
         description="Your account and trainer profile information"
@@ -25,6 +25,6 @@ export default function TrainerProfile() {
         <p><strong>Role:</strong> {user.role}</p>
         <p><strong>Status:</strong> {user.status}</p>
       </Card>
-    </AppShell>
+    </SaasLayout>
   );
 }

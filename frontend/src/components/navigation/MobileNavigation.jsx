@@ -1,59 +1,66 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { navigationConfig } from '../../navigationConfig';
 import Icon from '../ui/Icon';
+import './MobileNavigation.css';
 
 /**
- * MobileNavigation – bottom navigation bar for mobile.
- * Shows primary items only (up to 4).
+ * MobileNavigation – premium SaaS bottom navigation for mobile.
+ * Shows 4 primary items + a "More" item that opens the sheet.
  */
-export default function MobileNavigation() {
+export default function MobileNavigation({ onMoreClick, isMoreOpen }) {
   const { user } = useAuth();
+  const { pathname } = useLocation();
   const role = user?.role || 'STUDENT';
   const sections = navigationConfig[role] || [];
-  // Flatten top-level items (skip secondary/tertiary sections)
-  const flatItems = sections
-    .map((s) => s.items)
-    .flat()
-    .slice(0, 4); // limit to 4 items
+
+  const allItems = sections.map((s) => s.items).flat();
+  const primaryItems = allItems.slice(0, 4);
+
+  // More is active if the sheet is open OR the current path isn't one of the primary items
+  const isMoreActive = isMoreOpen || !primaryItems.some(item => {
+    const isRoot = item.path === '/admin' || item.path === '/trainer' || item.path === '/student';
+    return isRoot ? pathname === item.path : pathname === item.path || pathname.startsWith(item.path + '/');
+  });
 
   return (
-    <nav
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'var(--color-surface)',
-        borderTop: '1px solid var(--color-divider)',
-        display: 'flex',
-        justifyContent: 'space-around',
-        padding: 'var(--space-2)',
-        height: 'var(--mobile-nav-height)',
-        zIndex: 5,
-      }}
-      aria-label="Mobile navigation"
-    >
-      {flatItems.map((item) => {
-        return (
+    <nav className="mobile-nav" aria-label="Mobile navigation">
+      <div className="mobile-nav__items">
+        {primaryItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
-            style={({ isActive }) => ({
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              color: isActive ? 'var(--color-accent)' : 'var(--color-text-muted)',
-              fontSize: 'var(--font-size-caption)',
-              textDecoration: 'none',
-            })}
+            end={item.path === '/admin' || item.path === '/trainer' || item.path === '/student'}
+            className={({ isActive }) =>
+              `mobile-nav__item ${isActive ? 'mobile-nav__item--active' : ''}`
+            }
+            aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
           >
-            <Icon name={item.icon} size={20} ariaLabel={item.label} />
-            <span>{item.label}</span>
+            <span className="mobile-nav__icon">
+              <Icon name={item.icon} size={21} ariaLabel={item.label} />
+            </span>
+            <span className="mobile-nav__label">{item.label}</span>
           </NavLink>
-        );
-      })}
+        ))}
+
+        <button
+          className={`mobile-nav__item ${isMoreActive ? 'mobile-nav__item--active' : ''}`}
+          onClick={onMoreClick}
+          aria-label="More"
+          aria-expanded={isMoreOpen}
+        >
+          <span className="mobile-nav__icon">
+            <Icon name="moreHorizontal" size={21} />
+          </span>
+          <span className="mobile-nav__label">More</span>
+        </button>
+      </div>
     </nav>
   );
 }
+
+MobileNavigation.propTypes = {
+  onMoreClick: PropTypes.func.isRequired,
+  isMoreOpen: PropTypes.bool,
+};

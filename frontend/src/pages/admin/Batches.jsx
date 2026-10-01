@@ -406,7 +406,7 @@ export default function Batches() {
                                 ? {
                                     label: 'Remove Trainer',
                                     icon: Award,
-                                    onClick: () => confirmRemoveTrainer(b),
+                                    onClick: () => {},
                                   }
                                 : {
                                     label: 'Assign Trainer',

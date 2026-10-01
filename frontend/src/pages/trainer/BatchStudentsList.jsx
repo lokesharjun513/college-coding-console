@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   getTrainerBatch,
@@ -69,7 +69,7 @@ export default function BatchStudentsList() {
   }, [batchId]);
 
   // Fetch students list
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setLoadingStudents(true);
       const res = await getBatchStudents(batchId);
@@ -81,12 +81,11 @@ export default function BatchStudentsList() {
     } finally {
       setLoadingStudents(false);
     }
-  };
+  }, [batchId]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchStudents();
-  }, [batchId]);
+  }, [fetchStudents]);
 
   // Fetch available students when modal opens or search changes
   useEffect(() => {

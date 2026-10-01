@@ -1,14 +1,14 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import AppShell from '../../layouts/AppShell';
+import SaasLayout from '../../components/common/SaasLayout';
 
 /**
- * AdminLayout – wraps admin routes with the shared AppShell.
+ * AdminLayout – wraps admin routes with the shared SaasLayout.
  */
 export default function AdminLayout() {
   return (
-    <AppShell>
+    <SaasLayout>
       <Outlet />
-    </AppShell>
+    </SaasLayout>
   );
 }

@@ -2,17 +2,12 @@ import React, { useState } from 'react';
 import { runFreeConsoleCode } from '../../api/student';
 import './FreeConsole.css';
 import CompilerSelector from '../../components/CompilerSelector';
+import { Home, Code2, Terminal, MoreHorizontal, X, User, BarChart2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-// Robust normalizer selecting the first non-empty execution output field
 const getExecutionOutput = (result) => {
   if (!result) return '';
-  const val =
-    result.stdout ??
-    result.output ??
-    result.compile_output ??
-    result.error ??
-    result.stderr ??
-    '';
+  const val = result.stdout ?? result.output ?? result.compile_output ?? result.error ?? result.stderr ?? '';
   return typeof val === 'string' ? val : String(val);
 };
 
@@ -23,16 +18,19 @@ export default function FreeConsole() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleCompilerChange = (compilerId) => {
     if (compilerId === selectedCompilerId) return;
     setSelectedCompilerId(compilerId);
-    setCode(''); // clear on change
+    setCode('');
     setResult(null);
     setError(null);
   };
 
   const handleRun = async () => {
+    if (loading) return;
     setLoading(true);
     setError(null);
     setResult(null);
@@ -57,127 +55,99 @@ export default function FreeConsole() {
   const outputText = getExecutionOutput(result);
   const status = result?.status || (result?.success ? 'success' : error ? 'error' : null);
 
-  const getStatusBadge = (st, success) => {
-    switch (st) {
-      case 'success':
-        return <span className="status-badge success">Success</span>;
-      case 'compile_error':
-        return <span className="status-badge error">Compile Error</span>;
-      case 'runtime_error':
-        return <span className="status-badge error">Runtime Error</span>;
-      case 'timeout':
-        return <span className="status-badge warning">Timeout</span>;
-      case 'compiler_unavailable':
-        return <span className="status-badge warning">Compiler Unavailable</span>;
-      default:
-        return success ? <span className="status-badge success">Success</span> : <span className="status-badge error">Error</span>;
-    }
-  };
-
   return (
     <div className="free-console-container">
-      {/* Header */}
       <header className="console-header">
         <div className="console-title-area">
-          <h1>🖥️ Student Free Console</h1>
-          <p>Experiment with multi-language code execution in a sandboxed environment.</p>
+          <h1>Free Console</h1>
         </div>
-        <div className="console-actions">
-          <button className="reset-btn" onClick={handleReset}>Reset Code</button>
-          <button className="run-btn" onClick={handleRun} disabled={loading}>
-            {loading ? 'Executing...' : '▶ Run Code'}
-          </button>
+        <div className="console-status">
+          <span className={`status-dot ${loading ? 'running' : ''}`}></span>
+          {loading ? 'Running...' : 'Ready'}
         </div>
       </header>
 
-      {/* Main Workspace */}
-      <div className="console-workspace">
-        {/* Left pane: Editor & Input */}
-        <div className="editor-pane">
-          <div className="pane-header">
-            <div className="language-selector">
-              <label>Language:</label>
+      <main className="workspace">
+        <div className="editor-area">
+          <div className="toolbar">
+            <div className="toolbar-left">
               <CompilerSelector selectedId={selectedCompilerId} onChange={handleCompilerChange} />
             </div>
-            <span className="file-name">{selectedCompilerId.split('-')[0]}.txt</span>
-          </div>
-
-          <div className="code-editor-wrapper">
-            <textarea
-              className="code-textarea"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              spellCheck="false"
-              placeholder="Write your code here..."
-            />
-          </div>
-
-          <div className="stdin-section">
-            <label className="stdin-label">Standard Input (stdin):</label>
-            <textarea
-              className="stdin-textarea"
-              value={stdin}
-              onChange={(e) => setStdin(e.target.value)}
-              placeholder="Provide input for your program if needed..."
-              rows={3}
-            />
-          </div>
-        </div>
-
-        {/* Right pane: Execution Output */}
-        <div className="output-pane">
-          <div className="output-header-bar">
-            <h3>OUTPUT</h3>
-            <div className="output-meta-group">
-              {result && (
-                <span className="metadata-text">
-                  {result.exitCode !== undefined && `Exit code: ${result.exitCode}`}
-                  {result.time && `     ${result.time}s`}
-                </span>
-              )}
-              {getStatusBadge(status, result?.success)}
+            <div className="toolbar-right" style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn" style={{ background: '#333', color: '#fff' }} onClick={handleReset}>Reset</button>
+              <button className="btn btn-primary" onClick={handleRun} disabled={loading}>
+                {loading ? 'Running...' : 'Run Code'}
+              </button>
             </div>
           </div>
+          <textarea
+            className="editor-textarea"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            spellCheck="false"
+            placeholder="Write your code here..."
+          />
+        </div>
 
-          <div className="output-content-area">
-            {loading && (
-              <div className="loading-state">
-                <div className="spinner"></div>
-                <p>Compiling and executing code...</p>
-              </div>
-            )}
-
-            {error && !result && (
-              <div className="error-banner">
-                <strong>Error:</strong> {error}
-              </div>
-            )}
-
-            {!loading && !result && !error && (
-              <div className="empty-output">
-                <span>⚡</span>
-                <p>Click &quot;Run Code&quot; to compile and execute your program.</p>
-              </div>
-            )}
-
+        <div className="panels-grid">
+          <div className="panel">
+            <h3>Input</h3>
+            <textarea
+              value={stdin}
+              onChange={(e) => setStdin(e.target.value)}
+              placeholder="Provide input..."
+            />
+          </div>
+          <div className="panel">
+            <h3>Output</h3>
+            <pre className={status === 'error' ? 'error-text' : 'success-text'}>
+              {loading ? 'Running your code...' : (outputText || error || 'Output will appear here.')}
+            </pre>
             {result && (
-              <div className="output-scroll-container">
-                {status === 'success' && outputText === '' ? (
-                  <div className="no-output-message">
-                    Program executed successfully.<br />
-                    No output was produced.
-                  </div>
-                ) : (
-                  <pre className={`output-pre ${status === 'compile_error' || status === 'runtime_error' || !result.success ? 'error-text' : 'success-text'}`}>
-                    {outputText || result.error || '(No output)'}
-                  </pre>
-                )}
+              <div className="metrics-row" style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666' }}>
+                {result.time && <span>Runtime: {result.time}s | </span>}
+                {result.memory && <span>Memory: {result.memory} KB</span>}
               </div>
             )}
           </div>
         </div>
-      </div>
+      </main>
 
+      {/* Mobile Bottom Navigation */}
+      <nav className="bottom-nav">
+        <button aria-label="Home" onClick={() => navigate('/student/dashboard')}>
+          <Home size={24} />
+        </button>
+        <button aria-label="Practice" onClick={() => navigate('/student/practice')}>
+          <Code2 size={24} />
+        </button>
+        <button aria-label="Free Console" className="active" onClick={() => navigate('/student/freeconsole')}>
+          <Terminal size={24} />
+        </button>
+        <button aria-label="More" onClick={() => setIsMoreOpen(true)}>
+          <MoreHorizontal size={24} />
+        </button>
+      </nav>
+
+      {/* More Sheet */}
+      {isMoreOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 40 }} onClick={() => setIsMoreOpen(false)}>
+          <div className="more-sheet" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0 }}>More Options</h3>
+              <button onClick={() => setIsMoreOpen(false)} style={{ background: 'none', border: 'none' }}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button onClick={() => { navigate('/student/performance'); setIsMoreOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f5f5f7', border: 'none', borderRadius: '8px', textAlign: 'left' }}>
+                <BarChart2 size={18} /> Performance
+              </button>
+              <button onClick={() => { navigate('/student/profile'); setIsMoreOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#f5f5f7', border: 'none', borderRadius: '8px', textAlign: 'left' }}>
+                <User size={18} /> Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,9 +3,6 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 100vh;
-  position: sticky;
-  top: 0;
   overflow-x: visible;
   overflow: hidden;
   background-color: rgba(255, 255, 255, 0.88);
@@ -127,7 +124,7 @@
 
 /* ── Composable Group / Menu ──────────────────────────── */
 .sidebar-group {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .sidebar-group__label {
@@ -314,75 +311,8 @@
   to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
-/* ── Mobile Navigation Drawer ─────────────────────────── */
-.sidebar--mobile {
-  position: fixed;
-  top: 0;
-  left: -280px;
-  width: 280px;
-  height: 100vh;
-  background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  z-index: 9999;
-  transition: left 240ms cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.sidebar--mobile-open {
-  left: 0;
-}
-
-.sidebar-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 36, 65, 0.35);
-  backdrop-filter: blur(4px);
-  z-index: 9998;
-  animation: fadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.sidebar__mobile-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid rgba(15, 36, 65, 0.08);
-}
-
-.sidebar__close-btn {
-  background: none;
-  border: none;
-  color: rgba(15, 36, 65, 0.6);
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background 160ms ease, color 160ms ease;
-}
-
-.sidebar__close-btn:hover {
-  color: #0f2441;
-  background-color: rgba(15, 36, 65, 0.05);
-}
-
-.sidebar__mobile-toggle {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background-color: #0f2441;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 1000;
-  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.sidebar__mobile-toggle:hover {
-  transform: scale(1.05);
+@media (max-width: 767px) {
+  .sidebar {
+    display: none;
+  }
 }

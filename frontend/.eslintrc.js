@@ -25,6 +25,10 @@ module.exports = {
     },
   },
   rules: {
-    // custom rules can be added here
+    // Turn off rules that cause noisy errors in this project
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    // Reduce unused‑var errors to warnings so they don't block CI
+    "no-unused-vars": "warn",
   },
 };

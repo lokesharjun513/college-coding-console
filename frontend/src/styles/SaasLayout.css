@@ -1,0 +1,66 @@
+:root {
+  --z-base: 0;
+  --z-content: 10;
+  --z-sidebar: 100;
+  --z-header: 100;
+  --z-mobile-nav: 200;
+  --z-overlay: 300;
+  --z-modal: 1000;
+}
+
+.app-shell {
+  display: flex;
+  height: 100dvh;
+  background-color: var(--surface-page);
+  position: relative;
+  overflow: hidden;
+}
+
+.app-shell__ambient {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-base);
+  pointer-events: none;
+  background: radial-gradient(circle at 10% 20%, rgba(47, 126, 218, 0.04) 0%, transparent 40%),
+              radial-gradient(circle at 90% 80%, rgba(239, 68, 68, 0.02) 0%, transparent 40%);
+}
+
+.app-shell__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  z-index: var(--z-content);
+  transition: padding 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .sidebar__mobile-toggle-btn {
+    display: none;
+  }
+  .app-content {
+    padding: var(--space-4);
+    /* Space for mobile nav: 64px height + 24px buffer + safe area */
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Fullscreen mode */
+.app-shell[data-layout='fullscreen'] .app-content {
+  padding: 0;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__main {
+    transition: none;
+  }
+}
