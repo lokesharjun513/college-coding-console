@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Build output and coverage
+dist/
+build/
+coverage/
+
+# Temporary debugging files
+tmp_test*.js
+backend/test_import.json
+backend/test_50_problems.json
+
+# Local agent/tool configuration
+.agents/
+.aider-desk/
+
+# Local reports and scratch files
+memory/

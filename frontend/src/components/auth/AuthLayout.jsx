@@ -15,11 +15,11 @@ export default function AuthLayout({ children }) {
         <div className="auth-layout__glow auth-layout__glow--coral" />
       </div>
       <div className="auth-layout__wrapper">
-        {/* Left branding area – visible on desktop >= 1200px */}
-        <section className="auth-branding" aria-hidden="true">
+        {/* Both panels intentionally live inside one shared product surface. */}
+        <section className="auth-branding">
           <div className="auth-branding__content">
             <BrandLogo size="lg" variant="dark" />
-            <span className="auth-header__eyebrow" style={{ marginTop: '24px' }}>The Developer Learning Platform</span>
+            <span className="auth-header__eyebrow auth-branding__eyebrow">The Developer Learning Platform</span>
             <h1 className="auth-branding__title">
               Learn.<br />
               Practice.<br />
@@ -63,7 +63,7 @@ export default function AuthLayout({ children }) {
         </section>
 
         {/* Right panel – the auth form */}
-        <section className="auth-panel">
+        <section className="auth-panel" aria-label="Sign in form">
           <div className="auth-layout__content">
             {children}
           </div>

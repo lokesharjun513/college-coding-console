@@ -8,6 +8,8 @@ const Collection = require('../../models/Collection');
 const Topic = require('../../models/Topic');
 const ProblemTopic = require('../../models/ProblemTopic');
 const Problem = require('../../models/Problem');
+const TestCase = require('../../models/TestCase');
+const Submission = require('../../models/Submission');
 
 // Helper to generate slug
 function slugify(text) {
@@ -87,10 +89,22 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       {
         $addFields: {
           topicCount: { $size: '$topics' },
-          problemCount: { $size: '$problemLinks' }
+          // compute distinct problem IDs from problemLinks
+          problemIds: {
+            $map: {
+              input: '$problemLinks',
+              as: 'pl',
+              in: '$$pl.problem'
+            }
+          }
         }
       },
-      { $project: { topics: 0, problemLinks: 0 } }
+      {
+        $addFields: {
+          problemCount: { $size: { $setUnion: ['$problemIds'] } }
+        }
+      },
+      { $project: { topics: 0, problemLinks: 0, problemIds: 0 } }
     ]);
     const total = await Collection.countDocuments(filter);
     // Ensure IDs are strings for client consistency
@@ -123,8 +137,9 @@ router.get('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     // topics count
     const topics = await Topic.find({ collection: id }).lean();
     const topicCount = topics.length;
-    // problem count via ProblemTopic
-    const problemCount = await ProblemTopic.countDocuments({ collection: id });
+    // problem count via distinct ProblemTopic.problem
+    const problemIds = await ProblemTopic.distinct('problem', { collection: id });
+    const problemCount = problemIds.length;
     const data = { ...collection, topics, topicCount, problemCount };
     return res.json({ success: true, data });
   } catch (err) {
@@ -138,12 +153,13 @@ router.get('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
  * PATCH /api/admin/collections/:id
  */
 router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
+  const session = await mongoose.startSession();
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid collection id' });
+      throw new Error('Invalid collection id');
     }
-    const { name, description, status } = req.body;
+    const { name, description, status, cascade } = req.body;
     const update = {};
     if (name) {
       update.name = name.trim();
@@ -151,14 +167,72 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }
     if (description !== undefined) update.description = description?.trim();
     if (status) update.status = status;
-    const collection = await Collection.findByIdAndUpdate(id, update, { new: true }).lean();
-    if (!collection) {
-      return res.status(404).json({ success: false, message: 'Collection not found' });
+
+    // Fetch existing collection to determine status change
+    const oldCollection = await Collection.findById(id).session(session);
+    if (!oldCollection) {
+      throw new Error('Collection not found');
     }
+    const oldStatus = oldCollection.status;
+
+    // Apply updates within transaction
+    let collection;
+    await session.withTransaction(async () => {
+      collection = await Collection.findByIdAndUpdate(id, update, { new: true, session }).lean();
+      if (!collection) {
+        throw new Error('Collection not found');
+      }
+
+      // If status is being changed to ARCHIVED, cascade archive to topics and problems
+      if (status === 'ARCHIVED' && oldStatus !== 'ARCHIVED') {
+        // Archive all topics in this collection
+        await Topic.updateMany({ collection: id }, { status: 'ARCHIVED' }, { session });
+        // Archive all problems linked to topics in this collection
+        const topicIds = await Topic.distinct('_id', { collection: id }, { session });
+        if (topicIds.length > 0) {
+          const problemIds = await ProblemTopic.distinct('problem', { topic: { $in: topicIds } }, { session });
+          if (problemIds.length > 0) {
+            const problemsToArchive = await Problem.find({ _id: { $in: problemIds } }, { _id: 1, status: 1 }, { session });
+            await Promise.all(problemsToArchive.map(p =>
+              Problem.updateOne(
+                { _id: p._id },
+                { $set: { status: 'ARCHIVED', ...(p.status !== 'ARCHIVED' ? { archivedFrom: p.status } : {}) } },
+                { session }
+              )
+            ));
+          }
+        }
+      }
+
+      // If status is being changed to ACTIVE and cascade is true, cascade unarchive
+      if (status === 'ACTIVE' && oldStatus !== 'ACTIVE' && cascade === true) {
+        // Unarchive all topics in this collection
+        await Topic.updateMany({ collection: id }, { status: 'ACTIVE' }, { session });
+        // Unarchive all problems linked to topics in this collection: restore their status from archivedFrom
+        const topicIds = await Topic.distinct('_id', { collection: id }, { session });
+        if (topicIds.length > 0) {
+          const problemIds = await ProblemTopic.distinct('problem', { topic: { $in: topicIds } }, { session });
+          if (problemIds.length > 0) {
+            // Restore status from archivedFrom and clear archivedFrom
+            const problemsToRestore = await Problem.find({ _id: { $in: problemIds } }, { _id: 1, archivedFrom: 1 }, { session });
+            await Promise.all(problemsToRestore.map(p =>
+              Problem.updateOne(
+                { _id: p._id },
+                { $set: { status: p.archivedFrom || 'DRAFT', archivedFrom: null } },
+                { session }
+              )
+            ));
+          }
+        }
+      }
+    });
+
+    await session.endSession();
     return res.json({ success: true, data: collection });
   } catch (err) {
+    if (session) await session.endSession();
     console.error('Error updating collection:', err);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: err.message || 'Internal server error' });
   }
 });
 
@@ -177,30 +251,85 @@ router.delete('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
       return res.status(404).json({ success: false, message: 'Collection not found' });
     }
     if (collection.status === 'ARCHIVED') {
-      // Hard delete permanently (also delete topics and problem links)
-      await ProblemTopic.deleteMany({ collection: id });
-      await Collection.findByIdAndDelete(id);
-      return res.json({ success: true, data: null, hardDeleted: true });
+      // Hard delete permanently with transaction if supported
+      if (mongoose.__transactionSupport) {
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            // 1. Find all topics in this collection
+            const topics = await Topic.find({ collection: id }, { _id: 1 }, { session });
+            const topicIds = topics.map(t => t._id);
+
+            // 2. Find all problems linked to topics in this collection
+            if (topicIds.length > 0) {
+              const problemIds = await ProblemTopic.distinct('problem', { topic: { $in: topicIds } }, { session });
+
+              // 3. Delete Submissions for these problems
+              if (problemIds.length > 0) {
+                await Submission.deleteMany({ problem: { $in: problemIds } }, { session });
+                // 4. Delete TestCases for these problems
+                await TestCase.deleteMany({ problem: { $in: problemIds } }, { session });
+              }
+
+              // 5. Delete all ProblemTopic records for problems linked to this collection
+              await ProblemTopic.deleteMany({ collection: id }, { session });
+
+              // 6. Delete Problems
+              if (problemIds.length > 0) {
+                await Problem.deleteMany({ _id: { $in: problemIds } }, { session });
+              }
+            }
+
+            // 7. Delete all Topics in this collection
+            await Topic.deleteMany({ collection: id }, { session });
+
+            // 8. Delete Collection
+            await Collection.findByIdAndDelete(id, { session });
+          });
+          await session.endSession();
+          return res.json({ success: true, data: null, hardDeleted: true });
+        } catch (error) {
+          await session.endSession();
+          throw error;
+        }
+      } else {
+        // Fallback: sequential deletes (not atomic)
+        const topics = await Topic.find({ collection: id }, { _id: 1 });
+        const topicIds = topics.map(t => t._id);
+
+        if (topicIds.length > 0) {
+          const problemIds = await ProblemTopic.distinct('problem', { topic: { $in: topicIds } });
+
+          // Delete Submissions
+          if (problemIds.length > 0) {
+            await Submission.deleteMany({ problem: { $in: problemIds } });
+            await TestCase.deleteMany({ problem: { $in: problemIds } });
+          }
+
+          await ProblemTopic.deleteMany({ collection: id });
+
+          if (problemIds.length > 0) {
+            await Problem.deleteMany({ _id: { $in: problemIds } });
+          }
+        }
+
+        await Topic.deleteMany({ collection: id });
+        await Collection.findByIdAndDelete(id);
+
+        return res.json({ success: true, data: null, hardDeleted: true });
+      }
     }
     // Prevent deletion if topics exist (only when not archived)
     const topicCount = await Topic.countDocuments({ collection: id });
     if (topicCount > 0) {
       return res.status(400).json({ success: false, message: 'Cannot delete collection with existing topics' });
     }
-    // Soft delete: archive all problems linked to this collection
-    const links = await ProblemTopic.find({ collection: id }).select('problem').lean();
-    const problemIds = links.map(l => l.problem);
-    if (problemIds.length > 0) {
-      await Problem.updateMany({ _id: { $in: problemIds } }, { $set: { status: 'ARCHIVED' } });
-      // Remove problem links as they reference an archived collection
-      await ProblemTopic.deleteMany({ collection: id });
-    }
-    // Soft delete collection by setting status
+    // Soft delete collection by setting status only
     const updated = await Collection.findByIdAndUpdate(id, { status: 'ARCHIVED' }, { new: true }).lean();
     return res.json({ success: true, data: null, hardDeleted: false });
   } catch (err) {
     console.error('Error deleting collection:', err);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: err.message || 'Internal server error' });
   }
 });
 

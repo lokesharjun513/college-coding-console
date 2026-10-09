@@ -96,9 +96,31 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
  */
 router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
-    const batches = await Batch.find()
-      .populate({ path: 'trainer', select: '-passwordHash' })
-      .select('-__v');
+    const batches = await Batch.aggregate([
+      {
+        $lookup: {
+          from: 'batchstudents',
+          localField: '_id',
+          foreignField: 'batch',
+          as: 'students'
+        }
+      },
+      {
+        $addFields: {
+          studentCount: { $size: '$students' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'trainer',
+          foreignField: '_id',
+          as: 'trainer'
+        }
+      },
+      { $unwind: { path: '$trainer', preserveNullAndEmptyArrays: true } }
+    ]);
+
     const data = batches.map(b => ({
       id: b._id,
       name: b.name,
@@ -116,6 +138,7 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       endDate: b.endDate,
       createdAt: b.createdAt,
       updatedAt: b.updatedAt,
+      studentCount: b.studentCount,
     }));
     res.json({ success: true, data });
   } catch (error) {

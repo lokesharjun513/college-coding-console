@@ -22,9 +22,12 @@ const adminSubmissionsRouter = require('./routes/admin/submissions');
 const adminSettingsRouter = require('./routes/admin/settings');
 const adminSystemRouter = require('./routes/admin/system');
 const adminStudentsRouter = require('./routes/admin/students');
+const adminPlatformActivityRouter = require('./routes/admin/platformActivity');
+const adminRecentActivityRouter = require('./routes/admin/recentActivity');
 const trainerBatchRouter = require('./routes/trainer/batches');
 const trainerStudentsRouter = require('./routes/trainer/students');
 const trainerProblemRouter = require('./routes/trainer/problems');
+const trainerCollectionsRouter = require('./routes/trainer/collections');
 const trainerTestCaseRouter = require('./routes/trainer/testCases');
 const testRouter = require('./routes/testRoutes');
 const studentRouter = require('./routes/student/submissions');
@@ -33,6 +36,7 @@ const studentCollectionsRouter = require('./routes/student/collections');
 const studentTopicsRouter = require('./routes/student/topics');
 const studentDashboardRouter = require('./routes/student/dashboard');
 const studentConsoleRouter = require('./routes/student/console');
+const studentPracticeRouter = require('./routes/student/practice');
 
 const app = express();
 
@@ -83,6 +87,8 @@ app.use('/api/admin/reports', adminReportsRouter);
 app.use('/api/admin/submissions', adminSubmissionsRouter);
 app.use('/api/admin/settings', adminSettingsRouter);
 app.use('/api/admin/system', adminSystemRouter);
+app.use('/api/admin/platform-activity', adminPlatformActivityRouter);
+app.use('/api/admin/recent-activity', adminRecentActivityRouter);
 app.use('/api/admin/students', adminStudentsRouter);
 
 app.use(
@@ -100,8 +106,14 @@ app.use(
   trainerProblemRouter
 );
 
+// Trainer read-only Training (Collection) / Day (Topic) metadata
+app.use('/api/trainer/collections', trainerCollectionsRouter);
+
 // Trainer performance endpoints
 app.use('/api/trainer/performance', require('./routes/trainer/performance'));
+
+// Trainer analytics (KPIs + leaderboard)
+app.use('/api/trainer/analytics', require('./routes/trainer/analytics'));
 
 app.use(
   '/api/trainer/problems/:problemId/test-cases',
@@ -114,7 +126,10 @@ app.use('/api/student/problems', studentProblemsRouter);
 app.use('/api/student/collections', studentCollectionsRouter);
 app.use('/api/student/topics', studentTopicsRouter);
 app.use('/api/student/dashboard', studentDashboardRouter);
+app.use('/api/student/performance', require('./routes/student/performance'));
+app.use('/api/student/leaderboard', require('./routes/student/leaderboard'));
 app.use('/api/student/console', studentConsoleRouter);
+app.use('/api/student/practice', studentPracticeRouter);
 app.use('/api/student/compilers', require('./routes/student/compiler'));
 
 // Centralized error handling middleware

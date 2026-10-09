@@ -1,17 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Pencil, Trash2, Users, UserCheck, X, Download, Upload, Plus } from 'lucide-react';
 import DataTable from '../../components/ui/DataTable';
 import TableActions from '../../components/ui/table/TableActions';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Toast from '../../components/ui/Toast';
 import Spinner from '../../components/ui/Spinner';
-import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Card from '../../components/ui/Card';
 import { getStudents, createStudent, updateStudent, deleteStudent, downloadStudentTemplate } from '../../api/admin';
+import PageHeader from '../../components/ui/PageHeader';
 import BulkUploadModal from './BulkUploadModal';
+import '../../styles/pages/admin.css';
+import '../../styles/pages/admin-dashboard.css';
 import '../../styles/pages/admin-students.css';
 
 /**
@@ -41,6 +43,11 @@ export default function Students() {
 
   // Selected student for edit/delete
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Status toggle confirmation (follows Trainers page pattern)
+  const [statusConfirmStudent, setStatusConfirmStudent] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Form state
   const [addForm, setAddForm] = useState({ name: '', email: '', rollNumber: '', startYear: '', endYear: '', department: '', section: '' });
@@ -216,6 +223,28 @@ export default function Students() {
     }
   };
 
+  const toggleStatus = (student) => {
+    setStatusConfirmStudent(student);
+    setStatusTarget(student.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!statusConfirmStudent) return;
+    setUpdatingStatus(true);
+    try {
+      await updateStudent(statusConfirmStudent.id, { ...statusConfirmStudent, status: statusTarget });
+      setToast({ message: `Student status updated to ${statusTarget.toLowerCase()}`, type: 'success' });
+      setStatusConfirmStudent(null);
+      setStatusTarget(null);
+      await fetchStudents();
+    } catch (err) {
+      setToast({ message: err?.response?.data?.message || 'Failed to update status', type: 'error' });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+
   const [downloading, setDownloading] = useState(false);
 
   const handleDownloadTemplate = async () => {
@@ -250,7 +279,7 @@ export default function Students() {
     { key: 'department', header: 'Department' },
     { key: 'section', header: 'Section' },
     { key: 'status', header: 'Status' },
-    { key: 'actions', header: 'Actions' },
+    { key: 'actions', header: 'Actions', align: 'center' },
   ];
 
   // Table rows
@@ -270,7 +299,16 @@ export default function Students() {
     department: student.department || '—',
     section: student.section || '—',
     status: (
-      <Badge variant={student.status === 'ACTIVE' ? 'success' : 'warning'}>{student.status}</Badge>
+      <button
+        type="button"
+        className="admin-students__status-toggle"
+        onClick={() => toggleStatus(student)}
+        title="Click to toggle status"
+      >
+        <span className={`admin-badge admin-badge--status ${student.status === 'ACTIVE' ? 'admin-badge--active' : 'admin-badge--inactive'}`}>
+          {student.status}
+        </span>
+      </button>
     ),
     actions: (
       <TableActions
@@ -284,40 +322,62 @@ export default function Students() {
 
   return (
     <div className="admin-students">
-      {/* Page Header */}
-      <div className="admin-students__header">
-        <h1>Students</h1>
-        <p>Manage students across the institution.</p>
-        <div className="admin-students__actions">
-          <Button variant="secondary" className="admin-students__download-btn" onClick={handleDownloadTemplate} loading={downloading}>
-            {downloading ? 'Downloading...' : 'Download Template'}
-          </Button>
-          <Button className="admin-students__bulk-btn" onClick={() => setBulkModalOpen(true)}>Bulk Upload</Button>
-          <Button onClick={() => setAddModalOpen(true)}>+ Add Student</Button>
+      <div className="admin-trainers__page-header">
+        <nav className="admin-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/admin" className="admin-breadcrumb__item">Home</Link>
+          <span className="admin-breadcrumb__separator">/</span>
+          <span className="admin-breadcrumb__current" aria-current="page">Students</span>
+        </nav>
+        <div className="admin-trainers__header">
+          <div>
+            <h1 className="admin-trainers__title">Students</h1>
+            <p className="admin-trainers__description">
+              Manage students across the institution.
+            </p>
+          </div>
+          <div className="admin-trainers__header-actions">
+            <Button onClick={handleDownloadTemplate} variant="secondary"><Download size={16} />Template</Button>
+            <Button onClick={() => setBulkModalOpen(true)} variant="secondary"><Upload size={16} />Bulk Upload</Button>
+            <Button onClick={() => setAddModalOpen(true)} className="admin-trainers__add-btn">
+              <Plus size={16} /> Add Student
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* KPI Strip */}
-      <div className="admin-students__kpi">
-        <div className="admin-students__kpi-card">
-          <div className="admin-students__kpi-label">Total Students</div>
-          <div className="admin-students__kpi-value">{loading ? <Spinner size={20} /> : kpis.total}</div>
-          <div className="admin-students__kpi-meta">All students</div>
+      {/* KPI Grid using shared admin-dashboard classes */}
+      <div className="admin-dashboard__kpi-grid">
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Total Students</span>
+            <div className="admin-dashboard__stat-icon"><Users size={18} /></div>
+          </div>
+          <div className="admin-dashboard__stat-value">{loading ? <Spinner size={20} /> : kpis.total}</div>
+          <div className="admin-dashboard__stat-meta">All students</div>
         </div>
-        <div className="admin-students__kpi-card">
-          <div className="admin-students__kpi-label">Active</div>
-          <div className="admin-students__kpi-value">{loading ? <Spinner size={20} /> : kpis.active}</div>
-          <div className="admin-students__kpi-meta">Currently active</div>
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Active</span>
+            <div className="admin-dashboard__stat-icon"><UserCheck size={18} /></div>
+          </div>
+          <div className="admin-dashboard__stat-value">{loading ? <Spinner size={20} /> : kpis.active}</div>
+          <div className="admin-dashboard__stat-meta">Currently active</div>
         </div>
-        <div className="admin-students__kpi-card">
-          <div className="admin-students__kpi-label">Inactive</div>
-          <div className="admin-students__kpi-value">{loading ? <Spinner size={20} /> : kpis.inactive}</div>
-          <div className="admin-students__kpi-meta">Deactivated</div>
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Inactive</span>
+            <div className="admin-dashboard__stat-icon"><X size={18} /></div>
+          </div>
+          <div className="admin-dashboard__stat-value">{loading ? <Spinner size={20} /> : kpis.inactive}</div>
+          <div className="admin-dashboard__stat-meta">Deactivated</div>
         </div>
-        <div className="admin-students__kpi-card">
-          <div className="admin-students__kpi-label">Departments</div>
-          <div className="admin-students__kpi-value">{loading ? <Spinner size={20} /> : kpis.deptCount}</div>
-          <div className="admin-students__kpi-meta">Unique departments</div>
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Departments</span>
+            <div className="admin-dashboard__stat-icon"><Users size={18} /></div>
+          </div>
+          <div className="admin-dashboard__stat-value">{loading ? <Spinner size={20} /> : kpis.deptCount}</div>
+          <div className="admin-dashboard__stat-meta">Unique departments</div>
         </div>
       </div>
 
@@ -375,8 +435,8 @@ export default function Students() {
           <h3>No students yet</h3>
           <p>Create your first student or import students using a CSV template.</p>
           <div className="admin-students__empty-actions">
-            <Button onClick={() => setAddModalOpen(true)}>+ Add Student</Button>
-            <Button variant="secondary" onClick={() => setBulkModalOpen(true)}>Import Students</Button>
+            <Button className="admin-students__action admin-students__action--primary" variant="ghost" onClick={() => setAddModalOpen(true)}><Plus size={16} />Add Student</Button>
+            <Button className="admin-students__action admin-students__action--bulk" variant="ghost" onClick={() => setBulkModalOpen(true)}>Import Students</Button>
           </div>
         </div>
       )}
@@ -392,19 +452,20 @@ export default function Students() {
       {!error && !loading && filteredStudents.length > 0 && (
         <Card>
           <div className="admin-students__table">
-            <DataTable
-              columns={columns}
-              data={rows}
-              loading={false}
-              error={null}
-              emptyMessage="No students available."
-              showSNo={true}
-              currentPage={meta.page}
-              pageSize={meta.limit}
-            />
+             <DataTable
+               columns={columns}
+               data={rows}
+               loading={false}
+               error={null}
+               emptyMessage="No students available."
+               showSNo={true}
+               currentPage={meta.page}
+               pageSize={meta.limit}
+               className="admin-table"
+             />
           </div>
           {/* Pagination */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-5)', padding: '0 var(--space-4) var(--space-4)' }}>
+          <div className="admin-pagination admin-pagination-controls">
             <div>Page {meta.page} of {totalPages}</div>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
               <Button variant="secondary" size="sm" disabled={meta.page <= 1} onClick={() => setMeta(prev => ({ ...prev, page: prev.page - 1 }))}>Previous</Button>
@@ -543,6 +604,34 @@ export default function Students() {
           </div>
         ) : (
           <div className="admin-students__empty"><p>No student selected.</p></div>
+        )}
+      </Modal>
+
+      {/* Status Toggle Confirmation Modal */}
+      <Modal isOpen={!!statusConfirmStudent} onClose={() => statusConfirmStudent ? setStatusConfirmStudent(null) : null} title={statusTarget === 'INACTIVE' ? 'Deactivate Student?' : 'Activate Student?'}>
+        {statusConfirmStudent && (
+          <div>
+            <p style={{ marginBottom: 'var(--space-4)', color: 'var(--text-primary)' }}>
+              Are you sure you want to make <strong>{statusConfirmStudent.name}</strong>{' '}
+              {statusTarget === 'INACTIVE' ? 'inactive' : 'active'}?
+            </p>
+            <div className="admin-students__modal-actions">
+              <Button
+                variant="secondary"
+                onClick={() => setStatusConfirmStudent(null)}
+                disabled={updatingStatus}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={statusTarget === 'INACTIVE' ? 'danger' : 'primary'}
+                onClick={confirmToggleStatus}
+                loading={updatingStatus}
+              >
+                {statusTarget === 'INACTIVE' ? 'Yes, Deactivate' : 'Yes, Activate'}
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
 

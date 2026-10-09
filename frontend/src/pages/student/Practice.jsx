@@ -1,227 +1,477 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  getStudentCollections,
+  getStudentCollectionTopics,
+  getStudentTopicProblems,
+  getStudentNextPracticeProblem,
+} from '../../api/student';
 import './Practice.css';
-import Spinner from '../../components/ui/Spinner';
-import { getStudentProblems } from '../../api/student';
 
-// Helper to deduplicate problem arrays by canonical ID (_id or id)
-const dedupeById = (arr) => {
-  const map = new Map();
-  arr.forEach((item) => {
-    const id = item.id || item._id;
-    if (id && !map.has(id)) {
-      map.set(id, item);
-    }
-  });
-  return Array.from(map.values());
+// ──────────────────────────────────────────────────────────────────────
+// Helper Functions
+// ──────────────────────────────────────────────────────────────────────
+
+const idOf = (item) => item?._id || item?.id;
+
+const progressOf = (total = 0, completed = 0) => ({
+  total,
+  completed,
+  percentage: total ? Math.min(100, Math.round((completed / total) * 100)) : 0,
+});
+
+const statusOf = ({ percentage, total }) => {
+  if (total > 0 && percentage === 100) return 'COMPLETED';
+  if (percentage > 0) return 'IN_PROGRESS';
+  return 'NOT_STARTED';
 };
+
+// ──────────────────────────────────────────────────────────────────────
+// Presentational Components
+// ──────────────────────────────────────────────────────────────────────
+
+function Progress({ value, label }) {
+  return (
+    <div className="practice-progress" role="progressbar" aria-valuenow={value} aria-valuemin="0" aria-valuemax="100" aria-label={label}>
+      <span style={{ width: `${value}%` }} />
+    </div>
+  );
+}
+
+function Status({ progress }) {
+  const status = statusOf(progress);
+  return (
+    <span className={`practice-status practice-status--${status.toLowerCase()}`}>
+      {status === 'COMPLETED' ? 'Collection Completed' : status === 'IN_PROGRESS' ? 'In Progress' : 'Not Started'}
+    </span>
+  );
+}
+
+function LoadingCards({ label }) {
+  return (
+    <div className="practice-skeletons" aria-label={`Loading ${label}`} role="status">
+      {[1, 2, 3].map((item) => (
+        <div className="practice-skeleton" key={item}>
+          <i />
+          <b />
+          <em />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Empty({ title, children }) {
+  return (
+    <div className="practice-empty">
+      <h3>{title}</h3>
+      <p>{children}</p>
+    </div>
+  );
+}
+
+function InlineError({ message, onRetry }) {
+  return (
+    <div className="practice-inline-error" role="alert">
+      <span>{message}</span>
+      <button onClick={onRetry}>Retry</button>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Main Component
+// ──────────────────────────────────────────────────────────────────────
 
 export default function Practice() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  // ──────────────────────────────────────────────────────────────────
+  // State
+  // ──────────────────────────────────────────────────────────────────
+  const [collections, setCollections] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [problems, setProblems] = useState([]);
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [view, setView] = useState('collections');
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [detailError, setDetailError] = useState(null);
+  const [continueState, setContinueState] = useState({ id: null, error: null });
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Filters
-  const [difficultyFilter, setDifficultyFilter] = useState('ALL');
-  const [topicFilter, setTopicFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-
-  useEffect(() => {
-    const fetchPracticeProblems = async () => {
-      try {
-        setLoading(true);
-        const res = await getStudentProblems();
-        // Deduplicate the problem list by canonical ID.
-        setProblems(dedupeById(res.data?.data || []));
-      } catch (err) {
-        setError(err?.response?.data?.message || 'Failed to load practice problems.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPracticeProblems();
+  // ──────────────────────────────────────────────────────────────────
+  // Data Loading
+  // ──────────────────────────────────────────────────────────────────
+  const loadCollections = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const collectionsResponse = await getStudentCollections();
+      setCollections(collectionsResponse.data?.data || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Unable to load practice.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (loading && problems.length === 0) {
-    return <div className="practice-container" style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><Spinner /></div>;
-  }
+  useEffect(() => {
+    loadCollections();
+  }, [loadCollections]);
 
-  if (error && problems.length === 0) {
-    return <div className="practice-container" style={{ color: 'red', padding: '24px' }}>{error}</div>;
-  }
-
-  const filteredProblems = problems.filter((item) => {
-    const matchesDiff = difficultyFilter === 'ALL' || item.difficulty === difficultyFilter;
-    const matchesTopic = topicFilter === 'ALL' || item.topic === topicFilter;
-    const matchesStatus = statusFilter === 'ALL' || item.progress === statusFilter;
-    return matchesDiff && matchesTopic && matchesStatus;
-  });
-
-  const totalCount = problems.length;
-  const solvedCount = problems.filter(p => p.progress === 'SOLVED').length;
-  const remainingCount = totalCount - solvedCount;
-  const solvedPercentage = totalCount > 0 ? Math.round((solvedCount / totalCount) * 100) : 0;
-  const remainingPercentage = totalCount > 0 ? 100 - solvedPercentage : 0;
-
-  const getStatusClass = (progress) => {
-    if (progress === 'SOLVED') return 'solved';
-    if (progress === 'ATTEMPTED') return 'attempted';
-    return 'not-started';
+  const selectCollection = async (collection) => {
+    setSelectedCollection(collection);
+    setSelectedTopic(null);
+    setView('topics');
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const response = await getStudentCollectionTopics(idOf(collection));
+      setTopics(response.data?.data || []);
+    } catch (err) {
+      setDetailError(err?.response?.data?.message || 'Unable to load topics.');
+      setTopics([]);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  const getStatusLabel = (progress) => {
-    if (progress === 'SOLVED') return 'Solved';
-    if (progress === 'ATTEMPTED') return 'Attempted';
-    return 'Not Started';
+  const selectTopic = async (topic) => {
+    setSelectedTopic(topic);
+    setView('problems');
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const response = await getStudentTopicProblems(idOf(topic), { scope: 'GLOBAL' });
+      setProblems(response.data?.data || []);
+    } catch (err) {
+      setDetailError(err?.response?.data?.message || 'Unable to load problems.');
+      setProblems([]);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  const getDiffClass = (diff) => {
-    if (!diff) return 'easy';
-    const d = diff.toLowerCase();
-    if (d.includes('easy')) return 'easy';
-    if (d.includes('med')) return 'medium';
-    return 'hard';
+  const back = () => {
+    if (view === 'problems') {
+      setView('topics');
+      setSelectedTopic(null);
+    } else if (view === 'topics') {
+      setView('collections');
+      setSelectedCollection(null);
+    }
   };
 
-  return (
-    <div className="practice-container">
-      {/* Top Hero Section */}
-      <header className="practice-hero">
-        <div className="hero-top-row">
-          <div className="hero-text-content">
-            <h1 className="practice-title">Practice</h1>
-            <p className="practice-subtitle">
-              Explore problems from the global practice library and improve your coding skills.
-            </p>
-          </div>
+  const handleContinue = useCallback(async (collection) => {
+    setContinueState({ id: idOf(collection), error: null });
+    try {
+      const res = await getStudentNextPracticeProblem({ collectionId: idOf(collection) });
+      const next = res.data?.data;
+      if (next && next.problemId) {
+        navigate(`/student/problems/${next.problemId}`);
+      } else {
+        setContinueState({ id: null, error: 'no-problems' });
+      }
+    } catch (err) {
+      setContinueState({ id: null, error: err?.response?.data?.message || 'Unable to find next problem.' });
+    }
+  }, [navigate]);
 
-          <div className="hero-banner-group">
-            <div className="banner-illustration-purple">
-              <span className="code-icon-text">&lt;/&gt;</span>
-            </div>
-            <div className="quote-box">
-              <span className="quote-mark">“</span>
-              <p className="quote-text">Practice today builds the expert you&apos;ll become tomorrow.</p>
-            </div>
-          </div>
+  // ──────────────────────────────────────────────────────────────────
+  // Computed Data
+  // ──────────────────────────────────────────────────────────────────
+  const collectionProgress = (collection) => progressOf(collection.problemCount, collection.completedProblemCount);
+  const topicProgress = (topic) => progressOf(topic.problemCount, topic.completedProblemCount);
+
+  const title = view === 'collections'
+    ? 'Practice'
+    : view === 'topics'
+      ? selectedCollection?.name
+      : selectedTopic?.name;
+
+  const subtitle = view === 'collections'
+    ? 'Explore collections and keep your skills sharp.'
+    : view === 'topics'
+      ? 'Choose a topic and build your fluency one problem at a time.'
+      : 'Solve, review, and strengthen your understanding.';
+
+  const filteredCollections = collections.filter((c) =>
+    c.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalProblems = collections.reduce((sum, c) => sum + (c.problemCount || 0), 0);
+  const solvedProblems = collections.reduce((sum, c) => sum + (c.completedProblemCount || 0), 0);
+  const attemptedProblems = collections.reduce((sum, c) => {
+    const attempted = c.problemCount || 0 - (c.completedProblemCount || 0);
+    return sum + Math.max(0, attempted);
+  }, 0);
+  const completionPercentage = totalProblems ? Math.round((solvedProblems / totalProblems) * 100) : 0;
+
+  // ──────────────────────────────────────────────────────────────────
+  // Render Functions
+  // ──────────────────────────────────────────────────────────────────
+  const renderCollectionCard = (collection) => {
+    const progress = collectionProgress(collection);
+    const isComplete = progress.total > 0 && progress.completed === progress.total;
+    const busy = continueState.id === idOf(collection);
+
+    return (
+      <div className="practice-card" key={idOf(collection)}>
+        <button className="practice-card__open" onClick={() => selectCollection(collection)} aria-label={`Open ${collection.name}`}>
+          <span className="practice-card-kicker">Collection</span>
+          <strong>{collection.name}</strong>
+          <small>
+            {collection.topicCount || 0} Topics
+            <i>•</i>
+            {progress.total} Problems
+          </small>
+          <Progress value={progress.percentage} label={`${collection.name} progress`} />
+          <span className="practice-card-foot">
+            <b>{progress.completed} / {progress.total} completed</b>
+            <Status progress={progress} />
+            <span className="practice-arrow">→</span>
+          </span>
+        </button>
+        {isComplete ? (
+          <button
+            className="practice-continue practice-continue--secondary"
+            onClick={() => selectCollection(collection)}
+          >
+            Review Topics
+          </button>
+        ) : (
+          <button
+            className="practice-continue"
+            onClick={() => handleContinue(collection)}
+            disabled={Boolean(continueState.id) && !busy}
+          >
+            {busy ? 'Finding…' : continueState.error === 'no-problems' && continueState.id === null ? 'Nothing left' : 'Continue Practice'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderTopicCard = (topic, index) => {
+    const progress = topicProgress(topic);
+    return (
+      <button
+        className="practice-card practice-card--topic"
+        key={idOf(topic)}
+        onClick={() => selectTopic(topic)}
+      >
+        <span className="practice-card-kicker">
+          Topic {String(index + 1).padStart(2, '0')}
+        </span>
+        <strong>{topic.name}</strong>
+        <small>{progress.total} Problems</small>
+        <Progress value={progress.percentage} label={`${topic.name} progress`} />
+        <span className="practice-card-foot">
+          <b>{progress.completed} / {progress.total} completed</b>
+          <Status progress={progress} />
+          <span className="practice-arrow">→</span>
+        </span>
+      </button>
+    );
+  };
+
+  const renderProblemCard = (problem, index) => {
+    const progress = problem.progress || 'NOT_STARTED';
+    const solved = progress === 'SOLVED';
+    const attempted = progress === 'ATTEMPTED';
+
+    return (
+      <button
+        className="practice-problem"
+        key={idOf(problem)}
+        onClick={() => navigate(`/student/problems/${idOf(problem)}`)}
+      >
+        <span className="practice-problem-number">#{index + 1}</span>
+        <div className="practice-problem-main">
+          <strong>{problem.title}</strong>
+          <small>
+            <em className={`difficulty difficulty--${(problem.difficulty || 'easy').toLowerCase()}`}>
+              {problem.difficulty || 'EASY'}
+            </em>
+          </small>
         </div>
+        <div className="practice-problem-meta">
+          <span className={`problem-state problem-state--${progress.toLowerCase()}`}>
+            {solved ? '✓ Solved' : attempted ? '◐ Attempted' : '○ Not Started'}
+          </span>
+          <span className="practice-problem-action">
+            {solved ? 'Review' : attempted ? 'Continue' : 'Solve'}
+            <b>→</b>
+          </span>
+        </div>
+      </button>
+    );
+  };
 
-        {/* 3-Column Metric Cards Row */}
-        <div className="hero-metrics-row">
-          <div className="metric-box">
-            <div className="m-icon red">📝</div>
-            <div className="m-info">
-              <h2>{totalCount}</h2>
-              <p>Total Problems</p>
-            </div>
-          </div>
-          <div className="metric-box">
-            <div className="m-icon blue">✔️</div>
-            <div className="m-info">
-              <h2>{solvedCount}</h2>
-              <p>Solved</p>
-            </div>
-            <div className="m-progress-bar"><div className="fill blue" style={{ width: `${solvedPercentage}%` }}></div></div>
-            <span className="m-percent">{solvedPercentage}%</span>
-          </div>
-          <div className="metric-box">
-            <div className="m-icon pink">🎯</div>
-            <div className="m-info">
-              <h2>{remainingCount}</h2>
-              <p>Remaining</p>
-            </div>
-            <div className="m-progress-bar"><div className="fill pink" style={{ width: `${remainingPercentage}%` }}></div></div>
-            <span className="m-percent">{remainingPercentage}%</span>
-          </div>
+  // ──────────────────────────────────────────────────────────────────
+  // Content Rendering
+  // ──────────────────────────────────────────────────────────────────
+  const content = useMemo(() => {
+    if (loading) return <LoadingCards label="collections" />;
+
+    if (view === 'collections') {
+      return filteredCollections.length ? (
+        <div className="practice-card-grid">
+          {filteredCollections.map(renderCollectionCard)}
+        </div>
+      ) : (
+        <Empty title="No collections yet">
+          Global practice collections will appear here. Check back soon.
+        </Empty>
+      );
+    }
+
+    if (detailLoading) return <LoadingCards label={view === 'topics' ? 'topics' : 'problems'} />;
+
+    if (detailError) {
+      return (
+        <InlineError
+          message={detailError}
+          onRetry={() => view === 'topics' ? selectCollection(selectedCollection) : selectTopic(selectedTopic)}
+        />
+      );
+    }
+
+    if (view === 'topics') {
+      return topics.length ? (
+        <div className="practice-card-grid">
+          {topics.map(renderTopicCard)}
+        </div>
+      ) : (
+        <Empty title="No topics yet">
+          This collection has no global topics. Others may appear soon.
+        </Empty>
+      );
+    }
+
+    return problems.length ? (
+      <div className="practice-problem-list">
+        {problems.map(renderProblemCard)}
+      </div>
+    ) : (
+      <Empty title="No problems yet">
+        This topic has no global problems to practice.
+      </Empty>
+    );
+  }, [collections, continueState, detailError, detailLoading, filteredCollections, handleContinue, loading, navigate, problems, selectedCollection, selectedTopic, topics, view]);
+
+  // ──────────────────────────────────────────────────────────────────
+  // Final JSX
+  // ──────────────────────────────────────────────────────────────────
+  return (
+    <main className="practice-container">
+      {/* Breadcrumb */}
+      {view === 'collections' && (
+        <nav className="practice-breadcrumb" aria-label="Breadcrumb">
+          <a href="/" className="breadcrumb-link">Home</a>
+          <span className="breadcrumb-separator">›</span>
+          <a href="/student" className="breadcrumb-link">Student Workspace</a>
+          <span className="breadcrumb-separator">›</span>
+          <span className="breadcrumb-current">Practice</span>
+        </nav>
+      )}
+
+      {/* Page Header */}
+      <header className="practice-header">
+        <div className="practice-header-content">
+          {view !== 'collections' && (
+            <button className="practice-back" onClick={back}>
+              ← {view === 'problems' ? selectedCollection?.name : 'Practice'}
+            </button>
+          )}
+          <p className="practice-eyebrow">
+            {view === 'collections' ? 'Learning Space' : view === 'topics' ? 'Collection' : 'Topic'}
+          </p>
+          <h1>{title}</h1>
+          <p className="practice-subtitle">{subtitle}</p>
         </div>
       </header>
 
-      {/* Filter Options Bar */}
-      <div className="filter-bar">
-        <div className="difficulty-tabs">
-          <button className={`d-tab ${difficultyFilter === 'ALL' ? 'active' : ''}`} onClick={() => setDifficultyFilter('ALL')}>All Problems</button>
-          <button className={`d-tab ${difficultyFilter === 'EASY' ? 'active' : ''}`} onClick={() => setDifficultyFilter('EASY')}>Easy</button>
-          <button className={`d-tab ${difficultyFilter === 'MEDIUM' ? 'active' : ''}`} onClick={() => setDifficultyFilter('MEDIUM')}>Medium</button>
-          <button className={`d-tab ${difficultyFilter === 'HARD' ? 'active' : ''}`} onClick={() => setDifficultyFilter('HARD')}>Hard</button>
-        </div>
-        <div className="dropdown-filters">
-          <select className="filter-select" value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
-            <option value="ALL">All Topics</option>
-            {Array.from(new Set(problems.map(p => p.topic).filter(Boolean))).map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-          <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="ALL">All Status</option>
-            <option value="SOLVED">Solved</option>
-            <option value="ATTEMPTED">Attempted</option>
-            <option value="NOT_STARTED">Not Started</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Global Practice Table Section */}
-      <section className="table-card">
-        <div className="table-header-info">
-          <div className="table-title-wrap">
-            <h3>🌐 Global Practice</h3>
-            <p>Practice additional problems beyond your assigned work.</p>
+      {/* KPI Metrics */}
+      {view === 'collections' && (
+        <section className="practice-metrics">
+          <div className="kpi-grid">
+            <div className="kpi-card">
+              <span className="kpi-label">Total Problems</span>
+              <span className="kpi-value">{totalProblems}</span>
+            </div>
+            <div className="kpi-card">
+              <span className="kpi-label">Solved</span>
+              <span className="kpi-value">{solvedProblems}</span>
+            </div>
+            <div className="kpi-card">
+              <span className="kpi-label">Attempted</span>
+              <span className="kpi-value">{attemptedProblems}</span>
+            </div>
+            <div className="kpi-card">
+              <span className="kpi-label">Completion</span>
+              <span className="kpi-value">{completionPercentage}%</span>
+            </div>
           </div>
-          <span className="total-problems-badge">{filteredProblems.length} Problems</span>
-        </div>
+        </section>
+      )}
 
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Status</th>
-                <th>Problem</th>
-                <th>Topic</th>
-                <th>Difficulty</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProblems.length > 0 ? (
-                filteredProblems.map((item, idx) => (
-                  <tr key={item.id || idx}>
-                    <td className="id-col">{idx + 1}</td>
-                    <td>
-                      <span className={`status-badge ${getStatusClass(item.progress)}`}>
-                        {item.progress === 'SOLVED' && '✔ '}
-                        {item.progress === 'ATTEMPTED' && '⏳ '}
-                        {item.progress === 'NOT_STARTED' && '⏱ '}
-                        {getStatusLabel(item.progress)}
-                      </span>
-                    </td>
-                    <td className="problem-col">
-                      <span className="p-title">{item.title}</span>
-                      <span className="p-desc">{item.description}</span>
-                    </td>
-                    <td>
-                      <span className={`tag array`}>{item.topic || 'General'}</span>
-                    </td>
-                    <td>
-                      <span className={`tag ${getDiffClass(item.difficulty)}`}>{item.difficulty}</span>
-                    </td>
-                    <td>
-                      <button className="action-btn" onClick={() => navigate(`/student/problems/${item.id}`)}>Practice →</button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
-                    No problems found matching your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Error Messages */}
+      {error && <InlineError message={error} onRetry={loadCollections} />}
+      {continueState.error && continueState.error !== 'no-problems' && (
+        <InlineError message={continueState.error} onRetry={() => setContinueState({ id: null, error: null })} />
+      )}
+
+      {/* Collections Toolbar */}
+      {view === 'collections' && (
+        <section className="practice-collections-header">
+          <div className="collections-header-left">
+            <h2>Collections</h2>
+            <p>Choose a collection to start practicing.</p>
+          </div>
+          <div className="collections-header-right">
+            <input
+              type="search"
+              className="collections-search"
+              placeholder="Search collections…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Search collections"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* Summary Bar */}
+      {view === 'topics' && selectedCollection && (
+        <div className="practice-summary">
+          <strong>{selectedCollection.name}</strong>
+          <span>
+            {selectedCollection.topicCount || 0} Topics •
+            {selectedCollection.problemCount || 0} Problems
+          </span>
+          <Progress value={collectionProgress(selectedCollection).percentage} label="Collection progress" />
+          <b>
+            {collectionProgress(selectedCollection).completed} / {collectionProgress(selectedCollection).total} completed
+          </b>
         </div>
-      </section>
-    </div>
+      )}
+      {view === 'problems' && selectedTopic && (
+        <div className="practice-summary">
+          <strong>{selectedTopic.name}</strong>
+          <span>{selectedTopic.problemCount || 0} Problems</span>
+          <Progress value={topicProgress(selectedTopic).percentage} label="Topic progress" />
+          <b>
+            {topicProgress(selectedTopic).completed} / {topicProgress(selectedTopic).total} completed
+          </b>
+        </div>
+      )}
+
+      {/* Content */}
+      <section className="practice-content">{content}</section>
+    </main>
   );
 }

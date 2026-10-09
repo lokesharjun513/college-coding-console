@@ -1,12 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getTrainerBatch, getBatchPerformance } from '../../api/trainer';
-import PageHeader from '../../components/ui/PageHeader';
-import Card from '../../components/ui/Card';
+import Icon from '../../components/ui/Icon';
 import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
-import Badge from '../../components/ui/Badge';
-import EmptyState from '../../components/ui/EmptyState';
+import '../../styles/pages/trainer-batches.css';
+
+// Map canonical backend status -> BEM modifier. Status also rendered as text (never color alone).
+function statusClass(status) {
+  const s = (status || '').toUpperCase();
+  if (s === 'ACTIVE') return 'active';
+  if (s === 'COMPLETED') return 'completed';
+  return 'neutral';
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString();
+}
 
 export default function BatchDetails() {
   const { batchId } = useParams();
@@ -29,46 +40,30 @@ export default function BatchDetails() {
           return;
         }
         setBatch(batchData);
-
-        // Fetch performance in parallel or subsequent
-        try {
-          setPerfLoading(true);
-          const perfRes = await getBatchPerformance(batchId);
-          setPerformance(perfRes.data?.data || null);
-        } catch (perfErr) {
-          // Performance data optional or unavailable, fail gracefully
-          setPerformance(null);
-        } finally {
-          setPerfLoading(false);
-        }
       } catch (err) {
         setError(err?.response?.data?.message || 'Failed to load batch details');
       } finally {
         setLoading(false);
       }
     };
-    if (batchId) {
-      fetchBatchData();
-    }
+    if (batchId) fetchBatchData();
   }, [batchId]);
 
-  const getStatusBadgeVariant = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'ACTIVE':
-        return 'success';
-      case 'PENDING':
-        return 'warning';
-      case 'INACTIVE':
-      case 'ARCHIVED':
-        return 'danger';
-      default:
-        return 'neutral';
-    }
-  };
+  // Performance snapshot — real, authoritative aggregate API; fails gracefully.
+  useEffect(() => {
+    if (!batchId) return;
+    let active = true;
+    setPerfLoading(true);
+    getBatchPerformance(batchId)
+      .then((res) => { if (active) setPerformance(res.data?.data || null); })
+      .catch(() => { if (active) setPerformance(null); })
+      .finally(() => { if (active) setPerfLoading(false); });
+    return () => { active = false; };
+  }, [batchId]);
 
   if (loading) {
     return (
-      <div style={{ maxWidth: 'var(--content-max-width, 1200px)', margin: '0 auto', padding: '32px' }}>
+      <div className="trainer-batch-detail" style={{ display: 'flex', justifyContent: 'center', paddingTop: 'var(--space-16)' }}>
         <Spinner />
       </div>
     );
@@ -76,233 +71,187 @@ export default function BatchDetails() {
 
   if (error || !batch) {
     return (
-      <div style={{ maxWidth: 'var(--content-max-width, 1200px)', margin: '0 auto', padding: '32px' }}>
-        <PageHeader
-          title="Batch Details"
-          description="Unable to load batch information."
-        />
-        <Card>
-          <EmptyState
-            message={error || 'Batch not found.'}
-            actionLabel="Back to Batches"
-            onAction={() => navigate('/trainer/batches')}
-          />
-        </Card>
+      <div className="trainer-batch-detail">
+        <div className="trainer-batches__error" role="alert">
+          <span className="trainer-batches__error-icon">
+            <Icon name="barChart" size={22} />
+          </span>
+          <h2>Couldn&apos;t load batch</h2>
+          <p>Batch not found.</p>
+          <Button variant="primary" onClick={() => navigate('/trainer/batches')}>Back to Batches</Button>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div style={{ maxWidth: 'var(--content-max-width, 1200px)', margin: '0 auto', padding: '32px' }}>
-      {/* Back Navigation & Header */}
-      <div style={{ marginBottom: '16px' }}>
-        <Link
-          to="/trainer/batches"
-          style={{
-            fontSize: '13px',
-            color: 'var(--color-text-secondary, #5c6b73)',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontWeight: 500,
-          }}
-        >
-          &larr; Back to Batches
-        </Link>
-      </div>
+  const term = `${formatDate(batch.startDate)} – ${formatDate(batch.endDate)}`;
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--color-ink, #0F2441)', margin: 0 }}>
-              {batch.name}
-            </h1>
+  const navItems = [
+    { key: 'overview', label: 'Overview', icon: 'layers', to: `/trainer/batches/${batchId}`, active: true },
+    { key: 'students', label: 'Students', icon: 'users', to: `/trainer/batches/${batchId}/students` },
+    { key: 'problems', label: 'Problems', icon: 'fileCode', to: `/trainer/batches/${batchId}/problems` },
+    { key: 'performance', label: 'Analytics', icon: 'barChart', to: `/trainer/batches/${batchId}/performance` },
+    { key: 'training', label: 'Training', icon: 'trendingUp', to: `/trainer/training?batchId=${batchId}` },
+    { key: 'monitoring', label: 'Monitoring', icon: 'chartBar', unavailable: true },
+    { key: 'leaderboard', label: 'Leaderboard', icon: 'userCheck', unavailable: true },
+  ];
+
+  return (
+    <div className="trainer-batch-detail">
+      {/* Breadcrumb: Trainer / Batches / Batch Name */}
+      <nav className="trainer-batch-detail__crumb" aria-label="Breadcrumb">
+        <Link to="/trainer">Trainer</Link>
+        <span className="trainer-batch-detail__crumb-sep">/</span>
+        <Link to="/trainer/batches">Batches</Link>
+        <span className="trainer-batch-detail__crumb-sep">/</span>
+        <span className="trainer-batch-detail__crumb-current">{batch.name}</span>
+      </nav>
+
+      {/* Header */}
+      <header className="trainer-batch-detail__header">
+        <div className="trainer-batch-detail__header-main">
+          <div className="trainer-batch-detail__title-row">
+            <h1 className="trainer-batch-detail__title">{batch.name}</h1>
             {batch.status && (
-              <Badge variant={getStatusBadgeVariant(batch.status)}>
+              <span className={`trainer-batch-detail__status trainer-batch-detail__status--${statusClass(batch.status)}`}>
                 {batch.status}
-              </Badge>
+              </span>
             )}
           </div>
-          <p style={{ fontSize: '14px', color: 'rgba(15, 36, 65, 0.62)', margin: 0 }}>
-            {batch.description || `Batch code: ${batch.code || 'N/A'}`}
+          <p className="trainer-batch-detail__subtitle">
+            {batch.description || (batch.code ? `Batch code: ${batch.code}` : 'Batch')}
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(`/trainer/batches/${batchId}/students`)}
-          >
-            Manage Students
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => navigate(`/trainer/batches/${batchId}/problems/create`)}
-          >
-            Create Problem
-          </Button>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', flexShrink: 0 }}>
+          <Button variant="secondary" onClick={() => navigate(`/trainer/batches/${batchId}/students`)}>Manage Students</Button>
+          <Button variant="primary" onClick={() => navigate(`/trainer/batches/${batchId}/problems/create`)}>Create Problem</Button>
         </div>
-      </div>
+      </header>
 
-      {/* KPI / Summary Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-        <Card>
-          <div style={{ fontSize: '13px', color: 'rgba(15, 36, 65, 0.58)', fontWeight: 500, marginBottom: '8px' }}>
-            Enrolled Students
-          </div>
-          <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--color-ink, #0F2441)' }}>
-            {batch.studentCount ?? 0}
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.48)', marginTop: '4px' }}>
-            Active roster count
-          </div>
-        </Card>
+      {/* Authoritative summary */}
+      <section className="trainer-batch-detail__summary" aria-label="Batch summary">
+        <div className="trainer-batch-detail__summary-item">
+          <p className="trainer-batch-detail__summary-label">Enrolled Students</p>
+          <p className="trainer-batch-detail__summary-value">{batch.studentCount ?? 0}</p>
+        </div>
+        <div className="trainer-batch-detail__summary-item">
+          <p className="trainer-batch-detail__summary-label">Batch Code</p>
+          <p className="trainer-batch-detail__summary-value">{batch.code || '—'}</p>
+        </div>
+        <div className="trainer-batch-detail__summary-item">
+          <p className="trainer-batch-detail__summary-label">Academic Term</p>
+          <p className="trainer-batch-detail__summary-value">{term}</p>
+        </div>
+        <div className="trainer-batch-detail__summary-item">
+          <p className="trainer-batch-detail__summary-label">Assigned Trainer</p>
+          <p className="trainer-batch-detail__summary-value">{batch.trainer?.name || 'You'}</p>
+        </div>
+      </section>
 
-        <Card>
-          <div style={{ fontSize: '13px', color: 'rgba(15, 36, 65, 0.58)', fontWeight: 500, marginBottom: '8px' }}>
-            Batch Code
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: 650, color: 'var(--color-ink, #0F2441)', fontFamily: 'var(--font-mono, monospace)' }}>
-            {batch.code || '—'}
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.48)', marginTop: '4px' }}>
-            Unique identifier
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ fontSize: '13px', color: 'rgba(15, 36, 65, 0.58)', fontWeight: 500, marginBottom: '8px' }}>
-            Duration
-          </div>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-ink, #0F2441)' }}>
-            {batch.startDate ? new Date(batch.startDate).toLocaleDateString() : 'N/A'} &mdash; {batch.endDate ? new Date(batch.endDate).toLocaleDateString() : 'N/A'}
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.48)', marginTop: '4px' }}>
-            Academic term
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ fontSize: '13px', color: 'rgba(15, 36, 65, 0.58)', fontWeight: 500, marginBottom: '8px' }}>
-            Assigned Trainer
-          </div>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-ink, #0F2441)' }}>
-            {batch.trainer?.name || 'You'}
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.48)', marginTop: '4px' }}>
-            {batch.trainer?.email || 'Primary instructor'}
-          </div>
-        </Card>
-      </div>
-
-      {/* Content 2-Column Grid: Gateways & Performance */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        {/* Students Gateway Card */}
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 650, color: 'var(--color-ink, #0F2441)', margin: '0 0 4px 0' }}>
-                Students & Enrollments
-              </h2>
-              <p style={{ fontSize: '13px', color: 'rgba(15, 36, 65, 0.58)', margin: 0 }}>
-                Manage student rosters, enrollment status, and individual student progress.
-              </p>
-            </div>
-            <Badge variant="info">{batch.studentCount ?? 0} Enrolled</Badge>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-            <Button
-              variant="primary"
-              onClick={() => navigate(`/trainer/batches/${batchId}/students`)}
+      {/* Module navigation — batch-scoped context hub */}
+      <nav className="trainer-batch-detail__nav" aria-label="Batch modules">
+        {navItems.map((item) =>
+          item.unavailable ? (
+            <span
+              key={item.key}
+              className="trainer-batch-detail__nav-item--unavailable"
+              aria-disabled="true"
+              title={`${item.label} arrives in a later phase`}
             >
-              View Students
-            </Button>
-          </div>
-        </Card>
-
-        {/* Problems Gateway Card */}
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 650, color: 'var(--color-ink, #0F2441)', margin: '0 0 4px 0' }}>
-                Coding Problems
-              </h2>
-              <p style={{ fontSize: '13px', color: 'rgba(15, 36, 65, 0.58)', margin: 0 }}>
-                Create, edit, archive problems and manage test cases for this batch.
-              </p>
-            </div>
-            <Badge variant="neutral">Problem Bank</Badge>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
-            <Button
-              variant="secondary"
-              onClick={() => navigate(`/trainer/batches/${batchId}/problems`)}
+              <Icon name={item.icon} size={16} />
+              {item.label}
+              <span className="trainer-batch-detail__nav-soon">Upcoming</span>
+            </span>
+          ) : (
+            <Link
+              key={item.key}
+              to={item.to}
+              className={`trainer-batch-detail__nav-link${item.active ? ' trainer-batch-detail__nav-link--active' : ''}`}
+              aria-current={item.active ? 'page' : undefined}
             >
-              View Problems
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => navigate(`/trainer/batches/${batchId}/problems/create`)}
-            >
-              Create Problem
-            </Button>
-          </div>
-        </Card>
-      </div>
+              <Icon name={item.icon} size={16} />
+              {item.label}
+            </Link>
+          )
+        )}
+      </nav>
 
-      {/* Performance Snapshot Section */}
-      <Card style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 650, color: 'var(--color-ink, #0F2441)', margin: '0 0 4px 0' }}>
-              Batch Performance Snapshot
+      {/* Existing gateway cards: Students & Problems (real routes) */}
+      <section className="trainer-batch-detail__section-grid">
+        <div className="trainer-batch-detail__section">
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-heading)', margin: '0 0 var(--space-1) 0' }}>
+              Students &amp; Enrollments
             </h2>
-            <p style={{ fontSize: '13px', color: 'rgba(15, 36, 65, 0.58)', margin: 0 }}>
-              Real-time aggregate completion and submission metrics.
+            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)', margin: 0 }}>
+              Manage the student roster and enrollment status for this batch.
             </p>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(`/trainer/batches/${batchId}/performance`)}
-          >
-            Detailed Performance &rarr;
-          </Button>
+          <Button variant="primary" onClick={() => navigate(`/trainer/batches/${batchId}/students`)}>View Students</Button>
+        </div>
+
+        <div className="trainer-batch-detail__section">
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-heading)', margin: '0 0 var(--space-1) 0' }}>
+              Coding Problems
+            </h2>
+            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)', margin: 0 }}>
+              Create, edit, archive problems and manage test cases for this batch.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+            <Button variant="secondary" onClick={() => navigate(`/trainer/batches/${batchId}/problems`)}>View Problems</Button>
+            <Button variant="primary" onClick={() => navigate(`/trainer/batches/${batchId}/problems/create`)}>Create Problem</Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Performance snapshot — authoritative aggregate API */}
+      <section className="trainer-batch-detail__section" aria-label="Batch performance snapshot">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+          <div>
+            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-heading)', margin: '0 0 var(--space-1) 0' }}>
+              Batch Performance Snapshot
+            </h2>
+            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)', margin: 0 }}>
+              Aggregate completion and submission metrics.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={() => navigate(`/trainer/batches/${batchId}/performance`)}>Detailed Performance</Button>
         </div>
 
         {perfLoading ? (
-          <div style={{ padding: '24px 0', textAlign: 'center' }}>
-            <Spinner />
-          </div>
+          <div style={{ padding: 'var(--space-6) 0', textAlign: 'center' }}><Spinner /></div>
         ) : performance ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-            <div style={{ padding: '16px', background: 'rgba(15, 36, 65, 0.02)', borderRadius: '12px', border: '1px solid rgba(15, 36, 65, 0.05)' }}>
-              <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.58)', marginBottom: '4px' }}>Active Students</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-ink, #0F2441)' }}>{performance.activeStudents} / {performance.totalStudents}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--space-4)' }}>
+            <div className="trainer-batch-detail__summary-item">
+              <p className="trainer-batch-detail__summary-label">Active Students</p>
+              <p className="trainer-batch-detail__summary-value">{performance.activeStudents} / {performance.totalStudents}</p>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(15, 36, 65, 0.02)', borderRadius: '12px', border: '1px solid rgba(15, 36, 65, 0.05)' }}>
-              <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.58)', marginBottom: '4px' }}>Total Problems</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-ink, #0F2441)' }}>{performance.totalProblems}</div>
+            <div className="trainer-batch-detail__summary-item">
+              <p className="trainer-batch-detail__summary-label">Total Problems</p>
+              <p className="trainer-batch-detail__summary-value">{performance.totalProblems}</p>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(15, 36, 65, 0.02)', borderRadius: '12px', border: '1px solid rgba(15, 36, 65, 0.05)' }}>
-              <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.58)', marginBottom: '4px' }}>Total Submissions</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-ink, #0F2441)' }}>{performance.totalSubmissions}</div>
+            <div className="trainer-batch-detail__summary-item">
+              <p className="trainer-batch-detail__summary-label">Total Submissions</p>
+              <p className="trainer-batch-detail__summary-value">{performance.totalSubmissions}</p>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(15, 36, 65, 0.02)', borderRadius: '12px', border: '1px solid rgba(15, 36, 65, 0.05)' }}>
-              <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.58)', marginBottom: '4px' }}>Solved Problems</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-ink, #0F2441)' }}>{performance.solvedProblems}</div>
+            <div className="trainer-batch-detail__summary-item">
+              <p className="trainer-batch-detail__summary-label">Solved Problems</p>
+              <p className="trainer-batch-detail__summary-value">{performance.solvedProblems}</p>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(15, 36, 65, 0.02)', borderRadius: '12px', border: '1px solid rgba(15, 36, 65, 0.05)' }}>
-              <div style={{ fontSize: '12px', color: 'rgba(15, 36, 65, 0.58)', marginBottom: '4px' }}>Overall Progress</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-ink, #0F2441)' }}>{performance.progress}%</div>
+            <div className="trainer-batch-detail__summary-item">
+              <p className="trainer-batch-detail__summary-label">Overall Progress</p>
+              <p className="trainer-batch-detail__summary-value">{performance.progress}%</p>
             </div>
           </div>
         ) : (
-          <div style={{ padding: '20px 0', textAlign: 'center', color: 'rgba(15, 36, 65, 0.48)', fontSize: '13px' }}>
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-muted)', margin: 0, textAlign: 'center', padding: 'var(--space-5) 0' }}>
             Performance metrics unavailable or no student submissions recorded yet.
-          </div>
+          </p>
         )}
-      </Card>
+      </section>
     </div>
   );
 }

@@ -1,0 +1,63 @@
+/* DailyTraining.css – training-specific styles */
+
+/* Status badges */
+.training-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+}
+
+.training-status--no_problems {
+  background-color: var(--color-muted-soft, #F3F4F6);
+  color: var(--color-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.training-status--completed {
+  background-color: var(--color-success-soft, #ECFDF5);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border, #D1FAE5);
+}
+
+.training-status--in_progress {
+  background-color: rgba(47, 126, 218, 0.08);
+  color: var(--color-action);
+  border: 1px solid rgba(47, 126, 218, 0.2);
+}
+
+.training-status--not_started {
+  background-color: var(--surface-subtle);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Day meta row (status badge + counts above problem list) */
+.training-day-meta {
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Difficulty badge in problem rows */
+.practice-problem-row__difficulty {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  min-width: 60px;
+  text-align: center;
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Mobile: stack difficulty below title */
+@media (max-width: 767px) {
+  .practice-problem-row__difficulty {
+    min-width: 0;
+    text-align: left;
+  }
+}

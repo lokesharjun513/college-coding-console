@@ -6,7 +6,7 @@
 .table--compact td {
   padding: var(--space-2) var(--space-3);
   height: 56px; /* target row height */
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .table--compact th {
@@ -33,6 +33,14 @@
 /* Reduce horizontal padding on container */
 .table-container > table {
   margin: 0;
+}
+
+/* Generic table cells for DataTable */
+.table-header-cell,
+.table-cell,
+.table-empty-cell {
+  text-align: center;
+  vertical-align: middle;
 }
 
 /* Responsive adjustments */

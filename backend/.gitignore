@@ -11,3 +11,5 @@ backup/
 backups/
 database-backups/
 
+
+.env.test

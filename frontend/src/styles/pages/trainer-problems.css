@@ -1,0 +1,324 @@
+/* ── Trainer Batch Problems — Glassmorphic SaaS Design ───────────────── */
+
+.trainer-problems {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-8);
+  padding-bottom: 96px;
+  animation: trainer-problems-fade-in var(--duration-normal) var(--ease-standard);
+  box-sizing: border-box;
+}
+
+@keyframes trainer-problems-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Breadcrumb */
+.trainer-problems__crumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.trainer-problems__crumb a {
+  color: var(--color-brand);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+}
+
+.trainer-problems__crumb a:hover {
+  text-decoration: underline;
+}
+
+.trainer-problems__crumb-sep {
+  color: var(--color-muted);
+}
+
+.trainer-problems__crumb-current {
+  color: var(--color-heading);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Header */
+.trainer-problems__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.trainer-problems__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+  margin: 0 0 var(--space-1) 0;
+  letter-spacing: -0.02em;
+}
+
+.trainer-problems__description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.trainer-problems__header-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Summary tiles */
+.trainer-problems__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.trainer-problems__summary-item {
+  background: rgba(252, 253, 253, 0.78);
+  backdrop-filter: blur(20px) saturate(130%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.trainer-problems__summary-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.trainer-problems__summary-value {
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+  margin: 0;
+}
+
+/* Toolbar */
+.trainer-problems__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.trainer-problems__search {
+  flex: 1;
+  min-width: 240px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: rgba(252, 253, 253, 0.85);
+  color: var(--color-heading);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.trainer-problems__search:focus {
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-sm);
+}
+
+.trainer-problems__filter-select {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: rgba(252, 253, 253, 0.85);
+  color: var(--color-heading);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+/* Error */
+.trainer-problems__error {
+  color: #B42318;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: rgba(180, 35, 24, 0.05);
+  border: 1px solid rgba(180, 35, 24, 0.15);
+  border-radius: var(--radius-md);
+}
+
+/* List */
+.trainer-problems__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.trainer-problems__problem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-border);
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.trainer-problems__problem:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--color-brand);
+}
+
+.trainer-problems__problem-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.trainer-problems__problem-title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-heading);
+  font-size: var(--font-size-md);
+}
+
+.trainer-problems__problem-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.trainer-problems__problem-tag {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+}
+
+.trainer-problems__problem-tag--easy { background: rgba(16, 185, 129, 0.1); color: #059669; border-color: rgba(16, 185, 129, 0.3); }
+.trainer-problems__problem-tag--medium { background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.3); }
+.trainer-problems__problem-tag--hard { background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3); }
+.trainer-problems__problem-tag--neutral { background: rgba(148, 163, 184, 0.1); color: #64748b; border-color: rgba(148, 163, 184, 0.3); }
+.trainer-problems__problem-tag--published { background: rgba(59, 130, 246, 0.1); color: #2563eb; border-color: rgba(59, 130, 246, 0.3); }
+.trainer-problems__problem-tag--draft { background: rgba(148, 163, 184, 0.1); color: #64748b; border-color: rgba(148, 163, 184, 0.3); }
+.trainer-problems__problem-tag--archived { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border-color: rgba(148, 163, 184, 0.3); }
+
+.trainer-problems__problem-linked {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.trainer-problems__problem-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.trainer-problems__icon-link,
+.trainer-problems__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.trainer-problems__icon-link:hover,
+.trainer-problems__icon-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+/* Empty */
+.trainer-problems__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.trainer-problems__empty h2 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.trainer-problems__empty p {
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+/* Modal actions */
+.trainer-problems__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* Drag & drop import */
+.trainer-problems__drag-drop-area {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.trainer-problems__drag-drop-area:hover,
+.trainer-problems__drag-drop-area:focus-visible {
+  border-color: var(--color-brand);
+  background: rgba(255, 255, 255, 0.6);
+  outline: none;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .trainer-problems {
+    padding: var(--space-4);
+    padding-bottom: 96px;
+  }
+  .trainer-problems__problem {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .trainer-problems__problem-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trainer-problems {
+    animation: none;
+  }
+}

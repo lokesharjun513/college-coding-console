@@ -29,10 +29,23 @@ async function cleanCollections() {
 let connectionPromise = null;
 
 beforeAll(async () => {
+  // Use worker-specific database to avoid collisions during parallel runs
+  if (process.env.JEST_WORKER_ID) {
+    const dbName = `CodingConsoleTest_${process.env.JEST_WORKER_ID}`;
+    process.env.MONGO_URI = process.env.MONGO_URI.replace(/\/CodingConsoleTest$/, `/${dbName}`);
+  }
+
   if (!connectionPromise) {
     connectionPromise = connectDB();
   }
-  await connectionPromise;
+  try {
+    await connectionPromise;
+  } catch (error) {
+    // Reset so a re-run in this worker can retry; fail the hook cleanly.
+    connectionPromise = null;
+    throw new Error(`[TEST SETUP] MongoDB connection failed: ${error.message}`);
+  }
+  // Cleanup only after a confirmed connection, fully awaited.
   await cleanCollections();
 });
 

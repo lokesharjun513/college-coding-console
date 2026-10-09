@@ -1,0 +1,218 @@
+
+/* =================================================================
+   ADMIN PROBLEMS IMPORT - CONFLICT REVIEW STYLING
+   ================================================================= */
+
+/* Import Review Section */
+.admin-import-modal__preview-review {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-import-modal__preview-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0 0 4px 0;
+}
+
+.admin-import-modal__preview-header p {
+  font-size: 13px;
+  color: var(--admin-text-muted);
+  margin: 0;
+}
+
+/* Summary Section */
+.admin-import-modal__preview-summary {
+  padding: 16px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius-md);
+}
+
+.admin-import-modal__summary-item {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.admin-import-modal__summary-total,
+.admin-import-modal__summary-new,
+.admin-import-modal__summary-existing {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}
+
+.admin-import-modal__summary-new {
+  color: var(--admin-success);
+}
+
+.admin-import-modal__summary-existing {
+  color: var(--admin-warning);
+}
+
+/* Conflicts Section */
+.admin-import-modal__conflicts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-import-modal__conflicts-section h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.admin-import-modal__conflicts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Conflict Item */
+.admin-import-modal__conflict-item {
+  padding: 16px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius-md);
+  transition: border-color 160ms ease;
+}
+
+.admin-import-modal__conflict-item:hover {
+  border-color: var(--admin-border);
+}
+
+.admin-import-modal__conflict-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.admin-import-modal__conflict-header strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}
+
+/* Conflict Status */
+.admin-import-modal__conflict-status {
+  padding: 4px 10px;
+  border-radius: var(--admin-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.admin-import-modal__conflict-status--pending {
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning);
+}
+
+.admin-import-modal__conflict-status--updated {
+  background: var(--admin-success-bg);
+  color: var(--admin-success);
+}
+
+.admin-import-modal__conflict-status--skipped {
+  background: var(--admin-muted);
+  color: var(--admin-text-muted);
+}
+
+/* Changes Display */
+.admin-import-modal__conflict-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--admin-muted);
+  border-radius: var(--admin-radius-sm);
+  margin-bottom: 12px;
+}
+
+.admin-import-modal__changes-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.admin-import-modal__change-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.admin-import-modal__change-field {
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}
+
+.admin-import-modal__change-value {
+  color: var(--admin-text-secondary);
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+/* Conflict Actions */
+.admin-import-modal__conflict-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* New Problems Section */
+.admin-import-modal__new-section {
+  padding: 16px;
+  background: var(--admin-success-bg);
+  border: 1px solid var(--admin-success-light);
+  border-radius: var(--admin-radius-md);
+}
+
+.admin-import-modal__new-section h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-success);
+  margin: 0 0 4px 0;
+}
+
+.admin-import-modal__new-section p {
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .admin-import-modal__conflict-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .admin-import-modal__conflict-actions {
+    width: 100%;
+  }
+
+  .admin-import-modal__conflict-actions button {
+    flex: 1;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .admin-import-modal__conflict-item {
+    transition: none;
+  }
+}

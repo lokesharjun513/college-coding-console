@@ -1,134 +1,129 @@
 // backend/src/services/compilerRegistry.js
-// Central registry for available compilers fetched from external provider.
-// Provides caching and normalization.
+// Dynamic compiler registry sourced from OnlineCompiler provider.
 
 const logger = require('../config/logger');
 
-// Environment variables
 const PROVIDER_BASE_URL = process.env.ONLINE_COMPILER_URL || 'https://api.onlinecompiler.io';
 const CACHE_TTL_MS = parseInt(process.env.COMPILER_CACHE_TTL_MS) || 10 * 60 * 1000; // 10 minutes
 
 let cachedCompilers = null;
 let cacheTimestamp = 0;
-
-// Fallback list of compilers when provider is unreachable
-const FALLBACK_COMPILERS = [
-  { id: 'python-3.14', name: 'Python 3.14', language: 'python', editorLanguage: 'python', extension: 'py' },
-  { id: 'gcc-15', name: 'GCC 15', language: 'c', editorLanguage: 'c', extension: 'c' },
-  { id: 'g++-15', name: 'G++ 15', language: 'cpp', editorLanguage: 'cpp', extension: 'cpp' },
-  { id: 'openjdk-25', name: 'OpenJDK 25', language: 'java', editorLanguage: 'java', extension: 'java' },
-  { id: 'dotnet-csharp-9', name: '.NET SDK 9 (C#)', language: 'csharp', editorLanguage: 'csharp', extension: 'cs' },
-  { id: 'php-8.5', name: 'PHP 8.5', language: 'php', editorLanguage: 'php', extension: 'php' },
-  { id: 'ruby-4.0', name: 'Ruby 4.0', language: 'ruby', editorLanguage: 'ruby', extension: 'rb' },
-  { id: 'haskell-9.12', name: 'Haskell GHC 9.12', language: 'haskell', editorLanguage: 'haskell', extension: 'hs' },
-  { id: 'go-1.26', name: 'Go 1.26', language: 'go', editorLanguage: 'go', extension: 'go' },
-  { id: 'rust-1.93', name: 'Rust 1.93', language: 'rust', editorLanguage: 'rust', extension: 'rs' },
-  { id: 'typescript-deno', name: 'TypeScript (Deno)', language: 'typescript', editorLanguage: 'typescript', extension: 'ts' },
-  { id: 'nodejs-20', name: 'Node.js 20', language: 'javascript', editorLanguage: 'javascript', extension: 'js' },
-];
+let cacheError = null;
 
 /**
- * Fetch raw compiler list from provider.
- * @returns {Promise<Array>} Raw compiler objects.
+ * Language to compiler display name mapping.
+ * Provider returns only id and name; we derive language and display name.
  */
-async function fetchFromProvider() {
-  const url = `${PROVIDER_BASE_URL.replace(/\/+$/, '')}/api/compilers/`;
-  logger.info('Fetching compiler list from provider', { url });
-  const response = await fetch(url);
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to fetch compilers: ${response.status} ${text}`);
-  }
-  const data = await response.json();
-  return data; // assume array
-}
+const LANGUAGE_NAMES = {
+  python: 'Python',
+  c: 'C',
+  cpp: 'C++',
+  java: 'Java',
+  csharp: 'C#',
+  fsharp: 'F#',
+  php: 'PHP',
+  ruby: 'Ruby',
+  haskell: 'Haskell',
+  go: 'Go',
+  rust: 'Rust',
+  typescript: 'TypeScript',
+};
 
-/**
- * Normalize provider response to a stable shape.
- * Expected output fields: id, name, language, editorLanguage, extension.
- */
-function normalize(rawList) {
-  // Provider may already include id and name. We'll derive missing fields.
-  return rawList.map(item => {
+const VERSION_PATTERN = /(\d+(?:\.\d+)*)$/;
+const LANGUAGE_PATTERN = /^(python|c|cpp|java|csharp|fsharp|php|ruby|haskell|go|rust|typescript)/i;
+
+function normalizeCompilerResponse(rawResponse) {
+  // Provider returns: { compilers: [{ id: "...", name: "..." }] }
+  const array = Array.isArray(rawResponse) ? rawResponse : (rawResponse?.compilers || []);
+
+  return array.map(item => {
     const id = item.id || item.compiler || '';
     const name = item.name || item.displayName || id;
-    const language = item.language || '';
-    const editorLanguage = language; // for now same
-    const extensionMap = {
-      python: 'py',
-      c: 'c',
-      cpp: 'cpp',
-      java: 'java',
-      javascript: 'js',
-      php: 'php',
-      ruby: 'rb',
-      haskell: 'hs',
-      go: 'go',
-      rust: 'rs',
-      typescript: 'ts',
-      csharp: 'cs',
-      fsharp: 'fs'
-    };
-    const extension = extensionMap[language] || '';
+
+    // Extract language from compiler id
+    const langMatch = id.match(LANGUAGE_PATTERN);
+    const language = langMatch ? langMatch[1].toLowerCase() : 'unknown';
+
+    // Extract version from name or id
+    const versionMatch = name.match(VERSION_PATTERN) || id.match(VERSION_PATTERN);
+    const version = versionMatch ? versionMatch[1] : '';
+
+    // Build display name
+    const langName = LANGUAGE_NAMES[language] || language;
+    const displayName = version ? `${langName} ${version}` : langName;
+
     return {
       id,
       name,
+      displayName,
       language,
-      editorLanguage,
-      extension
+      version,
+      // Compiler names follow pattern: language-version
+      compiler: id,
     };
   });
 }
 
-/**
- * Get the list of compilers, using cache if fresh.
- */
-async function getCompilers() {
+async function fetchFromProvider() {
+  const url = `${PROVIDER_BASE_URL.replace(/\/+$/, '')}/api/compilers/`;
+  logger.info('Fetching compiler list from provider', { url });
+
+  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to fetch compilers: ${response.status} ${text}`);
+  }
+
+  const data = await response.json();
+  return normalizeCompilerResponse(data);
+}
+
+async function getCompilers({ skipCache = false } = {}) {
   const now = Date.now();
-  if (cachedCompilers && (now - cacheTimestamp) < CACHE_TTL_MS) {
+  if (!skipCache && cachedCompilers && (now - cacheTimestamp) < CACHE_TTL_MS) {
     return cachedCompilers;
   }
+
   try {
-    const raw = await fetchFromProvider();
-    const normalized = normalize(raw);
-    cachedCompilers = normalized;
+    const compilers = await fetchFromProvider();
+    cachedCompilers = compilers;
     cacheTimestamp = now;
-    logger.info('Compiler list cached', { count: normalized.length });
-    return normalized;
+    cacheError = null;
+    logger.info('Compiler list cached', { count: compilers.length });
+    return compilers;
   } catch (err) {
     logger.error('Failed to fetch compiler list', { error: err.message });
-    // If we have old cache, return it as fallback.
+
     if (cachedCompilers) {
-      logger.warn('Using stale compiler list due to fetch error');
+      logger.warn('Using cached compiler list due to fetch error');
+      cacheError = err;
       return cachedCompilers;
     }
-    // Use built‑in fallback list when provider is unreachable.
-    logger.warn('Using built‑in fallback compiler list');
-    cachedCompilers = FALLBACK_COMPILERS;
-    cacheTimestamp = now;
-    return FALLBACK_COMPILERS;
+
+    throw new Error('COMPILER_REGISTRY_UNAVAILABLE');
   }
 }
 
-/**
- * Find compiler entry by its id.
- */
 async function getCompilerById(id) {
   const list = await getCompilers();
   return list.find(c => c.id === id);
 }
 
-/**
- * Map legacy language keys to default compiler id.
- * This mapping is used for starter code resolution.
- */
+function isSupportedCompiler(id) {
+  return cachedCompilers?.some(c => c.id === id) === true;
+}
+
+function getLanguageByCompiler(id) {
+  return cachedCompilers?.find(c => c.id === id)?.language || null;
+}
+
 const LEGACY_TO_COMPILER = {
   c: 'gcc-15',
   cpp: 'g++-15',
   java: 'openjdk-25',
   python: 'python-3.14',
-  javascript: 'typescript-deno', // using Deno for JS/TS
-  // Add other mappings
+  javascript: 'typescript-deno',
   php: 'php-8.5',
   ruby: 'ruby-4.0',
   haskell: 'haskell-9.12',
@@ -136,7 +131,7 @@ const LEGACY_TO_COMPILER = {
   rust: 'rust-1.93',
   csharp: 'dotnet-csharp-9',
   fsharp: 'dotnet-fsharp-9',
-  typescript: 'typescript-deno'
+  typescript: 'typescript-deno',
 };
 
 function mapLegacyToCompiler(lang) {
@@ -146,6 +141,9 @@ function mapLegacyToCompiler(lang) {
 module.exports = {
   getCompilers,
   getCompilerById,
+  isSupportedCompiler,
+  getLanguageByCompiler,
   mapLegacyToCompiler,
-  LEGACY_TO_COMPILER
+  normalizeCompilerResponse,
+  LEGACY_TO_COMPILER,
 };

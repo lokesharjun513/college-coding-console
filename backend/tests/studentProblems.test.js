@@ -130,17 +130,17 @@ describe('Student Problems Endpoint', () => {
     expect(res.body.data[0].progress).toBe('NOT_STARTED');
 
     // 2. Attempted
-    await Submission.create({ student: student._id, problem: problem._id, code: 'x', language: 'javascript', verdict: 'WRONG_ANSWER' });
+    await Submission.create({ student: student._id, problem: problem._id, code: 'x', language: 'python', verdict: 'WRONG_ANSWER' });
     res = await request(app).get('/api/student/problems').set('Authorization', `Bearer ${token}`);
     expect(res.body.data[0].progress).toBe('ATTEMPTED');
 
     // 3. Solved
-    await Submission.create({ student: student._id, problem: problem._id, code: 'x', language: 'javascript', verdict: 'ACCEPTED' });
+    await Submission.create({ student: student._id, problem: problem._id, code: 'x', language: 'python', verdict: 'ACCEPTED' });
     res = await request(app).get('/api/student/problems').set('Authorization', `Bearer ${token}`);
     expect(res.body.data[0].progress).toBe('SOLVED');
   });
 
-  test('Batch problems with practiceDate are categorized correctly (IST boundaries)', async () => {
+  test('Batch problems with practiceDate expose only current IST-day practice', async () => {
     // Setup
     const batch = await Batch.create({ name: 'B1', code: 'B1', trainer: new mongoose.Types.ObjectId() });
     const student = await createUser({ name: 'Student', email: 'stu.prac@test.com', password: 'pwd' });
@@ -190,8 +190,8 @@ describe('Student Problems Endpoint', () => {
     expect(res.body.meta.today.length).toBe(1);
     expect(res.body.meta.today[0].title).toBe('Today Problem');
 
-    expect(res.body.meta.upcoming.length).toBe(1);
-    expect(res.body.meta.upcoming[0].title).toBe('Tomorrow Problem');
+    expect(res.body.meta.upcoming.length).toBe(0);
+    expect(res.body.data.map(p => p.title)).not.toContain('Tomorrow Problem');
 
     expect(res.body.meta.global.length).toBe(0);
   });

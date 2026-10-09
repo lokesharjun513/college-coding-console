@@ -23,7 +23,9 @@ const submissionSchema = new mongoose.Schema({
   language: {
     type: String,
     required: true,
-    enum: ['c', 'cpp', 'java', 'python', 'javascript'],
+    // Normalized languages derived from compilerRegistry (OnlineCompiler compiler IDs).
+    // No 'javascript': provider has no JS compiler; typescript-deno normalizes to 'typescript'.
+    enum: ['c', 'cpp', 'java', 'python', 'csharp', 'fsharp', 'php', 'ruby', 'haskell', 'go', 'rust', 'typescript'],
   },
   // Results per test case
   testResults: [

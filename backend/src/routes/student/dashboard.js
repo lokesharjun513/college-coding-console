@@ -6,6 +6,7 @@ const User = require('../../models/User');
 const BatchStudent = require('../../models/BatchStudent');
 const Problem = require('../../models/Problem');
 const Submission = require('../../models/Submission');
+const { visibleProblemQuery } = require('../../services/problemAccess');
 
 router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
   try {
@@ -14,7 +15,7 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
     // 1. Batch info
-    const enrollment = await BatchStudent.findOne({ student: studentId }).populate('batch');
+    const enrollment = await BatchStudent.findOne({ student: studentId, status: 'ACTIVE' }).populate('batch');
     const batch = enrollment ? {
       id: enrollment.batch._id,
       name: enrollment.batch.name,
@@ -23,15 +24,11 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
     } : null;
 
     // 2. Problems
-    const batchId = enrollment ? enrollment.batch._id : null;
-    const problemQuery = batchId ?
-        { $or: [{ scope: 'GLOBAL', status: 'PUBLISHED' }, { batch: batchId, status: 'PUBLISHED' }] } :
-        { scope: 'GLOBAL', status: 'PUBLISHED' };
-
+    const enrollments = await BatchStudent.find({ student: studentId, status: 'ACTIVE' }).select('batch').lean();
+    const problemQuery = visibleProblemQuery(enrollments.map(item => item.batch));
     const problems = await Problem.find(problemQuery).select('_id');
     const problemIds = problems.map(p => p._id);
     const totalProblems = problemIds.length;
-
     // 3. Submissions & Metrics
     const submissions = await Submission.find({ student: studentId }).populate('problem');
     const attemptedProblemIds = new Set();

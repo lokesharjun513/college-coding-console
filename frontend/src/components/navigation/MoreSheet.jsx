@@ -11,7 +11,7 @@ export default function MoreSheet({ isOpen, onClose }) {
   const role = user?.role || 'STUDENT';
   const sections = navigationConfig[role] || [];
   const allItems = sections.map((s) => s.items).flat();
-  const moreItems = allItems.slice(3);
+  const moreItems = allItems.slice(role === 'STUDENT' ? 4 : 3);
 
   if (!isOpen) return null;
 

@@ -1,5 +1,5 @@
 import { vi, beforeEach, test, expect } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Practice from './Practice';
 
@@ -15,7 +15,9 @@ vi.mock('react-router-dom', async () => {
 
 // Mock API
 vi.mock('../../api/student', () => ({
-  getStudentProblems: vi.fn(),
+  getStudentCollections: vi.fn(),
+  getStudentCollectionTopics: vi.fn(),
+  getStudentTopicProblems: vi.fn(),
 }));
 
 const mockData = {
@@ -34,10 +36,12 @@ import * as studentApi from '../../api/student';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  studentApi.getStudentProblems.mockResolvedValue({ data: mockData });
+  studentApi.getStudentCollections.mockResolvedValue({ data: { data: [{ id: 'collection-1', name: 'Basics', topicCount: 1, problemCount: 3, completedProblemCount: 1 }] } });
+  studentApi.getStudentCollectionTopics.mockResolvedValue({ data: { data: [{ id: 'topic-1', name: 'Topic', problemCount: 3, completedProblemCount: 1 }] } });
+  studentApi.getStudentTopicProblems.mockResolvedValue({ data: { data: mockData.data.slice(0, 3) } });
 });
 
-test('renders problem counts correctly and dedupes duplicates', async () => {
+test('renders collection progress from authoritative counts', async () => {
   render(
     <MemoryRouter>
       <Practice />
@@ -46,9 +50,7 @@ test('renders problem counts correctly and dedupes duplicates', async () => {
 
   await waitFor(() => expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument());
 
-  // Total count should be 3 (unique)
-  const totalBox = screen.getByText('Total Problems').closest('.metric-box');
-  expect(within(totalBox).getByText('3')).toBeInTheDocument();
+  expect(screen.getByText('1 / 3 completed')).toBeInTheDocument();
 });
 
 test('navigation to problem detail uses correct ID', async () => {
@@ -60,7 +62,10 @@ test('navigation to problem detail uses correct ID', async () => {
 
   await waitFor(() => expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument());
 
-  const practiceButtons = screen.getAllByRole('button', { name: /Practice →/i });
-  fireEvent.click(practiceButtons[0]);
+  fireEvent.click(screen.getByRole('button', { name: /Basics/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Topic/ })).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: /Topic/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Problem A/ })).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: /Problem A/ }));
   expect(mockNavigate).toHaveBeenCalledWith('/student/problems/1');
 });

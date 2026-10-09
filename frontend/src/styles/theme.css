@@ -30,6 +30,10 @@
   --color-action: #2F7EDA;
   --color-action-hover: #2769c0;
 
+  /* Semantic success (used by completed/verified states) */
+  --color-success: #16a34a;
+  --color-success-soft: rgba(22, 163, 74, 0.08);
+
   --color-focus-ring: rgba(47, 126, 218, 0.25);
 
   /* ============================================

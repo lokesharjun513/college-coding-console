@@ -5,21 +5,39 @@ const { studentLimiter } = require('../../middleware/rateLimiter');
 const requireAuth = require('../../middleware/auth');
 const { requireAnyRole } = require('../../middleware/role');
 const { execute } = require('../../services/OnlineCompilerExecutor');
+const { mapLegacyToCompiler, getCompilerById } = require('../../services/compilerRegistry');
 
 const router = express.Router();
 
-const { getCompilerById } = require('../../services/compilerRegistry');
-// We will dynamically validate compiler ID against registry
+// Supported free-console languages (JavaScript intentionally excluded — no JS compiler available)
+const SUPPORTED_LANGUAGES = ['c', 'cpp', 'java', 'python', 'typescript'];
 
 /**
  * POST /api/student/console/run
- * Execute code in sandboxed environment across C, C++, Java, Python, JavaScript via OnlineCompiler API.
+ * Execute code in sandboxed environment. Language → compiler resolution is server-side
+ * via compilerRegistry; client-sent compilerId is never trusted.
  */
 router.post('/run', studentLimiter, requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
   const code = req.body.code;
   const input = req.body.input !== undefined ? req.body.input : req.body.stdin;
-  const language = req.body.language || 'c';
-  const compilerId = req.body.compilerId || null;
+  const language = req.body.language || 'python';
+
+  if (!SUPPORTED_LANGUAGES.includes(language)) {
+    return res.status(400).json({ success: false, status: 'invalid_request', language, code: 'UNSUPPORTED_LANGUAGE', compiler: 'onlinecompiler', exitCode: null, output: '', error: `Unsupported language: ${language}` });
+  }
+
+  // Resolve compiler server-side from the language
+  let compilerId;
+  try {
+    compilerId = mapLegacyToCompiler(language);
+    const compilerInfo = await getCompilerById(compilerId);
+    if (!compilerInfo) {
+      return res.status(400).json({ success: false, status: 'invalid_request', language, code: 'COMPILER_NOT_SUPPORTED', compiler: compilerId, exitCode: null, output: '', error: `No compiler available for language: ${language}` });
+    }
+  } catch (err) {
+    logger.warn('Could not resolve compiler from registry', { language, error: err.message });
+    return res.status(502).json({ success: false, status: 'compiler_unavailable', language, compiler: 'onlinecompiler', exitCode: null, output: '', error: 'Code execution service is temporarily unavailable.' });
+  }
 
   // --- Validation ---
   if (!code || typeof code !== 'string') {
@@ -27,33 +45,11 @@ router.post('/run', studentLimiter, requireAuth, requireAnyRole('STUDENT'), asyn
       success: false,
       status: 'invalid_request',
       language,
-      compiler: compilerId || 'onlinecompiler',
+      compiler: compilerId,
       exitCode: null,
       output: '',
       error: 'Missing or invalid "code" field.',
     });
-  }
-
-  // Validate compiler exists in registry
-  try {
-    const compiler = compilerId
-      ? await getCompilerById(compilerId)
-      : null;
-    // If a specific compiler was requested, verify it exists
-    if (compilerId && !compiler) {
-      return res.status(400).json({
-        success: false,
-        status: 'invalid_request',
-        language,
-        compiler: compilerId,
-        exitCode: null,
-        output: '',
-        error: `Unsupported compiler ID: ${compilerId}`,
-      });
-    }
-  } catch (err) {
-    logger.warn('Could not validate compiler from registry', { compilerId, error: err.message });
-    // If registry is unreachable, allow request to proceed with existing validation
   }
 
   if (code.length > 50_000) {
@@ -123,6 +119,18 @@ router.post('/run', studentLimiter, requireAuth, requireAnyRole('STUDENT'), asyn
       message: err.message,
       durationMs,
     });
+
+    if (err.code === 'ONLINE_COMPILER_TIMEOUT') {
+      return res.status(408).json({
+        success: false,
+        status: 'timeout',
+        language,
+        compiler: 'onlinecompiler',
+        exitCode: null,
+        output: '',
+        error: 'Code execution service timed out. Please try again.',
+      });
+    }
 
     const isTimeout = err.message && err.message.includes('timed out');
     return res.status(isTimeout ? 408 : 502).json({

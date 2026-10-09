@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 /**
@@ -8,20 +8,39 @@ import PropTypes from 'prop-types';
 export default function Modal({ isOpen, onClose, title, children }) {
   const [show, setShow] = React.useState(isOpen);
 
-  // Handle escape key
+  const dialogRef = useRef(null);
+  const previousFocus = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Handle escape key and focus management
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current?.();
       }
     };
-    if (show) {
-      document.addEventListener('keydown', handleKey);
-    }
+
+    if (!show) return;
+
+    document.addEventListener('keydown', handleKey);
+
+    // Save current focus and focus modal
+    previousFocus.current = document.activeElement;
+    dialogRef.current?.focus();
+
     return () => {
       document.removeEventListener('keydown', handleKey);
+
+      // Restore focus
+      if (previousFocus.current) {
+        previousFocus.current.focus();
+      }
     };
-  }, [show, onClose]);
+  }, [show]);
 
   // Trigger animation on open/close
   useEffect(() => {
@@ -37,34 +56,28 @@ export default function Modal({ isOpen, onClose, title, children }) {
   if (!show) return null;
 
   const backdropStyle = {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
     opacity: isOpen ? 1 : 0,
-    transition: 'opacity var(--duration-fast) var(--ease-out)',
+    transition: 'opacity 200ms cubic-bezier(0.16, 1, 0.3, 1)',
   };
 
   const dialogStyle = {
-    backgroundColor: 'var(--color-surface)',
-    borderRadius: 'var(--radius-md)',
-    boxShadow: 'var(--shadow-modal)',
-    maxWidth: '90%',
-    width: '400px',
-    padding: 'var(--space-5)',
-    transform: isOpen ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(6px)',
+    transform: isOpen ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(10px)',
     opacity: isOpen ? 1 : 0,
-    transition: 'transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out)',
+    transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms cubic-bezier(0.16, 1, 0.3, 1)',
   };
 
   return (
-    <div style={backdropStyle} onClick={onClose} role="dialog" aria-modal="true">
-      <div style={dialogStyle} onClick={e => e.stopPropagation()}>
-        {title && <h2 style={{ marginTop: 0 }}>{title}</h2>}
-        {children}
+    <div className="admin-modal-overlay" style={backdropStyle} onClick={onClose} role="presentation">
+      <div className="admin-modal" style={dialogStyle} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title || undefined} ref={dialogRef} tabIndex="-1">
+        {title && (
+          <div className="admin-modal__header">
+            <h2 className="admin-modal__title">{title}</h2>
+            <button className="admin-modal__close" onClick={onClose} aria-label="Close modal">&times;</button>
+          </div>
+        )}
+        <div className="admin-modal__body">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -74,5 +87,5 @@ Modal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   title: PropTypes.string,
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
 };

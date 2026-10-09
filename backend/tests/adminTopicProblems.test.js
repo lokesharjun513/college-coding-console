@@ -174,7 +174,7 @@ describe('Problem Linking API', () => {
     const studentEmail = generateUniqueEmail('submission@testmail.com');
     const password = 'StrongP@ssw0rd';
     const student = await createUser({ name: 'Student', email: studentEmail, password, role: 'STUDENT' });
-    await Submission.create({ student: student._id, problem: globalProblem._id, code: 'x', language: 'javascript', verdict: 'ACCEPTED' });
+    await Submission.create({ student: student._id, problem: globalProblem._id, code: 'x', language: 'python', verdict: 'ACCEPTED' });
 
     const res = await Submission.findOne({ student: student._id, problem: globalProblem._id });
     expect(res).not.toBeNull();

@@ -1,0 +1,213 @@
+/* ── Trainer Dashboard Glassmorphic SaaS Design ─────────────────────── */
+
+.trainer-dashboard {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-8);
+  padding-bottom: 96px; /* safe padding for mobile bottom nav */
+  animation: trainer-dashboard-fade-in var(--duration-normal) var(--ease-standard);
+  box-sizing: border-box;
+}
+
+@keyframes trainer-dashboard-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header & Greeting */
+.trainer-dashboard__header {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.trainer-dashboard__eyebrow {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-brand);
+  margin: 0;
+}
+
+.trainer-dashboard__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.trainer-dashboard__description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.trainer-dashboard__context {
+  margin-top: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.trainer-dashboard__context select {
+  background: rgba(252, 253, 253, 0.85);
+  backdrop-filter: blur(12px) saturate(130%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-heading);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--duration-fast) var(--ease-standard);
+  box-shadow: var(--shadow-xs);
+}
+
+.trainer-dashboard__context select:hover {
+  border-color: var(--color-brand);
+  background: rgba(252, 253, 253, 0.95);
+}
+
+/* KPI Grid */
+.trainer-dashboard__kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  width: 100%;
+  min-width: 0;
+  margin-bottom: var(--space-8);
+}
+
+/* Glass Stat Card */
+.trainer-dashboard__stat-card {
+  position: relative;
+  background: rgba(252, 253, 253, 0.78);
+  backdrop-filter: blur(20px) saturate(130%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  min-height: 130px;
+  box-shadow: var(--shadow-sm), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform var(--duration-normal) var(--ease-standard), box-shadow var(--duration-normal) var(--ease-standard), border-color var(--duration-normal) var(--ease-standard);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.trainer-dashboard__stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-brand);
+  box-shadow: var(--shadow-md), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+}
+
+.trainer-dashboard__stat-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-width: 0;
+}
+
+.trainer-dashboard__stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+}
+
+.trainer-dashboard__stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-top: var(--space-2);
+}
+
+/* Glass Section Card */
+.trainer-dashboard__section {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: rgba(252, 253, 253, 0.80);
+  backdrop-filter: blur(20px) saturate(130%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-6);
+}
+
+.trainer-dashboard__section h2 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.trainer-dashboard__section p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4) 0;
+  line-height: 1.5;
+}
+
+/* Quick Actions */
+.trainer-dashboard__actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+  width: 100%;
+  min-width: 0;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1199px) {
+  .trainer-dashboard__kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .trainer-dashboard {
+    padding: var(--space-4);
+    padding-bottom: 96px;
+  }
+  .trainer-dashboard__kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .trainer-dashboard__title {
+    font-size: var(--font-size-xl);
+  }
+  .trainer-dashboard__section {
+    padding: var(--space-4);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .trainer-dashboard,
+  .trainer-dashboard__stat-card {
+    animation: none;
+    transition: none;
+  }
+}

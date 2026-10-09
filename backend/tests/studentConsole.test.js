@@ -113,6 +113,7 @@ describe('Student Free Console Endpoint', () => {
         code: '#include <stdio.h>\nint main() { return 0; }',
       });
 
+    console.log('Test 4 response:', res.status, res.body);
     expect(res.status).toBe(502);
     expect(res.body.success).toBe(false);
     expect(res.body.status).toBe('compiler_unavailable');
@@ -145,7 +146,9 @@ describe('Student Free Console Endpoint', () => {
   });
 
   test('6. timeout returns 408 timeout', async () => {
-    OnlineCompilerExecutor.execute.mockRejectedValueOnce(new Error('Execution timed out'));
+    const timeoutError = new Error('Code execution service timed out. Please try again.');
+    timeoutError.code = 'ONLINE_COMPILER_TIMEOUT';
+    OnlineCompilerExecutor.execute.mockRejectedValueOnce(timeoutError);
 
     const email = `student${uniqueSuffix()}@test.com`;
     const password = 'StrongP@ssw0rd';
@@ -163,6 +166,7 @@ describe('Student Free Console Endpoint', () => {
     expect(res.status).toBe(408);
     expect(res.body.success).toBe(false);
     expect(res.body.status).toBe('timeout');
+    expect(res.body.error).toBe('Code execution service timed out. Please try again.');
   });
 
   test('7. unauthenticated request returns 401', async () => {

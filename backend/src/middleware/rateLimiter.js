@@ -9,7 +9,7 @@ function createRateLimiter({ windowMs, max, message }) {
 
   return function (req, res, next) {
     // Bypass rate limiting in test environment unless explicitly enabled
-    if (process.env.NODE_ENV === 'test' && !process.env.ENABLE_RATE_LIMIT_IN_TESTS) {
+    if (process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT_IN_TESTS !== 'true') {
       return next();
     }
 

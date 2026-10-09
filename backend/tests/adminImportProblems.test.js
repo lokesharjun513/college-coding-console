@@ -205,8 +205,8 @@ describe('JSON Import Tests', () => {
     expect(collections.length).toBe(1);
   });
 
-  // 10. Duplicate problem is rejected
-  test('Duplicate problem is rejected', async () => {
+  // 10. Duplicate problem is reused (idempotent)
+  test('Duplicate problem is reused (idempotent)', async () => {
     await Problem.create({ title: 'Duplicate Title', slug: 'duplicate-title', description: 'Existing', difficulty: 'EASY', createdBy: new mongoose.Types.ObjectId(), scope: 'GLOBAL', status: 'PUBLISHED' });
 
     const res = await request(app)
@@ -221,8 +221,11 @@ describe('JSON Import Tests', () => {
       });
 
     expect(res.body.success).toBe(true);
-    expect(res.body.summary.failed).toBe(1);
+    // Existing problem is reused - no new problem created
     expect(res.body.summary.created).toBe(0);
+    const problem = await Problem.findOne({ slug: 'duplicate-title' });
+    // Existing problem remains unchanged
+    expect(problem.description).toBe('Existing');
   });
 
   // 12. 100 problems succeeds
@@ -310,7 +313,7 @@ describe('JSON Import Tests', () => {
     const res = await request(app)
       .post('/api/admin/problems/import')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ problems: [{ title: 'Test', description: 'd', difficulty: 'EASY', allowedLanguages: ['rust'] }] });
+      .send({ problems: [{ title: 'Test', description: 'd', difficulty: 'EASY', allowedLanguages: ['javascript'] }] });
 
     expect(res.body.success).toBe(true);
     expect(res.body.summary.failed).toBe(1);

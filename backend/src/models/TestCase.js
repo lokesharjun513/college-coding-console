@@ -13,7 +13,12 @@ const testCaseSchema = new mongoose.Schema({
   },
   expectedOutput: {
     type: String,
-    required: true,
+    validate: {
+      validator: function(v) {
+        return v !== null && v !== undefined;
+      },
+      message: 'expectedOutput is required'
+    }
   },
   isHidden: {
     type: Boolean,

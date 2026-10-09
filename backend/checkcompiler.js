@@ -14,7 +14,7 @@ async function runUserCode(code, input, timeoutMs = 5000) {
       method: "POST",
       signal: controller.signal,
       headers: {
-        "Authorization": "f0f4912df488b80558dfe74ac4ac7dd8",
+        "Authorization": process.env.ONLINE_COMPILER_API_KEY,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({

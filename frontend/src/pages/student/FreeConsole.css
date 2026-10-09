@@ -17,10 +17,12 @@
 }
 
 .free-console-container {
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
   background: var(--console-bg);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .console-header {
@@ -116,46 +118,4 @@
 .btn-primary { background: var(--console-accent); color: #fff; }
 .btn-primary:hover { opacity: 0.9; }
 
-.bottom-nav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--console-border);
-  padding: 8px 0;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
-  z-index: 20;
-}
-
-.bottom-nav button {
-  background: none;
-  border: none;
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--console-text-secondary);
-  transition: var(--console-transition);
-  height: 44px;
-}
-
-.bottom-nav button.active {
-  color: var(--console-accent);
-}
-
-@media (max-width: 767px) {
-  .panels-grid { grid-template-columns: 1fr; }
-  .bottom-nav { display: flex; }
-}
-
-.more-sheet {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: white;
-  border-radius: var(--console-radius-lg) var(--console-radius-lg) 0 0;
-  padding: 24px;
-  z-index: 30;
-}
+/* bottom-nav and more-sheet removed: shell now owns navigation */

@@ -158,7 +158,7 @@ router.patch('/:testCaseId', requireAuth, requireRole('ADMIN'), verifyProblem, a
       if (typeof order !== 'number') return res.status(400).json({ success: false, message: 'Invalid order value' });
       updateFields.order = order;
     }
-    const updated = await TestCase.findOneAndUpdate({ _id: testCaseId, problem: req.problem._id }, updateFields, { new: true, runValidators: true }).select('-__v');
+    const updated = await TestCase.findOneAndUpdate({ _id: testCaseId, problem: req.problem._id }, updateFields, { returnDocument: 'after', runValidators: true }).select('-__v');
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Test case not found' });
     }

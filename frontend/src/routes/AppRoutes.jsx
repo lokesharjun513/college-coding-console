@@ -19,6 +19,10 @@ import TrainerBatchDetails from '../pages/trainer/BatchDetails';
 import TrainerBatchStudentsList from '../pages/trainer/BatchStudentsList';
 import TrainerStudents from '../pages/trainer/Students';
 import TrainerProblemsList from '../pages/trainer/ProblemsList';
+import TrainerTrainingManagement from '../pages/trainer/TrainingManagement';
+import TrainerAnalytics from '../pages/trainer/Analytics';
+import TrainerMonitoring from '../pages/trainer/Monitoring';
+import TrainerProblems from '../pages/trainer/TrainerProblems';
 import TrainerProblemDetails from '../pages/trainer/ProblemDetails';
 import TrainerProblemEditor from '../pages/trainer/ProblemEditor';
 import TrainerBatchPerformance from '../pages/trainer/Performance/BatchPerformance';
@@ -28,8 +32,10 @@ import TrainerTestCasesList from '../pages/trainer/TestCasesList';
 import TrainerEnrollmentDetails from '../pages/trainer/EnrollmentDetails';
 import TrainerProfile from '../pages/trainer/TrainerProfile';
 import Practice from '../pages/student/Practice';
+import Batch from '../pages/student/Batch';
 import FreeConsole from '../pages/student/FreeConsole';
 import Performance from '../pages/student/Performance';
+import Leaderboard from '../pages/student/Leaderboard';
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentProblems from '../pages/student/Problems';
 import StudentProblemDetail from '../pages/student/ProblemDetail';
@@ -93,7 +99,11 @@ export default function AppRoutes() {
           }
         >
           <Route index element={<TrainerDashboard />} />
+          <Route path="training" element={<TrainerTrainingManagement />} />
+          <Route path="analytics" element={<TrainerAnalytics />} />
+          <Route path="monitoring" element={<TrainerMonitoring />} />
           <Route path="batches" element={<TrainerBatchesList />} />
+          <Route path="problems" element={<TrainerProblems />} />
           <Route path="students" element={<TrainerStudents />} />
           <Route path="batches/:batchId/students" element={<TrainerBatchStudentsList />} />
           <Route path="batches/:batchId/students/:studentId/performance" element={<TrainerStudentPerformance />} />
@@ -126,18 +136,34 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute>
               <RoleRoute allowedRoles={['STUDENT']}>
-                <StudentLayout />
+                <StudentLayout layoutMode="fullscreen" />
               </RoleRoute>
             </ProtectedRoute>
           }
         >
           <Route index element={<StudentDashboard />} />
           <Route path="practice" element={<Practice />} />
-          <Route path="freeconsole" element={<FreeConsole />} />
+          <Route path="batch" element={<Batch />} />
+          <Route path="training" element={<Navigate to="/student/batch" replace />} />
           <Route path="performance" element={<Performance />} />
+          <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="problems" element={<StudentProblems />} />
           <Route path="problems/:id" element={<StudentProblemDetail />} />
         </Route>
+
+        {/* Student Free Console – fullscreen workspace inside the shared shell */}
+        <Route
+          path="/student/freeconsole"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['STUDENT']}>
+                <StudentLayout layoutMode="fullscreen">
+                  <FreeConsole />
+                </StudentLayout>
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Profile page (accessible to any authenticated user) */}
         <Route

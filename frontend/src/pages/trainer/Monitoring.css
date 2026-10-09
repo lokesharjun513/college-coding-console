@@ -1,0 +1,93 @@
+/* Monitoring page — extends Analytics page styles; only layout deltas live here */
+.mo-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.mo-panel {
+  border: 1px solid var(--color-border, #C6D1D7);
+  border-radius: 8px;
+  background: #FCFDFD;
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.mo-panel h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-md, 1rem);
+  color: var(--color-text-primary);
+}
+
+.mo-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: #EDEFF3;
+  overflow: hidden;
+}
+
+.mo-progress > span {
+  display: block;
+  height: 100%;
+  background: #2F7EDA;
+}
+
+.mo-day-row,
+.mo-problem-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid #EDEFF3;
+  font-size: var(--font-size-sm);
+}
+
+.mo-day-row:last-child,
+.mo-problem-row:last-child {
+  border-bottom: none;
+}
+
+.mo-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.mo-row-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.mo-count {
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+/* Student rows are buttons so keyboard users can open the detail panel */
+.mo-student-btn {
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--color-action, #2F7EDA);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.mo-student-btn:hover,
+.mo-student-btn:focus-visible {
+  text-decoration: underline;
+}
+
+.mo-student-btn:focus-visible {
+  outline: 2px solid #2F7EDA;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1199px) {
+  .mo-layout { grid-template-columns: 1fr; }
+}

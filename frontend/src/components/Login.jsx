@@ -33,14 +33,7 @@ export default function Login() {
 
   if (isAuthenticated && user?.role) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100dvh',
-          backgroundColor: '#FAF8F5',
-        }}
+      <div className="auth-state-screen"
         aria-live="polite"
         aria-label="Redirecting to your dashboard"
       >
@@ -52,14 +45,7 @@ export default function Login() {
   // ── Show loading state while session is being restored ─
   if (authLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100dvh',
-          backgroundColor: '#FAF8F5',
-        }}
+      <div className="auth-state-screen"
         aria-live="polite"
         aria-label="Checking your session"
       >

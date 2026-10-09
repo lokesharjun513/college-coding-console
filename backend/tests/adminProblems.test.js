@@ -134,7 +134,7 @@ describe('Admin Problems API', () => {
       expect(problem.slug).toBe('two-sum-test-again');
     });
 
-    test('rejects duplicate slug', async () => {
+    test('handles duplicates with idempotent behavior', async () => {
       const res = await request(app)
         .post('/api/admin/problems/import')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -150,9 +150,9 @@ describe('Admin Problems API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.summary.failed).toBe(1);
-      expect(res.body.errors.length).toBe(1);
-      expect(res.body.errors[0].field).toBe('slug');
+      // Existing problem is reused - no new problem created, no failure
+      expect(res.body.summary.created).toBe(0);
+      expect(res.body.summary.failed).toBe(0);
     });
 
     test('handles multiple valid and invalid', async () => {
@@ -205,7 +205,7 @@ describe('Admin Problems API', () => {
               constraints: '1 <= n <= 100',
               examples: [{ input: '3', output: '[0,1,2]', explanation: 'Test' }],
               starterCode: { python: 'def solve(): pass' },
-              allowedLanguages: ['python', 'javascript'],
+              allowedLanguages: ['python', 'typescript'],
               status: 'PUBLISHED',
             },
           ],

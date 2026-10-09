@@ -1,0 +1,91 @@
+
+/* =================================================================
+   ADMIN LIFECYCLE MODAL STYLING
+   ================================================================= */
+
+.admin-lifecycle__entity-name {
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin-bottom: 20px;
+}
+
+.admin-lifecycle__scope-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-lifecycle__scope-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.admin-lifecycle__scope-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-lifecycle__scope-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius-md);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.admin-lifecycle__scope-option:hover {
+  background: var(--admin-muted);
+}
+
+.admin-lifecycle__scope-option--selected {
+  border-color: var(--admin-primary);
+  background: rgba(47, 126, 218, 0.05);
+}
+
+.admin-lifecycle__scope-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin-bottom: 4px;
+}
+
+.admin-lifecycle__scope-desc {
+  font-size: 12px;
+  color: var(--admin-text-muted);
+}
+
+.admin-lifecycle__warning-section {
+  padding: 12px;
+  background: var(--admin-danger-bg);
+  border: 1px solid var(--admin-danger-light);
+  border-radius: var(--admin-radius-md);
+  margin-bottom: 20px;
+}
+
+.admin-lifecycle__warning-text {
+  font-size: 13px;
+  color: var(--admin-danger-text);
+  margin: 0;
+}
+
+.admin-lifecycle__warning-text + .admin-lifecycle__warning-text {
+  margin-top: 8px;
+}
+
+.admin-lifecycle__confirm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-lifecycle__confirm-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}

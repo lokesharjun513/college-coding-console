@@ -130,14 +130,15 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
 /**
  * LIST USERS
  * GET /api/admin/users
+ * Supports pagination: ?page=1&limit=10&search=&role=&status=
  */
 router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
-    const { search, role, status } = req.query;
+    const { search, role, status, page = '1', limit = '20' } = req.query;
 
     const query = {};
 
-    // Add search filter
+    // Add search filter (searches name and email)
     if (search) {
       const searchRegex = new RegExp(search, 'i');
       query.$or = [
@@ -156,9 +157,18 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       query.status = status;
     }
 
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count for pagination metadata
+    const total = await User.countDocuments(query);
+
     const users = await User.find(query)
-      .select('-passwordHash')
-      .select('-__v');
+      .select('-passwordHash -__v')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
 
     res.json({
       success: true,
@@ -171,6 +181,12 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })),
+      meta: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
     });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error listing users:', error);

@@ -34,6 +34,7 @@ export const navigationConfig = {
       label: 'Main',
       items: [
         { label: 'Dashboard', path: '/trainer', icon: 'home' },
+        { label: 'Training', path: '/trainer/training', icon: 'trendingUp' },
       ],
     },
     {
@@ -48,6 +49,8 @@ export const navigationConfig = {
       label: 'Analytics',
       items: [
         { label: 'Performance', path: '/trainer/performance', icon: 'chartLine' },
+        { label: 'Monitoring', path: '/trainer/monitoring', icon: 'chartBar' },
+        { label: 'Analytics', path: '/trainer/analytics', icon: 'chartBar' },
       ],
     },
     {
@@ -66,11 +69,12 @@ export const navigationConfig = {
     {
       label: 'Learning',
       items: [
+        { label: 'Batch', path: '/student/batch', icon: 'layers' },
         { label: 'Practice', path: '/student/practice', icon: 'notebook' },
         { label: 'Free Console', path: '/student/freeconsole', icon: 'code' },
-        { label: 'Problems', path: '/student/problems', icon: 'fileCode' },
-        { label: 'Progress', path: '/student/progress', icon: 'trendingUp' },
         { label: 'Performance', path: '/student/performance', icon: 'chartBar' },
+        { label: 'Leaderboard', path: '/student/leaderboard', icon: 'trophy' },
+        { label: 'Problems', path: '/student/problems', icon: 'fileCode' },
       ],
     },
     {

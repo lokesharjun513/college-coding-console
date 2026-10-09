@@ -1,40 +1,20 @@
 // backend/src/services/OnlineCompilerExecutor.js
 const logger = require('../config/logger');
 
-const { getCompilerById, mapLegacyToCompiler } = require('./compilerRegistry');
-// Note: we will resolve compiler ID dynamically based on language or direct compilerId.
-const COMPILER_MAP = {
-  c: 'gcc-15',
-  cpp: 'g++-15',
-  java: 'openjdk-21',
-  python: 'python-3.11',
-  javascript: 'nodejs-20',
-};
+const { mapLegacyToCompiler } = require('./compilerRegistry');
 
 /**
  * Execute code against OnlineCompiler API for Free Console.
  * @param {Object} options
  * @param {string} options.source - Source code to execute
- * @param {string} options.language - Language name (c, cpp, java, python, javascript)
+ * @param {string} options.language - Language name (c, cpp, java, python, typescript)
  * @param {string} [options.stdin] - Input to feed to program
+ * @param {string} [options.compilerId] - Explicit compiler id; resolved from language via registry when omitted
  * @returns {Object} OnlineCompiler execution result normalized
  */
 async function execute({ source, language, stdin, compilerId }) {
-  // Resolve compiler: prefer explicit compilerId, fall back to legacy language mapping
-  let compiler = compilerId;
-  if (!compiler) {
-    // Try direct lookup from registry (modern compiler IDs like python-3.14)
-    try {
-      const entry = await getCompilerById(language);
-      if (entry) {
-        compiler = entry.id;
-      }
-    } catch (_) {}
-    // Fall back to legacy mapping if not found
-    if (!compiler) {
-      compiler = mapLegacyToCompiler(language) || COMPILER_MAP[language];
-    }
-  }
+  // Single source of truth: language → compiler via the registry
+  const compiler = compilerId || mapLegacyToCompiler(language);
   if (!compiler) {
     throw new Error(`Unsupported language: ${language}`);
   }
@@ -50,8 +30,9 @@ async function execute({ source, language, stdin, compilerId }) {
     input: stdin || '',
   };
 
+  const timeoutMs = Number(process.env.ONLINE_COMPILER_TIMEOUT_MS) || 30000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const start = Date.now();
   logger.info('OnlineCompiler execution requested', {
@@ -101,7 +82,10 @@ async function execute({ source, language, stdin, compilerId }) {
         language,
         durationMs,
       });
-      throw new Error('OnlineCompiler execution request timed out after 15000ms');
+      const error = new Error('Code execution service timed out. Please try again.');
+      error.code = 'ONLINE_COMPILER_TIMEOUT';
+      error.status = 408;
+      throw error;
     }
     logger.error('OnlineCompiler execution exception', {
       event: 'onlinecompiler.execution.exception',

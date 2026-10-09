@@ -7,6 +7,7 @@ const Collection = require('../src/models/Collection');
 const Topic = require('../src/models/Topic');
 const ProblemTopic = require('../src/models/ProblemTopic');
 const Problem = require('../src/models/Problem');
+const BatchStudent = require('../src/models/BatchStudent');
 const authService = require('../src/auth/authService');
 const uniqueSuffix = require('./utils/unique');
 
@@ -125,7 +126,8 @@ describe('Student Collections API', () => {
     const col = await Collection.create({ name: 'Filter Collection', slug: 'filter', status: 'ACTIVE', createdBy: new mongoose.Types.ObjectId() });
     const topic = await Topic.create({ name: 'Filter Topic', slug: 'filter-topic', collection: col._id, createdBy: new mongoose.Types.ObjectId() });
 
-    await Problem.create({ title: 'Published Global', slug: 'pub-global', description: 'Test', difficulty: 'EASY', createdBy: new mongoose.Types.ObjectId(), scope: 'GLOBAL', status: 'PUBLISHED' });
+    const published = await Problem.create({ title: 'Published Global', slug: 'pub-global', description: 'Test', difficulty: 'EASY', createdBy: new mongoose.Types.ObjectId(), scope: 'GLOBAL', status: 'PUBLISHED' });
+    await ProblemTopic.create({ problem: published._id, collection: col._id, topic: topic._id, createdBy: new mongoose.Types.ObjectId() });
 
     const archived = await Problem.create({ title: 'Archived', slug: 'archived', description: 'Test', difficulty: 'EASY', createdBy: new mongoose.Types.ObjectId(), scope: 'GLOBAL', status: 'ARCHIVED' });
     await ProblemTopic.create({ problem: archived._id, collection: col._id, topic: topic._id, createdBy: new mongoose.Types.ObjectId() });
@@ -166,5 +168,72 @@ describe('Student Collections API', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.length).toBe(1);
+  });
+
+  // Regression: compiler configuration must NOT affect visibility (GLOBAL/BATCH access rules)
+  describe('visibility is compiler-independent', () => {
+    let col, topic;
+    beforeEach(async () => {
+      col = await Collection.create({ name: 'Regression Collection', slug: 'regression', status: 'ACTIVE', createdBy: new mongoose.Types.ObjectId() });
+      topic = await Topic.create({ name: 'Regression Topic', slug: 'regression-topic', collection: col._id, createdBy: new mongoose.Types.ObjectId() });
+    });
+
+    async function linkProblem(overrides = {}) {
+      const unique = uniqueSuffix();
+      const problem = await Problem.create({
+        title: `Regression ${unique}`,
+        slug: `regression-${unique}`,
+        description: 'Test',
+        difficulty: 'EASY',
+        createdBy: new mongoose.Types.ObjectId(),
+        scope: 'GLOBAL',
+        status: 'PUBLISHED',
+        ...overrides,
+      });
+      await ProblemTopic.create({ problem: problem._id, collection: col._id, topic: topic._id, createdBy: new mongoose.Types.ObjectId() });
+      return problem;
+    }
+
+    test('Published GLOBAL problem with valid compiler is visible', async () => {
+      await linkProblem({ compiler: 'gcc-15' });
+      const res = await request(app).get(`/api/student/topics/${topic._id}/problems`).set('Authorization', `Bearer ${studentToken}`);
+      expect(res.body.data.length).toBe(1);
+    });
+
+    test('Published GLOBAL problem without compiler is still visible', async () => {
+      await linkProblem({ compiler: null });
+      const res = await request(app).get(`/api/student/topics/${topic._id}/problems`).set('Authorization', `Bearer ${studentToken}`);
+      expect(res.body.data.length).toBe(1);
+    });
+
+    test('Published BATCH problem with matching enrollment is visible', async () => {
+      const problem = await linkProblem({ scope: 'BATCH', batch: new mongoose.Types.ObjectId() });
+      const student = await User.findOne({ role: 'STUDENT' });
+      await BatchStudent.create({ batch: problem.batch, student: student._id, status: 'ACTIVE' });
+      // Fresh token not needed; enrollment is read per-request
+      const res = await request(app).get(`/api/student/topics/${topic._id}/problems`).set('Authorization', `Bearer ${studentToken}`);
+      expect(res.body.data.length).toBe(1);
+    });
+
+    test('Published BATCH problem with different batch enrollment is hidden', async () => {
+      await linkProblem({ scope: 'BATCH', batch: new mongoose.Types.ObjectId() });
+      const otherBatch = new mongoose.Types.ObjectId();
+      const student = await User.findOne({ role: 'STUDENT' });
+      await BatchStudent.create({ batch: otherBatch, student: student._id, status: 'ACTIVE' });
+      const res = await request(app).get(`/api/student/topics/${topic._id}/problems`).set('Authorization', `Bearer ${studentToken}`);
+      expect(res.body.data.length).toBe(0);
+    });
+
+    test('DRAFT GLOBAL problem is hidden', async () => {
+      await linkProblem({ status: 'DRAFT' });
+      const res = await request(app).get(`/api/student/topics/${topic._id}/problems`).set('Authorization', `Bearer ${studentToken}`);
+      expect(res.body.data.length).toBe(0);
+    });
+
+    test('ARCHIVED GLOBAL problem is hidden', async () => {
+      await linkProblem({ status: 'ARCHIVED' });
+      const res = await request(app).get(`/api/student/topics/${topic._id}/problems`).set('Authorization', `Bearer ${studentToken}`);
+      expect(res.body.data.length).toBe(0);
+    });
   });
 });

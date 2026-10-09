@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Pencil, Trash2, Users, UserCheck, UserRound, Search, UserPlus, Layers, Download, Upload } from 'lucide-react';
 import DataTable from '../../components/ui/DataTable';
 import TableActions from '../../components/ui/table/TableActions';
 import Button from '../../components/ui/Button';
@@ -10,7 +10,20 @@ import Modal from '../../components/ui/Modal';
 import Toast from '../../components/ui/Toast';
 import Skeleton from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
-import { getTrainers, createTrainer, updateTrainer, deleteTrainer, deleteTrainerForce, getTrainerAssignments, removeTrainerFromBatch, bulkUploadTrainers, downloadTrainerTemplate, getBatches, updateBatch } from '../../api/admin';
+import {
+  getTrainers,
+  createTrainer,
+  updateTrainer,
+  deleteTrainer,
+  deleteTrainerForce,
+  getTrainerAssignments,
+  removeTrainerFromBatch,
+  bulkUploadTrainers,
+  downloadTrainerTemplate,
+  getBatches,
+  updateBatch,
+} from '../../api/admin';
+import '../../styles/pages/admin.css';
 import '../../styles/pages/admin-trainers.css';
 
 /**
@@ -125,6 +138,13 @@ export default function Trainers() {
     e.target.value = '';
   };
 
+  const getInitials = (name) => {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
   // Filtered rows
   const filtered = trainers.filter(t => {
     const q = search.toLowerCase();
@@ -142,7 +162,7 @@ export default function Trainers() {
   const inactiveCount = trainers.filter(t => t.status !== 'ACTIVE').length;
 
   const columns = [
-    { key: 'name', header: 'TRAINER' },
+    { key: 'trainer', header: 'TRAINER' },
     { key: 'email', header: 'EMAIL' },
     { key: 'status', header: 'STATUS', align: 'center' },
     { key: 'assignedBatches', header: 'ASSIGNED BATCHES', align: 'center' },
@@ -151,10 +171,22 @@ export default function Trainers() {
 
   const rows = filtered.map(t => ({
     ...t,
+    trainer: (
+      <div className="admin-trainers__user-cell">
+        <div className="admin-trainers__avatar admin-trainers__avatar--trainer">
+          {getInitials(t.name)}
+        </div>
+        <div>
+          <div className="admin-trainers__user-name">{t.name}</div>
+          <div className="admin-trainers__user-id">{t.trainerId}</div>
+        </div>
+      </div>
+    ),
+    email: t.email,
     status: (
       <button
         type="button"
-        className={`admin-trainers__badge admin-trainers__badge--${t.status?.toLowerCase() || 'active'}`}
+        className={`admin-badge admin-badge--${t.status?.toLowerCase() || 'active'}`}
         onClick={() => toggleStatus(t)}
         style={{ cursor: 'pointer', border: 'none' }}
         title="Click to toggle status"
@@ -163,27 +195,31 @@ export default function Trainers() {
       </button>
     ),
     assignedBatches: t.assignedBatches && t.assignedBatches.length > 0 ? (
-      <span className="admin-trainers__assigned-cell admin-trainers__assigned-cell--yes">
-        {t.assignedBatches.map(b => (
+      <div className="admin-trainers__batches">
+        {t.assignedBatches.slice(0, 3).map(b => (
           <button
             key={b.id}
             type="button"
-            className="admin-trainers__batch-pill"
+            className="admin-trainers__batch-chip"
             onClick={() => {
               setTrainerToUnassign(t);
               setBatchToUnassign(b);
               setUnassignModalOpen(true);
             }}
-            title="Click to unassign from batch"
+            title={`Click to unassign from ${b.name}`}
           >
-            {b.name}
+            <Layers size={12} className="admin-trainers__batch-chip-icon" />
+            <span className="admin-trainers__batch-chip-name">{b.name}</span>
           </button>
         ))}
-      </span>
+        {t.assignedBatches.length > 3 && (
+          <span className="admin-trainers__batch-more">+{t.assignedBatches.length - 3}</span>
+        )}
+      </div>
     ) : (
-      <span className="admin-trainers__assigned-cell admin-trainers__assigned-cell--no">
-        <Button variant="secondary" size="sm" onClick={() => openAssign(t)}>Assign</Button>
-      </span>
+      <Button variant="ghost" size="sm" onClick={() => openAssign(t)} className="admin-trainers__assign-btn">
+        + Assign
+      </Button>
     ),
     actions: (
       <TableActions
@@ -366,7 +402,6 @@ export default function Trainers() {
     try {
       await removeTrainerFromBatch(batchId);
       showToast('Trainer removed from batch successfully');
-      // Refresh assignments for this trainer
       const res = await getTrainerAssignments(deleteId);
       if (res.data?.hasAssignedBatches) {
         setDeleteInfo(res.data);
@@ -399,46 +434,73 @@ export default function Trainers() {
 
   return (
     <div className="admin-trainers">
-      <PageHeader
-        className="admin-trainers__header"
-        title="Trainers"
-        description="Manage trainer accounts, access privileges and platform responsibilities."
-        actions={
+      <div className="admin-trainers__page-header">
+        <nav className="admin-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/admin" className="admin-breadcrumb__item">Home</Link>
+          <span className="admin-breadcrumb__separator">/</span>
+          <span className="admin-breadcrumb__current" aria-current="page">Trainers</span>
+        </nav>
+        <div className="admin-trainers__header">
+          <div>
+            <h1 className="admin-trainers__title">Trainers</h1>
+            <p className="admin-trainers__description">
+              Manage trainer accounts, access privileges and platform responsibilities.
+            </p>
+          </div>
           <div className="admin-trainers__header-actions">
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="admin-trainers__hidden-input" />
-            <Button onClick={handleDownloadTemplate} variant="secondary">Template</Button>
-            <Button onClick={handleBulkUpload} variant="secondary">Bulk Upload</Button>
-            <Button onClick={openCreate}>+ Add Trainer</Button>
+            <Button onClick={handleDownloadTemplate} variant="secondary"><Download size={16} />Template</Button>
+            <Button onClick={handleBulkUpload} variant="secondary"><Upload size={16} />Bulk Upload</Button>
+            <Button onClick={openCreate} className="admin-trainers__add-btn">
+              <UserPlus size={16} /> Add Trainer
+            </Button>
           </div>
-        }
-      />
+        </div>
+      </div>
 
       {/* Summary KPI Cards */}
-      <div className="admin-trainers__summary">
-        <Card className="admin-trainers__summary-card">
-          <h3>Total Trainers</h3>
-          <p>{totalCount}</p>
-        </Card>
-        <Card className="admin-trainers__summary-card">
-          <h3>Active Trainers</h3>
-          <p>{activeCount}</p>
-        </Card>
-        <Card className="admin-trainers__summary-card">
-          <h3>Inactive Trainers</h3>
-          <p>{inactiveCount}</p>
-        </Card>
+      <div className="admin-dashboard__kpi-grid">
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Total Trainers</span>
+            <div className="admin-dashboard__stat-icon"><Users size={18} /></div>
+          </div>
+          <div className="admin-dashboard__stat-value">{totalCount}</div>
+          <div className="admin-dashboard__stat-meta">All registered trainers</div>
+        </div>
+
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Active Trainers</span>
+            <div className="admin-dashboard__stat-icon"><UserCheck size={18} /></div>
+          </div>
+          <div className="admin-dashboard__stat-value">{activeCount}</div>
+          <div className="admin-dashboard__stat-meta">Currently active trainers</div>
+        </div>
+
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Inactive Trainers</span>
+            <div className="admin-dashboard__stat-icon"><UserRound size={18} /></div>
+          </div>
+          <div className="admin-dashboard__stat-value">{inactiveCount}</div>
+          <div className="admin-dashboard__stat-meta">Disabled or inactive trainers</div>
+        </div>
       </div>
 
       {/* Search & Filter Toolbar */}
       <div className="admin-trainers__toolbar">
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="admin-trainers__search"
-          aria-label="Search trainers"
-        />
+        <div className="admin-trainers__search-wrapper">
+          <Search className="admin-trainers__search-icon" size={16} />
+          <input
+            type="text"
+            placeholder="Search trainers by name or email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="admin-trainers__search"
+            aria-label="Search trainers"
+          />
+        </div>
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
@@ -456,10 +518,16 @@ export default function Trainers() {
         )}
       </div>
 
-      {loading && <Skeleton width="100%" height="var(--space-8)" className="admin-trainers__skeleton" />}
+      {loading && (
+        <div className="admin-trainers__skeleton">
+          <Skeleton width="100%" height="40px" />
+          <Skeleton width="100%" height="40px" />
+          <Skeleton width="100%" height="40px" />
+        </div>
+      )}
       {error && (
         <div className="admin-trainers__error" role="alert">
-          {error}
+          <span>{error}</span>
           <Button variant="secondary" size="sm" onClick={fetchTrainers} className="admin-trainers__retry-btn">
             Retry
           </Button>
@@ -476,15 +544,17 @@ export default function Trainers() {
                 onAction={!search && !statusFilter ? openCreate : clearFilters}
               />
             ) : (
-              <DataTable
-                columns={columns}
-                data={rows}
-                loading={false}
-                error={null}
-                emptyMessage="No trainers available."
-                showSNo={true}
-                className="admin-trainers__table"
-              />
+               <DataTable
+                 columns={columns}
+                 data={rows}
+                 loading={false}
+                 error={null}
+                 emptyMessage="No trainers available."
+                 showSNo={true}
+                 currentPage={meta.page}
+                 pageSize={meta.limit}
+                 className="admin-table"
+               />
             )}
           </Card>
 
@@ -516,178 +586,193 @@ export default function Trainers() {
       )}
 
       {/* Create / Edit Modal */}
-      <Modal isOpen={modalOpen} onClose={() => !submitting && setModalOpen(false)} title={editing ? 'Edit Trainer' : 'Create Trainer'} className="admin-trainers__modal">
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="admin-trainers__form-group">
-            <label htmlFor="name" className="admin-trainers__form-label">Full Name</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              value={form.name}
-              onChange={handleChange}
-              required
-              className={`admin-trainers__form-input ${formErrors.name ? 'error' : ''}`}
-            />
-            {formErrors.name && <span className="admin-trainers__field-error">{formErrors.name}</span>}
-          </div>
+<Modal isOpen={modalOpen} onClose={() => !submitting && setModalOpen(false)} title={editing ? 'Edit Trainer' : 'Create Trainer'}>
+         <div className="admin-modal__body">
+           <form onSubmit={handleSubmit} noValidate>
+             <div className="admin-trainers__form-group">
+               <label htmlFor="name" className="admin-trainers__form-label">Full Name</label>
+               <input
+                 id="name"
+                 name="name"
+                 type="text"
+                 value={form.name}
+                 onChange={handleChange}
+                 required
+                 className={`admin-trainers__form-input ${formErrors.name ? 'error' : ''}`}
+               />
+               {formErrors.name && <span className="admin-trainers__field-error">{formErrors.name}</span>}
+             </div>
 
-          <div className="admin-trainers__form-group">
-            <label htmlFor="email" className="admin-trainers__form-label">Email Address</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-              className={`admin-trainers__form-input ${formErrors.email ? 'error' : ''}`}
-            />
-            {formErrors.email && <span className="admin-trainers__field-error">{formErrors.email}</span>}
-          </div>
+             <div className="admin-trainers__form-group">
+               <label htmlFor="email" className="admin-trainers__form-label">Email Address</label>
+               <input
+                 id="email"
+                 name="email"
+                 type="email"
+                 value={form.email}
+                 onChange={handleChange}
+                 required
+                 className={`admin-trainers__form-input ${formErrors.email ? 'error' : ''}`}
+               />
+               {formErrors.email && <span className="admin-trainers__field-error">{formErrors.email}</span>}
+             </div>
 
-          {!editing && (
-            <div className="admin-trainers__form-group">
-              <label htmlFor="trainerId" className="admin-trainers__form-label">Trainer ID (e.g., T001)</label>
-              <input
-                id="trainerId"
-                name="trainerId"
-                type="text"
-                value={form.trainerId}
-                onChange={handleChange}
-                required
-                className={`admin-trainers__form-input ${formErrors.trainerId ? 'error' : ''}`}
-              />
-              {formErrors.trainerId && <span className="admin-trainers__field-error">{formErrors.trainerId}</span>}
-            </div>
-          )}
+             {!editing && (
+               <div className="admin-trainers__form-group">
+                 <label htmlFor="trainerId" className="admin-trainers__form-label">Trainer ID (e.g., T001)</label>
+                 <input
+                   id="trainerId"
+                   name="trainerId"
+                   type="text"
+                   value={form.trainerId}
+                   onChange={handleChange}
+                   required
+                   className={`admin-trainers__form-input ${formErrors.trainerId ? 'error' : ''}`}
+                 />
+                 {formErrors.trainerId && <span className="admin-trainers__field-error">{formErrors.trainerId}</span>}
+               </div>
+             )}
 
-          {editing && (
-            <div className="admin-trainers__form-group">
-              <label htmlFor="status" className="admin-trainers__form-label">Status</label>
-              <select
-                id="status"
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="admin-trainers__form-input"
-              >
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
-            </div>
-          )}
+             {editing && (
+               <div className="admin-trainers__form-group">
+                 <label htmlFor="status" className="admin-trainers__form-label">Status</label>
+                 <select
+                   id="status"
+                   name="status"
+                   value={form.status}
+                   onChange={handleChange}
+                   className="admin-trainers__form-input"
+                 >
+                   <option value="ACTIVE">Active</option>
+                   <option value="INACTIVE">Inactive</option>
+                 </select>
+               </div>
+             )}
 
-          <div className="admin-trainers__modal-actions">
-            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>Cancel</Button>
-            <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : (editing ? 'Save Changes' : 'Create Trainer')}</Button>
-          </div>
-        </form>
-      </Modal>
+             <div className="admin-modal__footer">
+               <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} disabled={submitting}>Cancel</Button>
+               <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : (editing ? 'Save Changes' : 'Create Trainer')}</Button>
+             </div>
+           </form>
+         </div>
+       </Modal>
 
       {/* Status Toggle Confirmation Modal */}
-      <Modal isOpen={!!toggleId} onClose={() => setToggleId(null)} title="Confirm Status Change" className="admin-trainers__modal">
-        <p className="admin-trainers__modal-text">
-          Are you sure you want to change <strong>{toggleName}</strong> status to <strong>{toggleTargetStatus}</strong>?
-        </p>
-        <div className="admin-trainers__modal-actions">
-          <Button variant="secondary" onClick={() => setToggleId(null)}>Cancel</Button>
-          <Button variant="primary" onClick={confirmToggleStatus}>Confirm</Button>
-        </div>
-      </Modal>
+<Modal isOpen={!!toggleId} onClose={() => setToggleId(null)} title="Confirm Status Change">
+         <div className="admin-modal__body">
+           <p className="admin-trainers__modal-text">
+             Are you sure you want to change <strong>{toggleName}</strong> status to <strong>{toggleTargetStatus}</strong>?
+           </p>
+         </div>
+         <div className="admin-modal__footer">
+           <Button variant="secondary" onClick={() => setToggleId(null)}>Cancel</Button>
+           <Button variant="primary" onClick={confirmToggleStatus}>Confirm</Button>
+         </div>
+       </Modal>
 
       {/* Unassign Confirmation Modal */}
-      <Modal isOpen={unassignModalOpen} onClose={() => setUnassignModalOpen(false)} title="Unassign Trainer from Batch" className="admin-trainers__modal">
-        <p className="admin-trainers__modal-text">
-          Do you want to remove/unassign <strong>{trainerToUnassign?.name}</strong> from this <strong>{batchToUnassign?.name}</strong>?
-        </p>
-        <div className="admin-trainers__modal-actions">
-          <Button variant="secondary" onClick={() => setUnassignModalOpen(false)}>Cancel</Button>
-          <Button variant="danger" onClick={handleUnassignConfirm}>Yes Continue</Button>
-        </div>
-      </Modal>
+<Modal isOpen={unassignModalOpen} onClose={() => setUnassignModalOpen(false)} title="Unassign Trainer from Batch">
+         <div className="admin-modal__body">
+           <p className="admin-trainers__modal-text">
+             Do you want to remove/unassign <strong>{trainerToUnassign?.name}</strong> from <strong>{batchToUnassign?.name}</strong>?
+           </p>
+         </div>
+         <div className="admin-modal__footer">
+           <Button variant="secondary" onClick={() => setUnassignModalOpen(false)}>Cancel</Button>
+           <Button variant="danger" onClick={handleUnassignConfirm}>Yes Continue</Button>
+         </div>
+       </Modal>
 
       {/* Assign Confirmation Modal */}
-      <Modal isOpen={assignModalOpen} onClose={() => { setAssignModalOpen(false); setAssignStep('select'); setSelectedBatchId(''); setTrainerToAssign(null); setAvailableBatches([]); }} title="Assign Trainer to Batch" className="admin-trainers__modal">
-        {assignStep === 'select' && (
-          <>
-            <p className="admin-trainers__modal-text">Select a batch to assign <strong>{trainerToAssign?.name}</strong> to:</p>
-            <div className="admin-trainers__batch-wrapper" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              <ul className="admin-trainers__batch-list">
-                {availableBatches.map(b => (
-                  <li key={b.id} className="admin-trainers__batch-item">
-                    <button
-                      type="button"
-                      className="admin-trainers__batch-pill"
-                      onClick={() => setSelectedBatchId(b.id)}
-                      style={{ background: selectedBatchId === b.id ? 'rgba(0, 122, 255, 0.1)' : undefined }}
-                    >
-                      {b.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="admin-trainers__modal-actions">
-              <Button variant="secondary" onClick={() => { setAssignModalOpen(false); setAssignStep('select'); setSelectedBatchId(''); setTrainerToAssign(null); setAvailableBatches([]); }}>Cancel</Button>
-              <Button variant="primary" onClick={handleAssignContinue} disabled={!selectedBatchId}>Yes, Continue</Button>
-            </div>
-          </>
-        )}
-        {assignStep === 'confirm' && (
-          <div>
-            <p className="admin-trainers__modal-text">
-              Assign <strong>{trainerToAssign?.name}</strong> to batch <strong>{availableBatches.find(b => b.id === selectedBatchId)?.name}</strong>?
-            </p>
-            <div className="admin-trainers__modal-actions">
-              <Button variant="secondary" onClick={() => setAssignStep('select')}>Back</Button>
-              <Button variant="primary" onClick={handleAssignConfirmFinal}>Yes, Continue</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+<Modal isOpen={assignModalOpen} onClose={() => { setAssignModalOpen(false); setAssignStep('select'); setSelectedBatchId(''); setTrainerToAssign(null); setAvailableBatches([]); }} title="Assign Trainer to Batch">
+         {assignStep === 'select' && (
+           <>
+             <div className="admin-modal__body">
+               <p className="admin-trainers__modal-text">Select a batch to assign <strong>{trainerToAssign?.name}</strong> to:</p>
+               <div className="admin-trainers__batch-wrapper" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                 <ul className="admin-trainers__batch-list">
+                   {availableBatches.map(b => (
+                     <li key={b.id} className="admin-trainers__batch-item">
+                       <button
+                         type="button"
+                         className="admin-trainers__batch-chip"
+                         onClick={() => setSelectedBatchId(b.id)}
+                         style={{ background: selectedBatchId === b.id ? 'rgba(0, 122, 255, 0.1)' : undefined }}
+                       >
+                         <Layers size={12} className="admin-trainers__batch-chip-icon" />
+                         <span className="admin-trainers__batch-chip-name">{b.name}</span>
+                       </button>
+                     </li>
+                   ))}
+                 </ul>
+               </div>
+               <div className="admin-modal__footer">
+                 <Button variant="secondary" onClick={() => { setAssignModalOpen(false); setAssignStep('select'); setSelectedBatchId(''); setTrainerToAssign(null); setAvailableBatches([]); }}>Cancel</Button>
+                 <Button variant="primary" onClick={handleAssignContinue} disabled={!selectedBatchId}>Yes, Continue</Button>
+               </div>
+             </div>
+           </>
+         )}
+         {assignStep === 'confirm' && (
+           <div>
+             <div className="admin-modal__body">
+               <p className="admin-trainers__modal-text">
+                 Assign <strong>{trainerToAssign?.name}</strong> to batch <strong>{availableBatches.find(b => b.id === selectedBatchId)?.name}</strong>?
+               </p>
+             </div>
+             <div className="admin-modal__footer">
+               <Button variant="secondary" onClick={() => setAssignStep('select')}>Back</Button>
+               <Button variant="primary" onClick={handleAssignConfirmFinal}>Yes, Continue</Button>
+             </div>
+           </div>
+         )}
+       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal isOpen={!!deleteId} onClose={() => { setDeleteId(null); setDeleteInfo(null); }} title="Delete Trainer" className="admin-trainers__modal">
-        {deleteInfo && deleteInfo.hasAssignedBatches ? (
-          <div>
-            <p className="admin-trainers__modal-batch-info">
-              Trainer is currently assigned to <strong>{deleteInfo.assignedBatchCount || deleteInfo.batches?.length || 0}</strong> batch(es).
-            </p>
-            {deleteInfo.batches && deleteInfo.batches.length > 0 && (
-              <div className="admin-trainers__batch-wrapper">
-                <p className="admin-trainers__batch-label">Assigned Batches:</p>
-                <ul className="admin-trainers__batch-list">
-                  {deleteInfo.batches.map(b => (
-                    <li key={b.id} className="admin-trainers__batch-item">
-                      <span><strong>{b.name}</strong> <small className="admin-trainers__batch-code">({b.code})</small></span>
-                      <Button variant="secondary" size="sm" onClick={() => handleRemoveFromBatch(b.id)} disabled={deleting}>Remove from batch</Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <div className="admin-trainers__modal-actions">
-              <Button type="button" variant="secondary" onClick={() => { setDeleteId(null); setDeleteInfo(null); }} disabled={deleting}>Cancel</Button>
-              <Button type="button" variant="danger" onClick={handleForceDelete} disabled={deleting}>
-                {deleting ? 'Force Deleting…' : 'Force Delete'}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p className="admin-trainers__modal-text">
-              Are you sure you want to delete this trainer? This action is permanent and cannot be undone.
-            </p>
-            <div className="admin-trainers__modal-actions">
-              <Button type="button" variant="secondary" onClick={() => { setDeleteId(null); setDeleteInfo(null); }} disabled={deleting}>Cancel</Button>
-              <Button type="button" variant="danger" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete Trainer'}
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+<Modal isOpen={!!deleteId} onClose={() => { setDeleteId(null); setDeleteInfo(null); }} title="Delete Trainer">
+         {deleteInfo && deleteInfo.hasAssignedBatches ? (
+           <div>
+             <div className="admin-modal__body">
+               <p className="admin-trainers__modal-batch-info">
+                 Trainer is currently assigned to <strong>{deleteInfo.assignedBatchCount || deleteInfo.batches?.length || 0}</strong> batch(es).
+               </p>
+               {deleteInfo.batches && deleteInfo.batches.length > 0 && (
+                 <div className="admin-trainers__batch-wrapper">
+                   <p className="admin-trainers__batch-label">Assigned Batches:</p>
+                   <ul className="admin-trainers__batch-list">
+                     {deleteInfo.batches.map(b => (
+                       <li key={b.id} className="admin-trainers__batch-item">
+                         <span><strong>{b.name}</strong> <small className="admin-trainers__batch-code">({b.code})</small></span>
+                         <Button variant="secondary" size="sm" onClick={() => handleRemoveFromBatch(b.id)} disabled={deleting}>Remove from batch</Button>
+                       </li>
+                     ))}
+                   </ul>
+                 </div>
+               )}
+             </div>
+             <div className="admin-modal__footer">
+               <Button type="button" variant="secondary" onClick={() => { setDeleteId(null); setDeleteInfo(null); }} disabled={deleting}>Cancel</Button>
+               <Button type="button" variant="danger" onClick={handleForceDelete} disabled={deleting}>
+                 {deleting ? 'Force Deleting…' : 'Force Delete'}
+               </Button>
+             </div>
+           </div>
+         ) : (
+           <div>
+             <div className="admin-modal__body">
+               <p className="admin-trainers__modal-text">
+                 Are you sure you want to delete this trainer? This action is permanent and cannot be undone.
+               </p>
+             </div>
+             <div className="admin-modal__footer">
+               <Button type="button" variant="secondary" onClick={() => { setDeleteId(null); setDeleteInfo(null); }} disabled={deleting}>Cancel</Button>
+               <Button type="button" variant="danger" onClick={handleDelete} disabled={deleting}>
+                 {deleting ? 'Deleting…' : 'Delete Trainer'}
+               </Button>
+             </div>
+           </div>
+         )}
+       </Modal>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

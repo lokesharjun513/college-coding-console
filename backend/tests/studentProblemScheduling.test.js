@@ -25,7 +25,7 @@ beforeEach(async () => {
 });
 
 describe('Student Problem Scheduling', () => {
-  test('categorizes batch problems by practiceDate (today vs upcoming)', async () => {
+  test('exposes current batch practice but not future practice', async () => {
     const student = await createUser({ name: 'Student', email: 'stu@test.com', password: 'pwd' });
     const batch = await Batch.create({ name: 'B1', code: 'B1', trainer: new mongoose.Types.ObjectId() });
     await BatchStudent.create({ batch: batch._id, student: student._id });
@@ -44,8 +44,8 @@ describe('Student Problem Scheduling', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.body.meta.todayCount).toBe(1);
-    expect(res.body.meta.upcomingCount).toBe(1);
+    expect(res.body.meta.upcomingCount).toBe(0);
     expect(res.body.meta.today[0].title).toBe('Today P');
-    expect(res.body.meta.upcoming[0].title).toBe('Upcoming P');
+    expect(res.body.data.map(p => p.title)).not.toContain('Upcoming P');
   });
 });

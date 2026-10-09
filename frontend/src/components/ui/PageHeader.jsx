@@ -7,46 +7,31 @@ import '../../styles/components.css';
  */
 export default function PageHeader({ title, description, breadcrumb, actions }) {
   return (
-    <header style={{ marginBottom: 'var(--space-5)' }}>
+    <header className="admin-page-header">
       {breadcrumb && (
         <nav
           aria-label="breadcrumb"
-          style={{
-            marginBottom: 'var(--space-2)',
-            fontSize: 'var(--font-size-xs)',
-            color: 'var(--color-text-tertiary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}
+          className="admin-breadcrumb"
         >
           {breadcrumb}
         </nav>
       )}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
-        <div>
-          <h1
-            style={{
-              fontSize: 'var(--font-size-3xl)',
-              fontWeight: 'var(--font-weight-semibold)',
-              margin: 0,
-              color: 'var(--color-text-primary)',
-            }}
-          >
+      <div className="admin-page-header-content">
+        <div className="admin-page-header-text">
+          <h1 className="admin-page-title">
             {title}
           </h1>
           {description && (
-            <p
-              style={{
-                marginTop: 'var(--space-2)',
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-text-secondary)',
-              }}
-            >
+            <p className="admin-page-description">
               {description}
             </p>
           )}
         </div>
-        {actions && <div style={{ flexShrink: 0 }}>{actions}</div>}
+        {actions && (
+          <div className="admin-header-actions">
+            {actions}
+          </div>
+        )}
       </div>
     </header>
   );

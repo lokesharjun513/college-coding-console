@@ -18,6 +18,8 @@ export const createProblem = (batchId, data) => api.post(`/trainer/batches/${bat
 export const getProblem = (batchId, problemId) => api.get(`/trainer/batches/${batchId}/problems/${problemId}`);
 export const updateProblem = (batchId, problemId, data) => api.patch(`/trainer/batches/${batchId}/problems/${problemId}`, data);
 export const deleteProblem = (batchId, problemId) => api.delete(`/trainer/batches/${batchId}/problems/${problemId}`);
+export const bulkImportProblems = (batchId, data) => api.post(`/trainer/batches/${batchId}/problems/import`, data);
+export const downloadProblemTemplate = (batchId) => api.get(`/trainer/batches/${batchId}/problems/template`, { responseType: 'blob' });
 
 // Test cases
 export const getTestCases = (problemId) => api.get(`/trainer/problems/${problemId}/test-cases`);
@@ -31,3 +33,11 @@ export const getBatchPerformance = (batchId) => api.get(`/trainer/performance/ba
 export const getStudentPerformance = (studentId, batchId) => api.get(`/trainer/performance/student/${studentId}`, { params: { batchId } });
 export const getProblemPerformance = (problemId) => api.get(`/trainer/performance/problem/${problemId}`);
 
+// Collections & Topics for Trainer — read-only Training/Day metadata
+export const getTrainerCollections = (params) => api.get('/trainer/collections', { params });
+export const getTrainerCollectionTopics = (collectionId, params) => api.get(`/trainer/collections/${collectionId}/topics`, { params });
+
+// Analytics — authoritative KPIs + leaderboard (solved = ACCEPTED submissions)
+export const getTrainerAnalytics = (params) => api.get('/trainer/analytics', { params });
+// Per-student detail: overall + per-Day + per-Problem progress (solved = ACCEPTED)
+export const getTrainerStudentDetail = (studentId, params) => api.get(`/trainer/analytics/student/${studentId}`, { params });

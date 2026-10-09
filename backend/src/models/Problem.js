@@ -41,11 +41,29 @@ const problemSchema = new mongoose.Schema({
     java: String,
     python: String,
     javascript: String,
+    typescript: String,
+    php: String,
+    ruby: String,
+    haskell: String,
+    go: String,
+    rust: String,
+    csharp: String,
+    fsharp: String,
   },
+  // Allowed languages
   allowedLanguages: [{
     type: String,
-    enum: ['c', 'cpp', 'java', 'python', 'javascript'],
+    enum: ['c', 'cpp', 'java', 'python', 'typescript', 'php', 'ruby', 'haskell', 'go', 'rust', 'csharp', 'fsharp'],
   }],
+  // Authoritative compiler mapping: { lang: compilerId }
+  compilers: {
+    type: Map,
+    of: String,
+  },
+  // Legacy single compiler (deprecated, to be removed)
+  compiler: {
+    type: String,
+  },
   scope: {
     type: String,
     enum: ['GLOBAL', 'BATCH'],
@@ -65,6 +83,11 @@ const problemSchema = new mongoose.Schema({
     enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'],
     default: 'DRAFT',
   },
+  archivedFrom: {
+    type: String,
+    enum: ['DRAFT', 'PUBLISHED'],
+    default: null,
+  },
   practiceDate: {
     type: Date,
     default: null,
@@ -72,9 +95,9 @@ const problemSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-// Index for faster lookup by batch and status
+problemSchema.index({ createdAt: -1 });
+
 problemSchema.index({ batch: 1, status: 1 });
-// Index for slug uniqueness (already unique, but explicit)
 problemSchema.index({ slug: 1 }, { unique: true });
 
 module.exports = mongoose.model('Problem', problemSchema);

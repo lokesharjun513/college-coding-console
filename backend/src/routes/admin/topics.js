@@ -8,6 +8,8 @@ const Topic = require('../../models/Topic');
 const Collection = require('../../models/Collection');
 const ProblemTopic = require('../../models/ProblemTopic');
 const Problem = require('../../models/Problem');
+const TestCase = require('../../models/TestCase');
+const Submission = require('../../models/Submission');
 
 // Helper to generate slug
 function slugify(text) {
@@ -142,23 +144,131 @@ router.patch('/:topicId', requireAuth, requireRole('ADMIN'), async (req, res) =>
     if (!mongoose.Types.ObjectId.isValid(topicId)) {
       return res.status(400).json({ success: false, message: 'Invalid topic id' });
     }
-    const { name, description, order, status } = req.body;
-    const update = {};
-    if (name) {
-      update.name = name.trim();
-      update.slug = slugify(name);
+    const { name, description, order, status: newStatus, cascade } = req.body;
+
+    // Use transaction if supported
+    if (mongoose.__transactionSupport) {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          // Fetch current topic to get old status
+          const currentTopic = await Topic.findById(topicId).session(session);
+          if (!currentTopic) {
+            throw new Error('Topic not found');
+          }
+          const oldStatus = currentTopic.status;
+
+          const update = {};
+          if (name) {
+            update.name = name.trim();
+            update.slug = slugify(name);
+          }
+          if (description !== undefined) update.description = description?.trim();
+          if (order !== undefined) update.order = order;
+          if (newStatus) update.status = newStatus;
+
+          // Update Topic within transaction
+          const topic = await Topic.findByIdAndUpdate(topicId, update, { new: true, session }).lean();
+          if (!topic) {
+            throw new Error('Topic not found');
+          }
+
+          // Cascade archive to linked problems
+          if (newStatus === 'ARCHIVED' && oldStatus !== 'ARCHIVED') {
+            const problemIds = await ProblemTopic.distinct('problem', { topic: topicId }, { session });
+            if (problemIds.length > 0) {
+              const problemsToArchive = await Problem.find({ _id: { $in: problemIds } }, { _id: 1, status: 1 }, { session });
+              await Promise.all(problemsToArchive.map(p =>
+                Problem.updateOne(
+                  { _id: p._id },
+                  { $set: { status: 'ARCHIVED', ...(p.status !== 'ARCHIVED' ? { archivedFrom: p.status } : {}) } },
+                  { session }
+                )
+              ));
+            }
+          }
+
+          // Cascade unarchive to linked problems when cascade flag is true
+          if (newStatus === 'ACTIVE' && oldStatus !== 'ACTIVE' && cascade === true) {
+            const problemIds = await ProblemTopic.distinct('problem', { topic: topicId }, { session });
+            if (problemIds.length > 0) {
+              const problemsToRestore = await Problem.find({ _id: { $in: problemIds }, archivedFrom: { $ne: null } }, { _id: 1, archivedFrom: 1 }, { session });
+              await Promise.all(problemsToRestore.map(p =>
+                Problem.updateOne(
+                  { _id: p._id },
+                  { $set: { status: p.archivedFrom, archivedFrom: null } },
+                  { session }
+                )
+              ));
+            }
+          }
+
+          // Return updated topic
+          return topic; // return topic object instead of res.json
+        });
+        await session.endSession();
+        return res.json({ success: true, data: await Topic.findById(topicId).lean() });
+      } catch (error) {
+        await session.endSession();
+        // Re-throw to be caught by outer catch
+        throw error;
+      }
+    } else {
+      // Fallback: non-transactional update (current behavior)
+      // Fetch current topic to get old status
+      const currentTopic = await Topic.findById(topicId);
+      if (!currentTopic) {
+        return res.status(404).json({ success: false, message: 'Topic not found' });
+      }
+      const oldStatus = currentTopic.status;
+
+      const update = {};
+      if (name) {
+        update.name = name.trim();
+        update.slug = slugify(name);
+      }
+      if (description !== undefined) update.description = description?.trim();
+      if (order !== undefined) update.order = order;
+      if (newStatus) update.status = newStatus;
+
+      const topic = await Topic.findByIdAndUpdate(topicId, update, { new: true }).lean();
+      if (!topic) {
+        return res.status(404).json({ success: false, message: 'Topic not found' });
+      }
+
+      // Cascade archive to linked problems
+      if (newStatus === 'ARCHIVED' && oldStatus !== 'ARCHIVED') {
+        const problemIds = await ProblemTopic.distinct('problem', { topic: topicId });
+        if (problemIds.length > 0) {
+          const problemsToArchive = await Problem.find({ _id: { $in: problemIds } }, { _id: 1, status: 1 });
+          await Promise.all(problemsToArchive.map(p =>
+            Problem.updateOne(
+              { _id: p._id },
+              { $set: { status: 'ARCHIVED', ...(p.status !== 'ARCHIVED' ? { archivedFrom: p.status } : {}) } }
+            )
+          ));
+        }
+      }
+
+      // Cascade unarchive to linked problems when cascade flag is true
+      if (newStatus === 'ACTIVE' && oldStatus !== 'ACTIVE' && cascade === true) {
+        const problemIds = await ProblemTopic.distinct('problem', { topic: topicId });
+        if (problemIds.length > 0) {
+          const problemsToRestore = await Problem.find({ _id: { $in: problemIds }, archivedFrom: { $ne: null } }, { _id: 1, archivedFrom: 1 });
+          await Promise.all(problemsToRestore.map(p =>
+            Problem.updateOne(
+              { _id: p._id },
+              { $set: { status: p.archivedFrom, archivedFrom: null } }
+            )
+          ));
+        }
+      }
+
+      return res.json({ success: true, data: topic });
     }
-    if (description !== undefined) update.description = description?.trim();
-    if (order !== undefined) update.order = order;
-    if (status) update.status = status;
-    const topic = await Topic.findByIdAndUpdate(topicId, update, { new: true }).lean();
-    if (!topic) {
-      return res.status(404).json({ success: false, message: 'Topic not found' });
-    }
-    return res.json({ success: true, data: topic });
   } catch (err) {
     console.error('Error updating topic:', err);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: err.message || 'Internal server error' });
   }
 });
 
@@ -177,19 +287,64 @@ router.delete('/:topicId', requireAuth, requireRole('ADMIN'), async (req, res) =
       return res.status(404).json({ success: false, message: 'Topic not found' });
     }
     if (topic.status === 'ARCHIVED') {
-      // Hard delete permanently (remove problem links)
-      await ProblemTopic.deleteMany({ topic: topicId });
-      await Topic.findByIdAndDelete(topicId);
-      return res.json({ success: true, data: null, hardDeleted: true });
+      // Hard delete permanently with transaction if supported
+      if (mongoose.__transactionSupport) {
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            // 1. Find all problems linked to this topic
+            const problemIds = await ProblemTopic.distinct('problem', { topic: topicId }, { session });
+
+            // 2. Delete Submissions for these problems
+            if (problemIds.length > 0) {
+              await Submission.deleteMany({ problem: { $in: problemIds } }, { session });
+              // 3. Delete TestCases for these problems
+              await TestCase.deleteMany({ problem: { $in: problemIds } }, { session });
+            }
+
+            // 4. Delete all ProblemTopic records for this topic
+            await ProblemTopic.deleteMany({ topic: topicId }, { session });
+
+            // 5. Delete Problems
+            if (problemIds.length > 0) {
+              await Problem.deleteMany({ _id: { $in: problemIds } }, { session });
+            }
+
+            // 6. Delete Topic
+            await Topic.findByIdAndDelete(topicId, { session });
+          });
+          await session.endSession();
+          return res.json({ success: true, data: null, hardDeleted: true });
+        } catch (error) {
+          await session.endSession();
+          throw error;
+        }
+      } else {
+        // Fallback: sequential deletes (not atomic)
+        const problemIds = await ProblemTopic.distinct('problem', { topic: topicId });
+
+        if (problemIds.length > 0) {
+          await Submission.deleteMany({ problem: { $in: problemIds } });
+          await TestCase.deleteMany({ problem: { $in: problemIds } });
+        }
+
+        await ProblemTopic.deleteMany({ topic: topicId });
+
+        if (problemIds.length > 0) {
+          await Problem.deleteMany({ _id: { $in: problemIds } });
+        }
+
+        await Topic.findByIdAndDelete(topicId);
+
+        return res.json({ success: true, data: null, hardDeleted: true });
+      }
     }
-    // Remove associated problem links first
-    await ProblemTopic.deleteMany({ topic: topicId });
     // Soft delete topic
     const updated = await Topic.findByIdAndUpdate(topicId, { status: 'ARCHIVED' }, { new: true }).lean();
     return res.json({ success: true, data: null, hardDeleted: false });
   } catch (err) {
     console.error('Error deleting topic:', err);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: err.message || 'Internal server error' });
   }
 });
 

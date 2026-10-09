@@ -39,13 +39,11 @@ export default function DataTable({
     ));
     return (
       <div className="table-container">
-        <table className="table table--compact">
+        <table className="table admin-table">
           <thead>
             <tr>
               {allColumns.map((col) => (
-                <th key={col.key} style={{ textAlign: col.align || 'left' }}>
-                  {col.header}
-                </th>
+                <th key={col.key} className="table-header-cell">{col.header}</th>
               ))}
             </tr>
           </thead>
@@ -62,19 +60,17 @@ export default function DataTable({
   if (!data || data.length === 0) {
     return (
       <div className="table-container">
-        <table className="table table--compact">
+        <table className="table admin-table">
           <thead>
             <tr>
               {allColumns.map((col) => (
-                <th key={col.key} style={{ textAlign: col.align || 'left' }}>
-                  {col.header}
-                </th>
+                <th key={col.key} className="table-header-cell">{col.header}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td colSpan={allColumns.length} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              <td colSpan={allColumns.length} className="table-empty-cell">
                 {emptyMessage || 'No data available.'}
               </td>
             </tr>
@@ -86,13 +82,11 @@ export default function DataTable({
 
   return (
     <div className="table-container">
-      <table className="table table--compact">
+      <table className="table admin-table">
         <thead>
           <tr>
             {allColumns.map((col) => (
-              <th key={col.key} style={{ textAlign: col.align || 'left' }}>
-                {col.header}
-              </th>
+              <th key={col.key} className="table-header-cell">{col.header}</th>
             ))}
           </tr>
         </thead>
@@ -102,13 +96,7 @@ export default function DataTable({
               {allColumns.map((col) => (
                 <td
                   key={col.key}
-                  style={{
-                    textAlign: col.align || (col.key === '_sNo' ? 'center' : 'left'),
-                    color: col.key === '_sNo' ? 'var(--color-text-muted)' : undefined,
-                    fontSize: col.key === '_sNo' ? '13px' : undefined,
-                    fontWeight: col.key === '_sNo' ? 500 : undefined,
-                    width: col.key === '_sNo' ? '60px' : undefined,
-                  }}
+                  className={col.key === '_sNo' ? 'table-cell table-cell--sno' : 'table-cell'}
                 >
                   {col.key === '_sNo'
                     ? getSerialNumber(rowIdx)

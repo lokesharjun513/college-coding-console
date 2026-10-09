@@ -13,11 +13,13 @@ export default function TableActions({ actions }) {
     <div className="table-actions">
       {actions.map((action, idx) => {
         const IconComponent = action.icon;
+        const btnClass = `table-actions__btn ${action.variant === 'danger' ? 'table-actions__btn--danger' : ''} ${action.disabled ? 'table-actions__btn--disabled' : ''}`;
         return (
           <Tooltip key={idx} title={action.label}>
             <button
               type="button"
-              className={`table-actions__btn ${action.variant === 'danger' ? 'table-actions__btn--danger' : ''} ${action.disabled ? 'table-actions__btn--disabled' : ''}`}
+              className={btnClass}
+              style={action.iconColor ? { '--action-color': action.iconColor } : {}}
               onClick={action.onClick}
               disabled={action.disabled}
               aria-label={action.label}

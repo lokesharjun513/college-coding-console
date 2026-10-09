@@ -1,0 +1,123 @@
+/* Trainer Analytics page styles — SaaS design tokens only */
+.an-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-end;
+  margin-bottom: var(--space-5);
+}
+
+.an-field { min-width: 180px; }
+
+.an-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.an-select {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border, #C6D1D7);
+  border-radius: 6px;
+  background: #FCFDFD;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.an-select:focus-visible {
+  outline: 2px solid #2F7EDA;
+  outline-offset: 2px;
+}
+
+.an-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.an-section { margin-bottom: var(--space-5); }
+
+.an-heading {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-3) 0;
+  color: var(--color-text-primary);
+}
+
+.an-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.an-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-danger, #b3261e);
+  font-size: var(--font-size-sm);
+}
+
+.an-retry {
+  border: 1px solid var(--color-border, #C6D1D7);
+  background: #FCFDFD;
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.an-retry:focus-visible {
+  outline: 2px solid #2F7EDA;
+  outline-offset: 2px;
+}
+
+.an-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border, #C6D1D7);
+  border-radius: 8px;
+  background: #FCFDFD;
+}
+
+.an-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.an-table th,
+.an-table td {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid #EDEFF3;
+}
+
+.an-table th {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: #EDEFF3;
+}
+
+.an-table tbody tr:hover { background: #EDEFF3; }
+
+.an-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* <768px: single-column filters, tighter table cells */
+@media (max-width: 767px) {
+  .an-filters { flex-direction: column; align-items: stretch; }
+  .an-field { min-width: 0; }
+  .an-table th,
+  .an-table td { padding: var(--space-2) var(--space-3); }
+}

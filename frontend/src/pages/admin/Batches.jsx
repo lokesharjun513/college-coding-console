@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Card from '../../components/ui/Card';
-import TableActions from '../../components/ui/table/TableActions';
-import { Pencil, Trash2, Plus, Search, Calendar, Users, Award, BookOpen, AlertCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Pencil, Trash2, Plus, Users, Award, BookOpen, AlertCircle, Search } from 'lucide-react';
+import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
-import Modal from '../../components/ui/Modal';
+import TableActions from '../../components/ui/table/TableActions';
 import Toast from '../../components/ui/Toast';
 import Spinner from '../../components/ui/Spinner';
-import Badge from '../../components/ui/Badge';
+import Modal from '../../components/ui/Modal';
 import { getBatches, createBatch, updateBatch, deleteBatch, getTrainers } from '../../api/admin';
+import '../../styles/pages/admin.css';
+import '../../styles/pages/admin-dashboard.css';
 import '../../styles/pages/admin-batches.css';
 
 /**
@@ -185,7 +186,6 @@ export default function Batches() {
     }
   };
 
-
   const handleRemoveTrainer = async () => {
     if (!batchToRemoveTrainer) return;
     try {
@@ -220,7 +220,6 @@ export default function Batches() {
     }
   };
 
-
   // KPI Calculations
   const totalBatchesCount = batches.length;
   const activeBatchesCount = batches.filter(b => b.status === 'ACTIVE').length;
@@ -228,173 +227,178 @@ export default function Batches() {
   const assignedTrainersCount = new Set(batches.filter(b => b.trainer).map(b => b.trainer.id)).size;
 
   return (
-    <div className="admin-batches">
-      {/* Apple iOS SaaS Header */}
-      <div className="admin-batches__header">
-        <div>
-          <div className="admin-batches__eyebrow">Academic Administration</div>
-          <h1>Batches & Schedules</h1>
-          <p>Organize academic batches, assign trainers, and manage timelines.</p>
+    <div className="admin-page">
+      <PageHeader
+        title="Batches"
+        description="Organize academic batches, assign trainers, and manage timelines."
+        breadcrumb={
+          <>
+            <Link to="/admin" className="admin-breadcrumb__item">Home</Link>
+            <span className="admin-breadcrumb__separator">/</span>
+            <span className="admin-breadcrumb__current" aria-current="page">Batches</span>
+          </>
+        }
+        actions={<Button onClick={openCreate}><Plus size={16} /> Create Batch</Button>}
+      />
+
+      {/* KPI Summary Cards */}
+      <div className="admin-dashboard__kpi-grid">
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Total Batches</span>
+            <div className="admin-dashboard__stat-icon">{totalBatchesCount}</div>
+          </div>
+          <div className="admin-dashboard__stat-value">{totalBatchesCount}</div>
+          <div className="admin-dashboard__stat-meta">All batches</div>
         </div>
-        <div className="admin-batches__actions">
-          <Button onClick={openCreate} className="admin-batches__bulk-btn">
-            <Plus size={16} style={{ marginRight: '6px' }} /> Create Batch
-          </Button>
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Active</span>
+            <div className="admin-dashboard__stat-icon">{activeBatchesCount}</div>
+          </div>
+          <div className="admin-dashboard__stat-value">{activeBatchesCount}</div>
+          <div className="admin-dashboard__stat-meta">Currently active</div>
+        </div>
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Completed</span>
+            <div className="admin-dashboard__stat-icon">{completedBatchesCount}</div>
+          </div>
+          <div className="admin-dashboard__stat-value">{completedBatchesCount}</div>
+          <div className="admin-dashboard__stat-meta">Finished batches</div>
+        </div>
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Assigned Trainers</span>
+            <div className="admin-dashboard__stat-icon">{assignedTrainersCount}</div>
+          </div>
+          <div className="admin-dashboard__stat-value">{assignedTrainersCount}</div>
+          <div className="admin-dashboard__stat-meta">Unique trainers</div>
         </div>
       </div>
 
-      {/* KPI Summary Strip */}
-      <div className="admin-batches__kpi">
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Total Batches</span>
-          <span className="admin-batches__kpi-value">{totalBatchesCount}</span>
-          <span className="admin-batches__kpi-meta">All registered cohorts</span>
+      {/* Search & Filter Toolbar */}
+      <div className="admin-toolbar">
+        <div className="admin-search-wrapper">
+          <Search size={18} className="admin-search-icon" />
+          <input
+            type="text"
+            placeholder="Search batches by name or code..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="admin-input admin-input--with-icon"
+          />
         </div>
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Active Batches</span>
-          <span className="admin-batches__kpi-value" style={{ color: 'var(--color-success, #16a34a)' }}>{activeBatchesCount}</span>
-          <span className="admin-batches__kpi-meta">Currently running</span>
-        </div>
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Completed</span>
-          <span className="admin-batches__kpi-value" style={{ color: 'var(--interactive, #2563eb)' }}>{completedBatchesCount}</span>
-          <span className="admin-batches__kpi-meta">Finished cohorts</span>
-        </div>
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Assigned Trainers</span>
-          <span className="admin-batches__kpi-value">{assignedTrainersCount}</span>
-          <span className="admin-batches__kpi-meta">Active instructional leads</span>
-        </div>
-      </div>
 
-      {/* Search & Status Toggle Toolbar */}
-      <div className="admin-batches__toolbar">
-        <div className="admin-batches__toolbar-left">
-          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              placeholder="Search batches by name or code..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="admin-batches__search"
-              style={{ paddingLeft: '38px' }}
-            />
-          </div>
-
-          <div className="admin-batches__toggle-group">
-            {['ALL', 'ACTIVE', 'INACTIVE', 'COMPLETED'].map((status) => (
-              <button
-                key={status}
-                type="button"
-                className={`admin-batches__toggle-btn ${statusFilter === status ? 'active' : ''}`}
-                onClick={() => setStatusFilter(status)}
-              >
-                {status.charAt(0) + status.slice(1).toLowerCase()}
-              </button>
-            ))}
-          </div>
-        </div>
+        <select
+          className="admin-select"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="ALL">All Status</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+          <option value="COMPLETED">Completed</option>
+        </select>
 
         {(searchTerm || statusFilter !== 'ALL') && (
-          <button
-            className="admin-batches__clear-btn"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => {
               setSearchTerm('');
               setStatusFilter('ALL');
             }}
           >
-            Reset Filters
-          </button>
+            Reset
+          </Button>
         )}
       </div>
 
       {/* Content Area */}
       {loading && <Spinner />}
       {error && (
-        <div className="admin-batches__error">
-          <AlertCircle size={20} />
-          <span>{error}</span>
+        <div className="admin-card admin-card-centered">
+          <AlertCircle size={40} style={{ color: 'var(--admin-danger-text)', marginBottom: '16px' }} />
+          <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>{error}</h3>
           <Button variant="secondary" size="sm" onClick={fetchBatches}>Retry</Button>
         </div>
       )}
 
       {!loading && !error && (
-        <div className="admin-batches__card">
+        <div className="admin-card">
           {paginatedBatches.length === 0 ? (
-            <div className="admin-batches__empty">
-              <BookOpen size={40} style={{ color: 'var(--text-muted)' }} />
-              <h3>No batches found</h3>
-              <p>No batches match your search criteria or none have been created yet.</p>
+            <div className="admin-card admin-card-empty">
+              <BookOpen size={40} style={{ color: 'var(--admin-text-muted)', marginBottom: '16px' }} />
+              <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: 'var(--admin-text-primary)' }}>No batches found</h3>
+              <p style={{ fontSize: '14px', color: 'var(--admin-text-secondary)', marginBottom: '20px' }}>No batches match your search criteria or none have been created yet.</p>
               <Button onClick={openCreate}>Create First Batch</Button>
             </div>
           ) : (
             <>
-              <table className="admin-batches__table">
+              <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Batch Name</th>
-                    <th>Code</th>
-                    <th>Trainer</th>
-                    <th>Timeline</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
+                    <th >#</th>
+                    <th >Batch Name</th>
+                    <th >Code</th>
+                    <th >Trainer</th>
+                    <th >Timeline</th>
+                    <th >Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedBatches.map((b, idx) => {
                     const rowNumber = (meta.page - 1) * meta.limit + idx + 1;
                     return (
-                      <tr key={b.id}>
-                        <td>{rowNumber}</td>
-                        <td>
+                      <tr key={b.id} >
+                        <td >{rowNumber}</td>
+                        <td >
                           <div
-                            style={{ fontWeight: 600, color: 'var(--interactive)', cursor: 'pointer' }}
                             onClick={() => navigate(`/admin/batches/${b.id}`)}
                             title="View Batch Details"
                           >
                             {b.name}
                           </div>
                           {b.description && (
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div className="admin-text-ellipsis">
                               {b.description}
                             </div>
                           )}
                         </td>
-                        <td>
-                          <code style={{ background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
+                        <td >
+                          <code style={{ background: 'var(--admin-bg-subtle)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
                             {b.code}
                           </code>
                         </td>
-                        <td>
+                        <td >
                           {b.trainer ? (
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{ fontWeight: 500 }}>{b.trainer.name}</span>
-                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{b.trainer.email}</span>
+                              <span style={{ fontSize: '11px', color: 'var(--admin-text-muted)' }}>{b.trainer.email}</span>
                             </div>
                           ) : (
-                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Unassigned</span>
+                            <span style={{ color: 'var(--admin-text-muted)', fontStyle: 'italic' }}>Unassigned</span>
                           )}
                         </td>
-                        <td>
-                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        <td >
+                          <div className="admin-timeline">
                             {b.startDate ? new Date(b.startDate).toLocaleDateString() : '—'} → {b.endDate ? new Date(b.endDate).toLocaleDateString() : '—'}
                           </div>
                         </td>
-                        <td>
+                        <td >
                           <button
                             type="button"
-                            className={`admin-batches__badge admin-batches__badge--${b.status?.toLowerCase() || 'active'}`}
+                            className={`admin-badge admin-badge--${b.status.toLowerCase()}`}
                             onClick={() => toggleStatus(b)}
-                            style={{ cursor: 'pointer', border: 'none' }}
                             title="Click to toggle batch status"
                             aria-label={`Toggle status (currently ${b.status})`}
                           >
                             {b.status}
                           </button>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td>
                           <TableActions
                             actions={[
                               {
@@ -406,7 +410,7 @@ export default function Batches() {
                                 ? {
                                     label: 'Remove Trainer',
                                     icon: Award,
-                                    onClick: () => {},
+                                    onClick: () => openRemoveTrainer(b),
                                   }
                                 : {
                                     label: 'Assign Trainer',
@@ -434,27 +438,25 @@ export default function Batches() {
               </table>
 
               {/* Pagination */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              <div className="admin-pagination">
+                <div>
                   Showing {(meta.page - 1) * meta.limit + 1} to {Math.min(meta.page * meta.limit, filteredBatches.length)} of {filteredBatches.length} batches
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
+                <div className="admin-pagination-controls">
+                  <button
+                    className="admin-page-btn"
                     disabled={meta.page <= 1}
                     onClick={() => setMeta(prev => ({ ...prev, page: prev.page - 1 }))}
                   >
                     Previous
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
+                  </button>
+                  <button
+                    className="admin-page-btn"
                     disabled={meta.page >= totalPages}
                     onClick={() => setMeta(prev => ({ ...prev, page: prev.page + 1 }))}
                   >
                     Next
-                  </Button>
+                  </button>
                 </div>
               </div>
             </>
@@ -464,24 +466,18 @@ export default function Batches() {
 
       {/* Create / Edit Modal */}
       {modalOpen && (
-        <div className="admin-batches__modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="admin-batches__modal-glass" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>
-                {editing ? 'Edit Batch' : 'Create New Batch'}
-              </h2>
-              <button
-                onClick={() => setModalOpen(false)}
-                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-secondary)' }}
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={editing ? 'Edit Batch' : 'Create New Batch'}
+        >
+          <div className="admin-modal__body">
             <form onSubmit={handleSubmit}>
-              <div className="admin-batches__form-row">
-                <div className="admin-batches__form-group">
-                  <label htmlFor="name">Batch Name *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label htmlFor="name" className="admin-form-label">
+                    Batch Name *
+                  </label>
                   <input
                     id="name"
                     name="name"
@@ -489,11 +485,14 @@ export default function Batches() {
                     value={form.name}
                     onChange={handleChange}
                     placeholder="e.g. Full Stack 2026"
+                    className="admin-input"
                     required
                   />
                 </div>
-                <div className="admin-batches__form-group">
-                  <label htmlFor="code">Batch Code *</label>
+                <div>
+                  <label htmlFor="code" className="admin-form-label">
+                    Batch Code *
+                  </label>
                   <input
                     id="code"
                     name="code"
@@ -501,19 +500,23 @@ export default function Batches() {
                     value={form.code}
                     onChange={handleChange}
                     placeholder="e.g. FS-2026-A"
+                    className="admin-input"
                     required
                   />
                 </div>
               </div>
 
-              <div className="admin-batches__form-row">
-                <div className="admin-batches__form-group">
-                  <label htmlFor="trainer">Assigned Trainer</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label htmlFor="trainer" className="admin-form-label">
+                    Assigned Trainer
+                  </label>
                   <select
                     id="trainer"
                     name="trainer"
                     value={form.trainer}
                     onChange={handleChange}
+                    className="admin-select"
                   >
                     <option value="">No trainer assigned</option>
                     {trainers.map((t) => (
@@ -523,13 +526,16 @@ export default function Batches() {
                     ))}
                   </select>
                 </div>
-                <div className="admin-batches__form-group">
-                  <label htmlFor="status">Status</label>
+                <div>
+                  <label htmlFor="status" className="admin-form-label">
+                    Status
+                  </label>
                   <select
                     id="status"
                     name="status"
                     value={form.status}
                     onChange={handleChange}
+                    className="admin-select"
                   >
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
@@ -538,31 +544,39 @@ export default function Batches() {
                 </div>
               </div>
 
-              <div className="admin-batches__form-row">
-                <div className="admin-batches__form-group">
-                  <label htmlFor="startDate">Start Date</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label htmlFor="startDate" className="admin-form-label">
+                    Start Date
+                  </label>
                   <input
                     id="startDate"
                     name="startDate"
                     type="date"
                     value={form.startDate}
                     onChange={handleChange}
+                    className="admin-input"
                   />
                 </div>
-                <div className="admin-batches__form-group">
-                  <label htmlFor="endDate">End Date</label>
+                <div>
+                  <label htmlFor="endDate" className="admin-form-label">
+                    End Date
+                  </label>
                   <input
                     id="endDate"
                     name="endDate"
                     type="date"
                     value={form.endDate}
                     onChange={handleChange}
+                    className="admin-input"
                   />
                 </div>
               </div>
 
-              <div className="admin-batches__form-group">
-                <label htmlFor="description">Description</label>
+              <div style={{ marginBottom: '16px' }}>
+                <label htmlFor="description" className="admin-form-label">
+                  Description
+                </label>
                 <textarea
                   id="description"
                   name="description"
@@ -570,38 +584,44 @@ export default function Batches() {
                   value={form.description}
                   onChange={handleChange}
                   placeholder="Optional batch description or curriculum notes..."
+                  className="admin-input"
+                  style={{ resize: 'vertical', minHeight: '80px' }}
                 />
-              </div>
-
-              <div className="admin-batches__modal-actions">
-                <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Saving...' : editing ? 'Save Changes' : 'Create Batch'}
-                </Button>
               </div>
             </form>
           </div>
-        </div>
+          <div className="admin-modal__footer">
+            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Saving...' : editing ? 'Save Changes' : 'Create Batch'}
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {/* Assign Trainer Modal */}
       {assignModalOpen && (
-        <div className="admin-batches__modal-overlay" onClick={() => setAssignModalOpen(false)}>
-          <div className="admin-batches__modal-glass" onClick={(e) => e.stopPropagation()} style={{ width: '480px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Assign Trainer</h2>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+        <Modal
+          isOpen={assignModalOpen}
+          onClose={() => setAssignModalOpen(false)}
+          title="Assign Trainer"
+        >
+          <div className="admin-modal__body">
+            <p style={{ fontSize: '14px', color: 'var(--admin-text-secondary)', marginBottom: '20px' }}>
               Select an instructional lead for <strong>{assignBatch?.name}</strong>.
             </p>
-
-            <form onSubmit={handleAssignSubmit}>
-              <div className="admin-batches__form-group">
-                <label htmlFor="assignTrainer">Trainer</label>
+            <form onSubmit={handleAssignSubmit} id="assign-trainer-form">
+              <div>
+                <label htmlFor="assignTrainer" className="admin-form-label">
+                  Trainer
+                </label>
                 <select
                   id="assignTrainer"
                   value={assignTrainer}
                   onChange={(e) => setAssignTrainer(e.target.value)}
+                  className="admin-select"
                 >
                   <option value="">No trainer assigned</option>
                   {trainers.map((t) => (
@@ -611,100 +631,86 @@ export default function Batches() {
                   ))}
                 </select>
               </div>
-
-              <div className="admin-batches__modal-actions">
-                <Button type="button" variant="secondary" onClick={() => setAssignModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Assigning...' : 'Confirm Assignment'}
-                </Button>
-              </div>
             </form>
           </div>
-        </div>
+          <div className="admin-modal__footer">
+            <Button variant="secondary" onClick={() => setAssignModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="assign-trainer-form" disabled={submitting}>
+              {submitting ? 'Assigning...' : 'Confirm Assignment'}
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && (
-        <div className="admin-batches__modal-overlay" onClick={() => setDeleteModalOpen(false)}>
-          <div className="admin-batches__modal-glass" onClick={(e) => e.stopPropagation()} style={{ width: '440px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: 'var(--color-danger)' }}>
-              Delete Batch
-            </h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+        <Modal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          title="Delete Batch"
+        >
+          <div className="admin-modal__body">
+            <p style={{ fontSize: '14px', color: 'var(--admin-text-secondary)' }}>
               Are you sure you want to delete <strong>{deleteBatchName}</strong>? This action cannot be undone.
             </p>
-            <div className="admin-batches__modal-actions" style={{ borderTop: 'none', marginTop: 0, paddingTop: 0 }}>
-              <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="danger" onClick={handleDelete}>
-                Delete Batch
-              </Button>
-            </div>
           </div>
-        </div>
+          <div className="admin-modal__footer">
+            <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Delete
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {/* Remove Trainer Confirmation Modal */}
       {removeTrainerModalOpen && (
-        <div className="admin-batches__modal-overlay" onClick={() => setRemoveTrainerModalOpen(false)}>
-          <div className="admin-batches__modal-glass" onClick={(e) => e.stopPropagation()} style={{ width: '440px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>
-              Remove Trainer
-            </h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+        <Modal
+          isOpen={removeTrainerModalOpen}
+          onClose={() => setRemoveTrainerModalOpen(false)}
+          title="Remove Trainer"
+        >
+          <div className="admin-modal__body">
+            <p style={{ fontSize: '14px', color: 'var(--admin-text-secondary)' }}>
               Are you sure you want to remove the assigned trainer from <strong>{batchToRemoveTrainer?.name}</strong>?
             </p>
-            <div className="admin-batches__modal-actions" style={{ borderTop: 'none', marginTop: 0, paddingTop: 0 }}>
-              <button
-                type="button"
-                className="admin-batches__btn-danger-gradient"
-                onClick={() => setRemoveTrainerModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="admin-batches__btn-success-gradient"
-                onClick={handleRemoveTrainer}
-              >
-                Confirm
-              </button>
-            </div>
           </div>
-        </div>
+          <div className="admin-modal__footer">
+            <Button variant="secondary" onClick={() => setRemoveTrainerModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRemoveTrainer}>
+              Confirm
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {/* Status Toggle Confirmation Modal */}
       {toggleId && (
-        <div className="admin-batches__modal-overlay" onClick={() => setToggleId(null)}>
-          <div className="admin-batches__modal-glass" onClick={(e) => e.stopPropagation()} style={{ width: '440px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>
-              Confirm Status Change
-            </h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+        <Modal
+          isOpen={toggleId !== null}
+          onClose={() => setToggleId(null)}
+          title="Confirm Status Change"
+        >
+          <div className="admin-modal__body">
+            <p style={{ fontSize: '14px', color: 'var(--admin-text-secondary)' }}>
               Are you sure you want to change status of <strong>{toggleName}</strong> to <strong>{toggleTargetStatus}</strong>?
             </p>
-            <div className="admin-batches__modal-actions" style={{ borderTop: 'none', marginTop: 0, paddingTop: 0 }}>
-              <button
-                type="button"
-                className="admin-batches__btn-danger-gradient"
-                onClick={() => setToggleId(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="admin-batches__btn-success-gradient"
-                onClick={confirmToggleStatus}
-              >
-                Confirm
-              </button>
-            </div>
           </div>
-        </div>
+          <div className="admin-modal__footer">
+            <Button variant="secondary" onClick={() => setToggleId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmToggleStatus}>
+              Confirm
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

@@ -7,8 +7,12 @@ const Problem = require('../../models/Problem');
 const Submission = require('../../models/Submission');
 const BatchStudent = require('../../models/BatchStudent');
 const TestCase = require('../../models/TestCase');
-const { execute } = require('../../services/CodeExecutor');
-const { getCompilerById, LEGACY_TO_COMPILER } = require('../../services/compilerRegistry');
+const { execute } = require('../../services/OnlineCompilerExecutor');
+const { getCompilerById } = require('../../services/compilerRegistry');
+const { mapResultToVerdict } = require('../../services/verdictMapper');
+const Topic = require('../../models/Topic');
+const ProblemTopic = require('../../models/ProblemTopic');
+const { canStudentAccessProblem, visibleProblemQuery } = require('../../services/problemAccess');
 
 // Helper to get start and end of today in IST (Asia/Kolkata)
 function getISTDayBounds() {
@@ -24,21 +28,12 @@ function getISTDayBounds() {
   return { start, end };
 }
 
-// Helper to check if a student can access a problem
+// Load a PUBLISHED problem and apply the authoritative GLOBAL/BATCH access check
 async function canAccessProblem(studentId, problemId) {
-  const enrollments = await BatchStudent.find({ student: studentId }).select('batch');
-  const batchIds = enrollments.map(e => e.batch);
-
-  const problem = await Problem.findOne({
-    _id: problemId,
-    status: 'PUBLISHED',
-    $or: [
-      { scope: 'GLOBAL' },
-      { scope: 'BATCH', batch: { $in: batchIds } }
-    ]
-  });
-
-  return problem;
+  const problem = await Problem.findOne({ _id: problemId, status: 'PUBLISHED' });
+  if (!problem) return null;
+  const allowed = await canStudentAccessProblem(studentId, problem);
+  return allowed ? problem : null;
 }
 
 // GET /api/student/problems - List all visible problems with student's progress
@@ -52,13 +47,7 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
     const enrolled = enrollments.length > 0;
 
     // Build query for visible problems (GLOBAL or in enrolled batches)
-    const problemQuery = {
-      status: 'PUBLISHED',
-      $or: [
-        { scope: 'GLOBAL' },
-        { scope: 'BATCH', batch: { $in: batchIds } }
-      ]
-    };
+    const problemQuery = visibleProblemQuery(batchIds);
 
     const problems = await Problem.find(problemQuery).populate('batch', 'name code').lean();
 
@@ -79,7 +68,6 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
     const { start: todayStart, end: todayEnd } = getISTDayBounds();
 
     const today = [];
-    const upcoming = [];
     const global = [];
 
     const data = problems.map(p => {
@@ -114,8 +102,6 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
         const pd = new Date(p.practiceDate);
         if (pd >= todayStart && pd < todayEnd) {
           today.push(result);
-        } else if (pd >= todayEnd) {
-          upcoming.push(result);
         }
       }
 
@@ -126,10 +112,10 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
     const meta = {
       enrolled,
       todayCount: today.length,
-      upcomingCount: upcoming.length,
+      upcomingCount: 0,
       globalCount: global.length,
       today: today.map(p => ({ id: p.id, title: p.title })),
-      upcoming: upcoming.map(p => ({ id: p.id, title: p.title })),
+      upcoming: [],
       global: global.map(p => ({ id: p.id, title: p.title }))
     };
 
@@ -170,19 +156,23 @@ router.get('/:problemId', requireAuth, requireAnyRole('STUDENT'), async (req, re
       progress = submission.verdict === 'ACCEPTED' ? 'SOLVED' : 'ATTEMPTED';
     }
 
+    // Resolve topic name via the ProblemTopic junction
+    const link = await ProblemTopic.findOne({ problem: problemId }).populate('topic', 'name');
+    const topicName = link?.topic?.name || null;
+
     const data = {
       id: problem._id,
       title: problem.title,
       slug: problem.slug,
       description: problem.description,
       difficulty: problem.difficulty,
-      topic: 'General',
+      topic: topicName,
       constraints: problem.constraints,
       inputFormat: problem.inputFormat,
       outputFormat: problem.outputFormat,
       examples: examples,
       starterCode: problem.starterCode,
-      supportedLanguages: problem.allowedLanguages,
+      allowedLanguages: problem.allowedLanguages,
       scope: problem.scope,
       batch: problem.batch ? { id: problem.batch._id, name: problem.batch.name } : null,
       practiceDate: problem.practiceDate,
@@ -201,49 +191,179 @@ router.post('/:problemId/run', requireAuth, requireAnyRole('STUDENT'), async (re
   try {
     const studentId = req.user.id;
     const { problemId } = req.params;
-    const { language, code, input, compilerId } = req.body;
+    const { language, code, input } = req.body;
 
-    if (!code) {
-      return res.status(400).json({ success: false, message: 'Code is required' });
+    if (!language || !code) {
+      return res.status(400).json({ success: false, message: 'Language and code are required' });
     }
 
+    // Validate code and input size (max 100 KB each)
+    const MAX_SIZE_KB = 100;
+    const MAX_SIZE_BYTES = MAX_SIZE_KB * 1024;
+    if (Buffer.byteLength(code, 'utf8') > MAX_SIZE_BYTES) {
+      return res.status(400).json({ success: false, message: `Code size exceeds ${MAX_SIZE_KB} KB limit` });
+    }
+    if (input && Buffer.byteLength(input, 'utf8') > MAX_SIZE_BYTES) {
+      return res.status(400).json({ success: false, message: `Input size exceeds ${MAX_SIZE_KB} KB limit` });
+    }
+
+    // Validate problemId format
+    if (!mongoose.Types.ObjectId.isValid(problemId)) {
+      return res.status(400).json({ success: false, message: 'Invalid problem id' });
+    }
     const problem = await canAccessProblem(studentId, problemId);
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem not found or inaccessible' });
     }
 
-    // Resolve language if not provided but compilerId is present
-    let resolvedLanguage = language;
-    if (!resolvedLanguage && compilerId) {
-      const entry = await getCompilerById(compilerId);
-      if (entry) resolvedLanguage = entry.language;
-      if (!resolvedLanguage) {
-        for (const [legacy, cid] of Object.entries(LEGACY_TO_COMPILER)) {
-          if (cid === compilerId) { resolvedLanguage = legacy; break; }
-        }
-      }
+    // Problem configuration is authoritative — client language/compilerId never overrides it.
+    if (!problem.allowedLanguages.includes(language)) {
+      return res.status(400).json({ success: false, message: 'Language not supported for this problem' });
     }
-    if (!resolvedLanguage) {
-      return res.status(400).json({ success: false, message: 'Missing language or compilerId' });
+    const compilerId = problem.compilers?.get(language);
+    if (!compilerId) {
+      return res.status(400).json({ success: false, code: 'COMPILER_NOT_CONFIGURED', message: `Compiler not configured for ${language}` });
     }
-    if (!problem.allowedLanguages.includes(resolvedLanguage)) {
-      return res.status(400).json({ success: false, message: 'Language not allowed' });
+    const compilerInfo = await getCompilerById(compilerId);
+    if (!compilerInfo) {
+      return res.status(400).json({ success: false, code: 'COMPILER_NOT_SUPPORTED', message: 'The compiler is no longer available.' });
     }
 
-    const result = await execute({ source: code, language: resolvedLanguage, stdin: input, compilerId });
+    const result = await execute({ source: code, language, stdin: input, compilerId });
 
+    // Normalize OnlineCompiler response: provider returns 'output'/'error', not 'stdout'/'stderr'
+    // Also preserve all execution metadata for frontend
     return res.json({
       success: true,
       data: {
-        status: result.status?.description || 'Unknown',
-        output: result.stdout || '',
-        error: result.stderr || '',
-        runtime: result.time || null,
-        memory: result.memory || null
+        status: result.status || 'success',
+        output: result.output || result.stdout || '',
+        error: result.error || result.stderr || '',
+        exit_code: result.exit_code,
+        signal: result.signal,
+        time: result.time,
+        total: result.total,
+        memory: result.memory,
       }
     });
   } catch (error) {
     console.error('Error running code:', error);
+    // Handle specific errors from OnlineCompilerExecutor
+    if (error.code === 'ONLINE_COMPILER_TIMEOUT') {
+      return res.status(408).json({ success: false, message: 'Code execution service timed out. Please try again.' });
+    }
+    if (error.message.includes('OnlineCompiler error')) {
+      // Extract status code if possible, but return generic message
+      return res.status(500).json({ success: false, message: 'Code execution service is temporarily unavailable' });
+    }
+    return res.status(500).json({ success: false, message: 'Execution error' });
+  }
+});
+
+// POST /api/student/problems/:problemId/run-tests
+// Run student code against VISIBLE (non-hidden) test cases without storing a submission.
+router.post('/:problemId/run-tests', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { problemId } = req.params;
+    const { language, code } = req.body;
+
+    if (!language || !code) {
+      return res.status(400).json({ success: false, message: 'Language and code are required' });
+    }
+
+    // Validate code size (max 100 KB)
+    const MAX_SIZE_KB = 100;
+    const MAX_SIZE_BYTES = MAX_SIZE_KB * 1024;
+    if (Buffer.byteLength(code, 'utf8') > MAX_SIZE_BYTES) {
+      return res.status(400).json({ success: false, message: `Code size exceeds ${MAX_SIZE_KB} KB limit` });
+    }
+
+    // Validate problemId format
+    if (!mongoose.Types.ObjectId.isValid(problemId)) {
+      return res.status(400).json({ success: false, message: 'Invalid problem id' });
+    }
+    const problem = await canAccessProblem(studentId, problemId);
+    if (!problem) {
+      return res.status(404).json({ success: false, message: 'Problem not found or inaccessible' });
+    }
+
+    // Problem configuration is authoritative — client language/compilerId never overrides it.
+    if (!problem.allowedLanguages.includes(language)) {
+      return res.status(400).json({ success: false, message: 'Language not supported for this problem' });
+    }
+    const compilerId = problem.compilers?.get(language);
+    if (!compilerId) {
+      return res.status(400).json({ success: false, code: 'COMPILER_NOT_CONFIGURED', message: `Compiler not configured for ${language}` });
+    }
+    const compilerInfo = await getCompilerById(compilerId);
+    if (!compilerInfo) {
+      return res.status(400).json({ success: false, code: 'COMPILER_NOT_SUPPORTED', message: 'The compiler is no longer available.' });
+    }
+
+    // Visible test cases only — hidden cases are not exposed on Run
+    const testCases = await TestCase.find({ problem: problemId, isHidden: false }).sort({ order: 1 });
+
+    const results = [];
+    let fatalVerdict = null;
+
+    for (const tc of testCases) {
+      // Validate input size for each test case (max 100 KB)
+      if (tc.input && Buffer.byteLength(tc.input, 'utf8') > MAX_SIZE_BYTES) {
+        return res.status(400).json({ success: false, message: `Test case input size exceeds ${MAX_SIZE_KB} KB limit` });
+      }
+
+      try {
+        const execResult = await execute({ source: code, language, stdin: tc.input, compilerId });
+        const judgeVerdict = mapResultToVerdict(execResult);
+        // Normalize provider response: 'output'/'error' not 'stdout'/'stderr'
+        if (judgeVerdict !== 'ACCEPTED') {
+          // Fatal execution error — stop, record the failure, do not expose expected outputs
+          fatalVerdict = judgeVerdict;
+          results.push({ index: results.length, passed: false, output: execResult.output || execResult.stdout || '', error: execResult.error || execResult.stderr || execResult.compile_output || '' });
+          break;
+        }
+        const output = (execResult.output || execResult.stdout || '').trim();
+        const expected = (tc.expectedOutput || '').trim();
+        results.push({ index: results.length, passed: output === expected, output, error: execResult.error || execResult.stderr || '' });
+      } catch (err) {
+        const msg = err.message || 'Execution error';
+        // Handle specific errors from OnlineCompilerExecutor
+        if (err.code === 'ONLINE_COMPILER_TIMEOUT') {
+          fatalVerdict = 'TIME_LIMIT_EXCEEDED';
+        } else if (msg.includes('OnlineCompiler error')) {
+          // Generic service error
+          fatalVerdict = 'EXECUTION_ERROR';
+        } else {
+          fatalVerdict = msg.includes('Compilation') ? 'COMPILATION_ERROR'
+            : msg.includes('Time limit') ? 'TIME_LIMIT_EXCEEDED'
+            : msg.includes('Memory limit') ? 'MEMORY_LIMIT_EXCEEDED'
+            : 'EXECUTION_ERROR';
+        }
+        results.push({ index: results.length, passed: false, output: '', error: msg });
+        break;
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        status: fatalVerdict || 'FINISHED',
+        total: testCases.length,
+        passed: results.filter(r => r.passed).length,
+        results
+      }
+    });
+  } catch (error) {
+    console.error('Error running code against test cases:', error);
+    // Handle specific errors from OnlineCompilerExecutor
+    if (error.code === 'ONLINE_COMPILER_TIMEOUT') {
+      return res.status(error.status || 500).json({ success: false, message: error.message });
+    }
+    if (error.message.includes('OnlineCompiler error')) {
+      // Extract status code if possible, but return generic message
+      return res.status(500).json({ success: false, message: 'Code execution service is temporarily unavailable' });
+    }
     return res.status(500).json({ success: false, message: 'Execution error' });
   }
 });

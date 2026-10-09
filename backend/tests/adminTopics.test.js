@@ -184,7 +184,7 @@ describe('Admin Topics API', () => {
   });
 
   // 11. deleting Topic removes ProblemTopic links
-  test('deleting Topic removes ProblemTopic links', async () => {
+  test('deleting Topic removes ProblemTopic links and associated Problems', async () => {
     const ProblemTopic = require('../src/models/ProblemTopic');
     const Problem = require('../src/models/Problem');
 
@@ -193,6 +193,13 @@ describe('Admin Topics API', () => {
 
     await ProblemTopic.create({ problem: problem._id, collection: testCollection._id, topic: topic._id, createdBy: new mongoose.Types.ObjectId() });
 
+    // Archive the topic first to trigger hard delete
+    await request(app)
+      .patch(`/api/admin/topics/${topic._id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'ARCHIVED' });
+
+    // Now delete the archived topic
     await request(app)
       .delete(`/api/admin/topics/${topic._id}`)
       .set('Authorization', `Bearer ${adminToken}`);
@@ -200,7 +207,7 @@ describe('Admin Topics API', () => {
     const links = await ProblemTopic.find({ topic: topic._id });
     expect(links.length).toBe(0);
     const originalProblem = await Problem.findById(problem._id);
-    expect(originalProblem).not.toBeNull();
+    expect(originalProblem).toBeNull();
   });
 
   // 12. unauthorized requests are rejected

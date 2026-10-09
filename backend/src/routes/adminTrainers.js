@@ -129,8 +129,21 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
  */
 router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const filter = { role: 'TRAINER' };
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, 'i');
+      filter.$or = [{ name: searchRegex }, { email: searchRegex }, { trainerId: searchRegex }];
+    }
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    const total = await User.countDocuments(filter);
+
     const trainers = await User.aggregate([
-      { $match: { role: 'TRAINER' } },
+      { $match: filter },
       {
         $lookup: {
           from: 'batches',
@@ -144,18 +157,29 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
           id: '$_id',
           name: 1,
           email: 1,
+          trainerId: 1,
           role: 1,
           status: 1,
           assignedBatches: { $map: { input: '$assignedBatches', as: 'b', in: { id: '$$b._id', name: '$$b.name', code: '$$b.code' } } },
           createdAt: 1,
           _id: 0
         }
-      }
+      },
+      { $skip: skip },
+      { $limit: limit }
     ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
 
     res.json({
       success: true,
       data: trainers,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages
+      }
     });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error listing trainers:', error);

@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const requireAuth = require('../../middleware/auth');
 const { requireRole } = require('../../middleware/role');
 const Submission = require('../../models/Submission');
+const { getCompilers } = require('../../services/compilerRegistry');
 
 router.use(requireAuth);
 router.use(requireRole('ADMIN'));
@@ -48,25 +49,19 @@ router.get('/health', async (req, res) => {
       latencyMs: dbLatencyMs
     };
 
-    // Execution Engine (Judge0) health
+    // Execution Engine (OnlineCompiler) health
     let execStatus = 'unavailable';
     let execLatencyMs = 0;
-    const endpoint = process.env.JUDGE0_ENDPOINT;
+    const endpoint = process.env.ONLINE_COMPILER_URL;
     if (endpoint) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
       const startTime = Date.now();
       try {
-        const response = await fetch(`${endpoint}/languages`, {
-          signal: controller.signal
-        });
+        const response = await fetch(endpoint, { signal: controller.signal });
         clearTimeout(timeoutId);
         execLatencyMs = Date.now() - startTime;
-        if (response.ok) {
-          execStatus = 'healthy';
-        } else {
-          execStatus = 'degraded';
-        }
+        execStatus = response.ok ? 'healthy' : 'degraded';
       } catch (err) {
         clearTimeout(timeoutId);
         execLatencyMs = Date.now() - startTime;
@@ -202,6 +197,19 @@ router.get('/metrics', async (req, res) => {
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') console.error('Error in system metrics:', err);
     return res.status(500).json({ success: false, message: 'Failed to load system metrics' });
+  }
+});
+
+/**
+ * GET /api/admin/system/compilers
+ */
+router.get('/compilers', async (req, res) => {
+  try {
+    const compilers = await getCompilers();
+    return res.json({ success: true, data: compilers });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'test') console.error('Error fetching compilers:', err);
+    return res.status(500).json({ success: false, message: 'Unable to fetch compiler list' });
   }
 });
 
