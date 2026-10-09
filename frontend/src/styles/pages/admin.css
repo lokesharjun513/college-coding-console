@@ -755,6 +755,37 @@
    ADMIN DASHBOARD KPI & TOOLBAR REFINEMENTS
    ───────────────────────────────────────────────────────────────────────── */
 
+.admin-dashboard__header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.admin-dashboard__header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-dashboard__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.admin-dashboard__header-actions .admin-reports__date-selector {
+  margin-bottom: 0;
+}
+
+.admin-dashboard__header-actions .admin-reports__date-options {
+  gap: 6px;
+}
+
 .admin-dashboard__kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -774,11 +805,18 @@
   transition: transform var(--admin-transition-base) ease,
               box-shadow var(--admin-transition-base) ease;
   height: 100%;
+  width: 100%;
 }
 
 .admin-dashboard__stat-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--admin-shadow-lg);
+}
+
+.admin-dashboard__stat-meta {
+  font-size: 12px;
+  color: var(--admin-text-secondary);
+  line-height: 1.4;
 }
 
 .admin-dashboard__stat-header {
@@ -878,6 +916,16 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
   }
+
+  .admin-dashboard__header-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .admin-dashboard__header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -898,6 +946,20 @@
 
   .admin-dashboard__kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard__header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-dashboard__header-actions .admin-reports__date-options {
+    justify-content: center;
+  }
+
+  .admin-dashboard__header-actions .admin-btn {
+    width: 100%;
+    text-align: center;
   }
 }
 

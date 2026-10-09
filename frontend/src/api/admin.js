@@ -84,6 +84,10 @@ export const updateAdminSettings = (data) => api.patch('/admin/settings', data);
 
 // Reports
 export const getAdminReportsOverview = () => api.get('/admin/reports/overview');
+export const getAdminSubmissionReports = (params) => api.get('/admin/reports/submissions', { params });
+export const getAdminBatchReports = (params) => api.get('/admin/reports/batches', { params });
+export const getAdminStudentReports = (params) => api.get('/admin/reports/students', { params });
+export const getAdminProblemReports = (params) => api.get('/admin/reports/problems', { params });
 
 // Platform Activity
 export const getAdminPlatformActivity = (range) => api.get(`/admin/platform-activity?range=${range}`);

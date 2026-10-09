@@ -20,7 +20,11 @@ const Submission = require('../../models/Submission');
 router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const range = req.query.range || '7d';
-    const rangeInDays = { '7d': 7, '30d': 30, '90d': 90 }[range];
+    const rangeMap = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
+    if (!rangeMap[range]) {
+      return res.status(400).json({ success: false, message: 'Invalid range. Supported ranges are 7d, 30d, 90d, 365d.' });
+    }
+    const rangeInDays = rangeMap[range];
 
     // Date boundaries in UTC (using midnight UTC for consistency)
     const now = new Date();
@@ -192,7 +196,7 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       }
     };
 
-    res.json({
+    const response = {
       success: true,
       range,
       metrics,
@@ -202,7 +206,10 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
         problems: problemTrend,
         users: userTrend
       }
-    });
+    };
+
+    console.log('[API DEBUG] platformActivity response:', response);
+    res.json(response);
   } catch (err) {
     console.error('Error fetching platform activity:', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });
