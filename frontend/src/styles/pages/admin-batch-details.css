@@ -459,32 +459,32 @@
     flex: 1 1 100%;
   }
 
-.admin-batch-toolbar__clear {
-  height: 38px;
-  padding: 0 12px;
-  flex-shrink: 0;
-  border: 1px solid transparent;
-  border-radius: var(--admin-radius-lg);
-  background: transparent;
-  color: var(--admin-danger-text, #D94668);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: var(--admin-font-weight-medium, 500);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--admin-transition-base) ease;
-}
+  .admin-batch-toolbar__clear {
+    height: 38px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    border-radius: var(--admin-radius-lg);
+    background: transparent;
+    color: var(--admin-danger-text, #D94668);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: var(--admin-font-weight-medium, 500);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--admin-transition-base) ease;
+  }
 
-.admin-batch-toolbar__clear:hover {
-  background: var(--admin-danger-bg, #FFF0F4);
-}
+  .admin-batch-toolbar__clear:hover {
+    background: var(--admin-danger-bg, #FFF0F4);
+  }
 
-.admin-batch-toolbar__clear:focus-visible {
-  outline: 2px solid var(--admin-primary);
-  outline-offset: 2px;
-}
+  .admin-batch-toolbar__clear:focus-visible {
+    outline: 2px solid var(--admin-primary);
+    outline-offset: 2px;
+  }
 
-.admin-batch-toolbar__group {
+  .admin-batch-toolbar__group {
     width: 100%;
   }
 
@@ -708,4 +708,9 @@
   .admin-batch-table-wrap .admin-table tbody tr {
     transition: none;
   }
+}
+
+/* Center align table header text by default */
+.admin-batch-table-wrap .admin-table th {
+  text-align: center;
 }
