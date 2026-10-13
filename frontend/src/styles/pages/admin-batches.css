@@ -17,11 +17,107 @@
   background: var(--admin-primary);
 }
 
-/* Form Labels (not in shared admin.css) */
-.admin-form-label {
-  display: block;
+/* ─────────────────────────────────────────────────────────────────────────
+   TRAINER PILL UI
+   ───────────────────────────────────────────────────────────────────────── */
+.admin-trainer-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(47, 126, 218, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 160ms ease;
+  min-width: 160px;
+  max-width: 220px;
+  text-decoration: none;
+  font-family: inherit;
+  text-align: left;
+}
+
+.admin-trainer-pill:hover {
+  border-color: rgba(47, 126, 218, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.admin-trainer-pill-static {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(47, 126, 218, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  min-width: 160px;
+  max-width: 220px;
+  text-align: left;
+  margin: 0 auto;
+}
+
+.admin-trainer-pill--unassigned {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.03);
+  border: 1px dashed rgba(239, 68, 68, 0.3);
+  color: var(--admin-danger-text);
+  font-style: italic;
   font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 8px;
+  min-width: 120px;
+  height: 44px;
+  border-radius: 8px;
+  margin: 0 auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BATCH NAME — primary table action
+   A real <button> so it is keyboard reachable, styled with the same
+   surface/border/shadow tokens as .admin-trainer-pill above.
+   ───────────────────────────────────────────────────────────────────────── */
+.admin-batch-name-btn {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 7px 14px;
+  border-radius: var(--admin-radius-lg);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  box-shadow: var(--admin-shadow-sm);
   color: var(--admin-text-primary);
+  font-family: inherit;
+  font-size: var(--admin-font-size-sm);
+  font-weight: var(--admin-font-weight-semibold);
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background var(--admin-transition-base) ease,
+              border-color var(--admin-transition-base) ease,
+              box-shadow var(--admin-transition-base) ease,
+              color var(--admin-transition-base) ease;
+}
+
+.admin-batch-name-btn:hover {
+  background: var(--admin-muted);
+  border-color: var(--admin-primary);
+  color: var(--admin-primary);
+  box-shadow: var(--admin-shadow-lg);
+}
+
+.admin-batch-name-btn:active {
+  background: var(--admin-border-light);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-batch-name-btn:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-batch-name-btn { transition: none; }
 }

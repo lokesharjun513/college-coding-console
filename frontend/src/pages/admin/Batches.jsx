@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Users, Award, BookOpen, AlertCircle, Search } from 'lucide-react';
+import { Pencil, Trash2, Plus, Users, Award, BookOpen, AlertCircle, Search, UserCheck, UserMinus, UserCog } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
 import TableActions from '../../components/ui/table/TableActions';
@@ -342,7 +342,7 @@ export default function Batches() {
                     <th >#</th>
                     <th >Batch Name</th>
                     <th >Code</th>
-                    <th >Trainer</th>
+                    <th style={{ textAlign: 'center' }}>Trainer</th>
                     <th >Timeline</th>
                     <th >Status</th>
                     <th>Actions</th>
@@ -355,31 +355,39 @@ export default function Batches() {
                       <tr key={b.id} >
                         <td >{rowNumber}</td>
                         <td >
-                          <div
+                          <button
+                            type="button"
+                            className="admin-batch-name-btn"
                             onClick={() => navigate(`/admin/batches/${b.id}`)}
+                            aria-label={`View details for ${b.name}`}
                             title="View Batch Details"
                           >
                             {b.name}
-                          </div>
-                          {b.description && (
-                            <div className="admin-text-ellipsis">
-                              {b.description}
-                            </div>
-                          )}
+                          </button>
                         </td>
                         <td >
                           <code style={{ background: 'var(--admin-bg-subtle)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
                             {b.code}
                           </code>
                         </td>
-                        <td >
+                        <td style={{ textAlign: 'center' }}>
                           {b.trainer ? (
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontWeight: 500 }}>{b.trainer.name}</span>
-                              <span style={{ fontSize: '11px', color: 'var(--admin-text-muted)' }}>{b.trainer.email}</span>
+                            <div className="admin-trainer-pill-static">
+                              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--admin-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.trainer.name}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--admin-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.trainer.email}</span>
+                              </div>
                             </div>
                           ) : (
-                            <span style={{ color: 'var(--admin-text-muted)', fontStyle: 'italic' }}>Unassigned</span>
+                            <button
+                              type="button"
+                              className="admin-trainer-pill admin-trainer-pill--unassigned"
+                              onClick={() => openAssignTrainer(b)}
+                              aria-label={`Assign trainer to ${b.name}`}
+                              title="Click to assign a trainer"
+                            >
+                              Unassigned
+                            </button>
                           )}
                         </td>
                         <td >
@@ -406,17 +414,17 @@ export default function Batches() {
                                 icon: Users,
                                 onClick: () => navigate(`/admin/batches/${b.id}/students`),
                               },
-                              b.trainer
-                                ? {
-                                    label: 'Remove Trainer',
-                                    icon: Award,
-                                    onClick: () => openRemoveTrainer(b),
-                                  }
-                                : {
-                                    label: 'Assign Trainer',
-                                    icon: Award,
-                                    onClick: () => openAssignTrainer(b),
-                                  },
+                              {
+                                label: b.trainer ? 'Change Trainer' : 'Assign Trainer',
+                                icon: b.trainer ? UserCog : UserCheck,
+                                onClick: () => openAssignTrainer(b),
+                              },
+                              ...(b.trainer ? [{
+                                label: 'Remove Trainer',
+                                icon: UserMinus,
+                                onClick: () => openRemoveTrainer(b),
+                                variant: 'danger',
+                              }] : []),
                               {
                                 label: 'Edit Batch',
                                 icon: Pencil,
@@ -631,15 +639,15 @@ export default function Batches() {
                   ))}
                 </select>
               </div>
+              <div className="admin-modal__footer" style={{ marginTop: '20px', padding: '0' }}>
+                <Button variant="secondary" onClick={() => setAssignModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? 'Assigning...' : 'Confirm Assignment'}
+                </Button>
+              </div>
             </form>
-          </div>
-          <div className="admin-modal__footer">
-            <Button variant="secondary" onClick={() => setAssignModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="assign-trainer-form" disabled={submitting}>
-              {submitting ? 'Assigning...' : 'Confirm Assignment'}
-            </Button>
           </div>
         </Modal>
       )}

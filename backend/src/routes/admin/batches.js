@@ -32,18 +32,18 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'endDate cannot be before startDate' });
     }
 
-    // Verify trainer if provided
+    // Verify trainer if provided (accept ObjectId or string)
     let trainerUser = null;
     if (trainer) {
-      if (!mongoose.Types.ObjectId.isValid(trainer)) {
+      // Normalize trainer ID to string for validation
+      const trainerIdStr = typeof trainer === 'string' ? trainer : trainer.toString();
+      if (!mongoose.Types.ObjectId.isValid(trainerIdStr)) {
         return res.status(400).json({ success: false, message: 'Invalid trainer id' });
       }
-      trainerUser = await User.findById(trainer);
+      // Find trainer with correct role in a single query
+      trainerUser = await User.findOne({ _id: trainerIdStr, role: 'TRAINER' });
       if (!trainerUser) {
         return res.status(400).json({ success: false, message: 'Trainer not found' });
-      }
-      if (trainerUser.role !== 'TRAINER') {
-        return res.status(400).json({ success: false, message: 'User is not a trainer' });
       }
     }
 
@@ -52,7 +52,7 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       name: name.trim(),
       code: code.trim(),
       description,
-      trainer: trainer || undefined,
+      trainer: trainerUser ? trainerUser._id : undefined,
       status: status || 'ACTIVE',
       startDate,
       endDate,

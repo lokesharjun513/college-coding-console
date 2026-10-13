@@ -1,0 +1,338 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN COMPILER KEYS PAGE — REFINED STYLING
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.compiler-keys-page {
+  padding: 24px 28px 40px;
+  background: var(--admin-white, #FFFFFF);
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.compiler-keys-page .admin-page-header {
+  margin-bottom: 24px;
+}
+
+.compiler-keys-page .admin-dashboard__kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ACTIVE KEY SUMMARY CARD (Full Green Gradient)
+   ───────────────────────────────────────────────────────────────────────── */
+
+.compiler-keys-page .active-key-summary-card {
+  background: linear-gradient(
+    135deg,
+    #064E3B 0%,
+    #047857 48%,
+    #059669 75%,
+    #34D399 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--admin-radius-2xl);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--admin-shadow-xl);
+  color: #ffffff;
+}
+
+.compiler-keys-page .active-key-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.compiler-keys-page .active-key-summary-title {
+  font-size: 16px;
+  font-weight: 650;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.compiler-keys-page .active-key-summary-refresh {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Active Key Information Row (Identity Strip) */
+.compiler-keys-page .active-key-info-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 16px 20px;
+  border-radius: var(--admin-radius-lg);
+  margin-bottom: 20px;
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+}
+
+.compiler-keys-page .active-key-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--admin-radius-pill);
+  white-space: nowrap;
+}
+
+.compiler-keys-page .active-key-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.compiler-keys-page .active-key-masked {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.95);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compiler-keys-page .active-key-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--admin-radius-sm);
+  cursor: pointer;
+  transition: all var(--admin-transition-base) ease;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+
+.compiler-keys-page .active-key-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Active Key KPI Grid */
+.compiler-keys-page .active-key-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.compiler-keys-page .active-key-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--admin-radius-lg);
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.compiler-keys-page .active-key-kpi-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--admin-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.compiler-keys-page .active-key-kpi-icon.blue { background: rgba(47, 126, 218, 0.1); color: var(--admin-primary); }
+.compiler-keys-page .active-key-kpi-icon.purple { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+.compiler-keys-page .active-key-kpi-icon.green { background: rgba(5, 150, 105, 0.1); color: var(--admin-success-text); }
+.compiler-keys-page .active-key-kpi-icon.orange { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+
+.compiler-keys-page .active-key-kpi-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.compiler-keys-page .active-key-kpi-label {
+  font-size: 11px;
+  color: #047857;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.compiler-keys-page .active-key-kpi-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #064E3B;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compiler-keys-page .active-key-kpi-meta {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+/* Capacity Progress Bar */
+.compiler-keys-page .active-key-progress {
+  margin-top: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 14px 16px;
+  border-radius: var(--admin-radius-lg);
+}
+
+.compiler-keys-page .active-key-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.compiler-keys-page .active-key-progress-header span:first-child {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.compiler-keys-page .active-key-progress-percentage {
+  font-weight: 650;
+  color: #ffffff;
+}
+
+.compiler-keys-page .active-key-progress-bar {
+  display: block;
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--admin-radius-pill);
+  overflow: hidden;
+}
+
+.compiler-keys-page .active-key-progress-bar > div {
+  height: 100%;
+  background: #ffffff;
+  border-radius: inherit;
+  transition: width 300ms ease;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RECENT ACTIVITY LOG
+   ───────────────────────────────────────────────────────────────────────── */
+
+.compiler-keys-page .admin-section-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--admin-border-light);
+  background: var(--admin-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.compiler-keys-page .admin-section-heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.compiler-keys-page .admin-section-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.compiler-keys-page .admin-table-container {
+  overflow-x: auto;
+}
+
+.compiler-keys-page .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--admin-font-size-sm);
+}
+
+.compiler-keys-page .admin-table th {
+  background: var(--admin-muted);
+  color: var(--admin-text-secondary);
+  font-weight: var(--admin-font-weight-semibold);
+  padding: 12px 16px;
+  font-size: var(--admin-font-size-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--admin-border-light);
+  text-align: center;
+}
+
+.compiler-keys-page .admin-table td {
+  padding: 14px 16px;
+  color: var(--admin-text-primary);
+  border-bottom: 1px solid var(--admin-border-light);
+  text-align: center;
+}
+
+.compiler-keys-page .admin-card-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--admin-text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RESPONSIVE OVERRIDES
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1200px) {
+  .compiler-keys-page .admin-dashboard__kpi-grid,
+  .compiler-keys-page .active-key-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .compiler-keys-page {
+    padding: 16px;
+  }
+
+  .compiler-keys-page .admin-dashboard__kpi-grid,
+  .compiler-keys-page .active-key-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compiler-keys-page .admin-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .compiler-keys-page .active-key-info-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .compiler-keys-page .active-key-masked {
+    text-align: center;
+  }
+
+  .compiler-keys-page .active-key-copy-btn {
+    width: 100%;
+  }
+}

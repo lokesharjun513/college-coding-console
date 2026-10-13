@@ -61,30 +61,22 @@ async function createProblem(trainerToken, batchId, overrides = {}) {
     starterCode: { python: 'print("hello")' },
     allowedLanguages: ['python'],
   };
+  // Titles are used exactly as given: slug uniqueness is per batch, and every
+  // test creates its own batch, so no suffix is needed for isolation.
   const data = { ...defaultData, ...overrides };
-  return await request(app)
+  const res = await request(app)
     .post(`/api/trainer/batches/${batchId}/problems`)
     .set('Authorization', `Bearer ${trainerToken}`)
     .send(data);
+  return res;
 }
 
 describe('Trainer Problem Management', () => {
   const password = 'StrongP@ssw0rd';
 
-  beforeAll(async () => {
-    
-    // DB connection managed globally by setup.js
-    // Clean any leftover data from previous runs
-    await Problem.deleteMany({});
-    await Batch.deleteMany({});
-    await User.deleteMany({});
-  });
-
-  
   afterEach(async () => {
-    // Only delete problem and batch related test data, preserve users for auth tokens
-    await Problem.deleteMany({});
-    await Batch.deleteMany({});
+    // No explicit cleanup needed here if beforeEach handles it,
+    // but keeps consistency with other test files if desired.
   });
 
   // ---------- AUTHENTICATION ----------
@@ -120,14 +112,27 @@ describe('Trainer Problem Management', () => {
 
   // ---------- AUTHORIZATION ----------
   test('admin cannot use trainer problem routes', async () => {
-    const { adminToken } = await createAdminAndTrainer();
-    const batchRes = await createBatch(adminToken, '000000000000000000000002'); // invalid trainer id, but we'll fix in next step
-    // Actually we need a valid trainer for the batch. Let's create a trainer and batch properly.
-    // We'll do a separate test for admin access with a valid batch owned by a trainer.
+    const { adminToken, trainer, trainerToken } = await createAdminAndTrainer();
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    const res = await request(app)
+      .get(`/api/trainer/batches/${batchId}/problems`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(403);
   });
 
   test('student cannot use trainer problem routes', async () => {
-    // We'll do this after creating a student and a batch owned by a trainer.
+    const { adminToken, trainer, trainerToken } = await createAdminAndTrainer();
+    const batchRes = await createBatch(adminToken, trainer._id);
+    const batchId = batchRes.body.data.id;
+    // Create a student
+    const studentEmail = generateUniqueEmail('student@testmail.com');
+    await createTestUser({ name: 'Student', email: studentEmail, password: 'StrongP@ssw0rd', role: 'STUDENT' });
+    const studentToken = await loginAndGetToken(studentEmail, 'StrongP@ssw0rd');
+    const res = await request(app)
+      .get(`/api/trainer/batches/${batchId}/problems`)
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(res.status).toBe(403);
   });
 
   // ---------- OWNERSHIP ----------

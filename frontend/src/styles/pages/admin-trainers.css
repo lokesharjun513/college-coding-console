@@ -110,11 +110,7 @@
 .admin-trainers__section { margin-bottom: 20px; }
 
 /* Table Card */
-.admin-trainers__card {
-  background: #FFFFFF; border: 1px solid #EDEFF3;
-  border-radius: 16px; overflow: hidden;
-  box-shadow: 0 5px 18px rgba(15,36,65,0.05);
-}
+/* Replaced by .admin-card .admin-table-wrapper in Card component */
 
 /* Table styling moved to shared admin.css - using .admin-table */
 

@@ -90,6 +90,7 @@ export default function BatchDetails() {
     { key: 'overview', label: 'Overview', icon: 'layers', to: `/trainer/batches/${batchId}`, active: true },
     { key: 'students', label: 'Students', icon: 'users', to: `/trainer/batches/${batchId}/students` },
     { key: 'problems', label: 'Problems', icon: 'fileCode', to: `/trainer/batches/${batchId}/problems` },
+    { key: 'assignments', label: 'Assignments', icon: 'checkSquare', to: `/trainer/batches/${batchId}/assignments` },
     { key: 'performance', label: 'Analytics', icon: 'barChart', to: `/trainer/batches/${batchId}/performance` },
     { key: 'training', label: 'Training', icon: 'trendingUp', to: `/trainer/training?batchId=${batchId}` },
     { key: 'monitoring', label: 'Monitoring', icon: 'chartBar', unavailable: true },
@@ -204,6 +205,17 @@ export default function BatchDetails() {
             <Button variant="secondary" onClick={() => navigate(`/trainer/batches/${batchId}/problems`)}>View Problems</Button>
             <Button variant="primary" onClick={() => navigate(`/trainer/batches/${batchId}/problems/create`)}>Create Problem</Button>
           </div>
+        </div>
+      <div className="trainer-batch-detail__section">
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-heading)', margin: '0 0 var(--space-1) 0' }}>
+              Practice Assignments
+            </h2>
+            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)', margin: 0 }}>
+              Assign published problems to this batch and track completed vs pending students.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={() => navigate(`/trainer/batches/${batchId}/assignments`)}>Manage Assignments</Button>
         </div>
       </section>
 

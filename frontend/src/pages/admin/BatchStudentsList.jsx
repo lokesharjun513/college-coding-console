@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   getBatch,
@@ -12,10 +12,12 @@ import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
-import Modal from '../../components/ui/Modal';
 import Toast from '../../components/ui/Toast';
-import { Search, Plus, Trash2, Users, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import '../../styles/pages/admin-batches.css';
+import PageHeader from '../../components/ui/PageHeader';
+import { Search, Plus, Trash2, Users, ArrowLeft } from 'lucide-react';
+import { academicBatchLabel, enrollmentId } from '../../utils/academicBatch';
+import '../../styles/pages/admin.css';
+import '../../styles/pages/admin-dashboard.css';
 
 /**
  * Admin - Batch Students / Enrollment Management Page
@@ -55,7 +57,14 @@ export default function AdminBatchStudentsList() {
       ]);
       setBatch(batchRes.data?.data || null);
       setEnrolledStudents(enrolledRes.data?.data || []);
-      setAllStudents((allStudentsRes.data?.data || []).map(s => ({ ...s, id: s._id || s.id })));
+      // The list endpoint returns Student profiles carrying both `_id`
+      // (Student) and `userId` (User). Enrollment keys off the User id, so
+      // `enrollmentId()` maps them correctly instead of passing the Student id.
+      setAllStudents((allStudentsRes.data?.data || []).map(s => ({
+        ...s,
+        id: s._id || s.id,
+        enrollmentUserId: enrollmentId(s),
+      })));
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load enrollment data');
     } finally {
@@ -82,16 +91,23 @@ export default function AdminBatchStudentsList() {
     });
   }, [enrolledStudents, searchTerm, statusFilter]);
 
-  // Available students not already enrolled
-  const enrolledStudentIds = useMemo(() => new Set(enrolledStudents.map(e => e.student?.id)), [enrolledStudents]);
+  // Already-enrolled students are keyed by their User id, which is what
+  // BatchStudent.student stores. Comparing against the Student id here would
+  // never match and would re-offer already-enrolled students.
+  const enrolledStudentIds = useMemo(
+    () => new Set(enrolledStudents.map(e => e.student?.id).filter(Boolean)),
+    [enrolledStudents]
+  );
 
   const availableStudents = useMemo(() => {
     return allStudents.filter((s) => {
-      if (enrolledStudentIds.has(s.id)) return false;
+      if (!s.enrollmentUserId) return false;
+      if (enrolledStudentIds.has(s.enrollmentUserId)) return false;
       const matchesSearch =
         s.name?.toLowerCase().includes(availableSearch.toLowerCase()) ||
         s.email?.toLowerCase().includes(availableSearch.toLowerCase()) ||
         s.rollNumber?.toLowerCase().includes(availableSearch.toLowerCase());
+      // Status comes from the linked User; enrollment rejects inactive users.
       return matchesSearch && s.status === 'ACTIVE';
     });
   }, [allStudents, enrolledStudentIds, availableSearch]);
@@ -178,7 +194,7 @@ export default function AdminBatchStudentsList() {
 
   if (loading) {
     return (
-      <div className="admin-batches" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <div className="admin-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <Spinner size={32} />
       </div>
     );
@@ -186,8 +202,8 @@ export default function AdminBatchStudentsList() {
 
   if (error || !batch) {
     return (
-      <div className="admin-batches">
-        <div className="admin-batches__error">
+      <div className="admin-page">
+        <div className="admin-error">
           <h3>Batch Not Found</h3>
           <p>{error || 'The requested batch could not be found.'}</p>
           <Button onClick={() => window.location.href = '/admin/batches'}>Back to Batches</Button>
@@ -197,75 +213,60 @@ export default function AdminBatchStudentsList() {
   }
 
   return (
-    <div className="admin-batches">
-      {/* Back Link */}
-      <div style={{ marginBottom: '-12px' }}>
-        <Link
-          to={`/admin/batches/${batchId}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
-            fontWeight: 500,
-            color: 'var(--text-secondary)',
-            textDecoration: 'none',
-          }}
-        >
-          <ArrowLeft size={16} /> Back to Batch Details
-        </Link>
-      </div>
-
-      {/* Header */}
-      <div className="admin-batches__header">
-        <div>
-          <div className="admin-batches__eyebrow">Student Enrollment Management</div>
-          <h1>{batch.name} — Students</h1>
-          <p>Manage enrolled students, enrollment status, and add new students to this batch.</p>
-        </div>
-        <div className="admin-batches__actions">
-          {selectedEnrolledIds.length > 0 && (
-            <Button variant="danger" onClick={handleRemoveBulk}>
-              <Trash2 size={16} style={{ marginRight: '6px' }} /> Remove Selected ({selectedEnrolledIds.length})
+    <div className="admin-page">
+      <PageHeader
+        title={batch.name}
+        description={`Manage enrolled students, enrollment status, and add new students to this batch.`}
+        breadcrumb={
+          <Link to={`/admin/batches/${batchId}`} className="admin-breadcrumb__item">
+            <ArrowLeft size={16} /> Back to Batch Details
+          </Link>
+        }
+        actions={
+          <>
+            {selectedEnrolledIds.length > 0 && (
+              <Button variant="danger" onClick={handleRemoveBulk}>
+                <Trash2 size={16} style={{ marginRight: '6px' }} /> Remove Selected ({selectedEnrolledIds.length})
+              </Button>
+            )}
+            <Button onClick={() => { setAvailableSearch(''); setSelectedAvailableIds([]); setAddModalOpen(true); }}>
+              <Plus size={16} style={{ marginRight: '6px' }} /> Add Students
             </Button>
-          )}
-          <Button onClick={() => { setAvailableSearch(''); setSelectedAvailableIds([]); setAddModalOpen(true); }}>
-            <Plus size={16} style={{ marginRight: '6px' }} /> Add Students
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* KPI Summary */}
-      <div className="admin-batches__kpi">
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Total Enrolled</span>
-          <span className="admin-batches__kpi-value">{enrolledStudents.length}</span>
-          <span className="admin-batches__kpi-meta">Active roster</span>
+      <div className="admin-dashboard__kpi-grid">
+        <div className="admin-dashboard__stat-card">
+          <span className="admin-dashboard__stat-label">Total Enrolled</span>
+          <span className="admin-dashboard__stat-value">{enrolledStudents.length}</span>
+          <span className="admin-dashboard__stat-meta">Active roster</span>
         </div>
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Active Enrollments</span>
-          <span className="admin-batches__kpi-value" style={{ color: 'var(--color-success, #16a34a)' }}>
+        <div className="admin-dashboard__stat-card">
+          <span className="admin-dashboard__stat-label">Active Enrollments</span>
+          <span className="admin-dashboard__stat-value" style={{ color: 'var(--color-success, #16a34a)' }}>
             {enrolledStudents.filter(e => e.status === 'ACTIVE').length}
           </span>
-          <span className="admin-batches__kpi-meta">In good standing</span>
+          <span className="admin-dashboard__stat-meta">In good standing</span>
         </div>
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Inactive Enrollments</span>
-          <span className="admin-batches__kpi-value" style={{ color: 'var(--text-muted)' }}>
+        <div className="admin-dashboard__stat-card">
+          <span className="admin-dashboard__stat-label">Inactive Enrollments</span>
+          <span className="admin-dashboard__stat-value" style={{ color: 'var(--text-muted)' }}>
             {enrolledStudents.filter(e => e.status !== 'ACTIVE').length}
           </span>
-          <span className="admin-batches__kpi-meta">Paused/Inactive</span>
+          <span className="admin-dashboard__stat-meta">Paused/Inactive</span>
         </div>
-        <div className="admin-batches__kpi-card">
-          <span className="admin-batches__kpi-label">Batch Code</span>
-          <span className="admin-batches__kpi-value" style={{ fontSize: '22px' }}><code>{batch.code}</code></span>
-          <span className="admin-batches__kpi-meta">{batch.status}</span>
+        <div className="admin-dashboard__stat-card">
+          <span className="admin-dashboard__stat-label">Batch Code</span>
+          <span className="admin-dashboard__stat-value" style={{ fontSize: '22px' }}><code>{batch.code}</code></span>
+          <span className="admin-dashboard__stat-meta">{batch.status}</span>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="admin-batches__toolbar">
-        <div className="admin-batches__toolbar-left">
+      <div className="admin-toolbar">
+        <div className="admin-toolbar__left">
           <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
@@ -273,17 +274,17 @@ export default function AdminBatchStudentsList() {
               placeholder="Search enrolled students by name, email, roll no..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="admin-batches__search"
+              className="admin-input"
               style={{ paddingLeft: '38px' }}
             />
           </div>
 
-          <div className="admin-batches__toggle-group">
+          <div className="admin-toggle-group">
             {['ALL', 'ACTIVE', 'INACTIVE'].map((st) => (
               <button
                 key={st}
                 type="button"
-                className={`admin-batches__toggle-btn ${statusFilter === st ? 'active' : ''}`}
+                className={`admin-toggle-btn ${statusFilter === st ? 'active' : ''}`}
                 onClick={() => setStatusFilter(st)}
               >
                 {st.charAt(0) + st.slice(1).toLowerCase()}
@@ -294,7 +295,7 @@ export default function AdminBatchStudentsList() {
 
         {(searchTerm || statusFilter !== 'ALL') && (
           <button
-            className="admin-batches__clear-btn"
+            className="admin-clear-btn"
             onClick={() => {
               setSearchTerm('');
               setStatusFilter('ALL');
@@ -306,16 +307,16 @@ export default function AdminBatchStudentsList() {
       </div>
 
       {/* Table Content */}
-      <div className="admin-batches__card">
+      <div className="admin-card">
         {filteredEnrolled.length === 0 ? (
-          <div className="admin-batches__empty">
+          <div className="admin-empty">
             <Users size={40} style={{ color: 'var(--text-muted)' }} />
             <h3>No enrolled students found</h3>
             <p>No students match your search criteria or no students have been enrolled in this batch yet.</p>
             <Button onClick={() => { setAvailableSearch(''); setSelectedAvailableIds([]); setAddModalOpen(true); }}>Add Students Now</Button>
           </div>
         ) : (
-          <table className="admin-batches__table">
+          <table className="admin-table">
             <thead>
               <tr>
                 <th style={{ width: '40px' }}>
@@ -393,8 +394,8 @@ export default function AdminBatchStudentsList() {
 
       {/* Add Students Modal */}
       {addModalOpen && (
-        <div className="admin-batches__modal-overlay" onClick={() => setAddModalOpen(false)}>
-          <div className="admin-batches__modal-glass" onClick={(e) => e.stopPropagation()} style={{ width: '680px' }}>
+        <div className="admin-modal-overlay" onClick={() => setAddModalOpen(false)}>
+          <div className="admin-modal admin-add-student-modal" onClick={(e) => e.stopPropagation()} style={{ width: 'min(760px, calc(100vw - 32px))', maxHeight: 'calc(100dvh - 32px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
                 <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>Enroll Students</h2>
@@ -405,91 +406,99 @@ export default function AdminBatchStudentsList() {
               <button onClick={() => setAddModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-secondary)' }}>✕</button>
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                type="text"
-                placeholder="Search available students by name, email, roll number..."
-                value={availableSearch}
-                onChange={(e) => setAvailableSearch(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-app)', color: 'var(--text-primary)' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                {selectedAvailableIds.length} student(s) selected
-              </span>
-              {availableStudents.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedAvailableIds.length === availableStudents.length) {
-                      setSelectedAvailableIds([]);
-                    } else {
-                      setSelectedAvailableIds(availableStudents.map(s => s.id));
-                    }
-                  }}
-                  style={{ background: 'none', border: 'none', color: 'var(--interactive)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
-                >
-                  {selectedAvailableIds.length === availableStudents.length ? 'Deselect All' : 'Select All Available'}
-                </button>
-              )}
-            </div>
-
-            <div style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '10px', background: 'var(--bg-app)', marginBottom: '16px' }}>
-              {availableStudents.length === 0 ? (
-                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-                  No available students found matching your search.
-                </div>
-              ) : (
-                availableStudents.map((student) => {
-                  const isSelected = selectedAvailableIds.includes(student.id);
-                  return (
-                    <div
-                      key={student.id}
-                      onClick={() => {
-                        setSelectedAvailableIds(prev =>
-                          prev.includes(student.id) ? prev.filter(i => i !== student.id) : [...prev, student.id]
-                        );
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 16px',
-                        borderBottom: '1px solid var(--border-subtle)',
-                        backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
-                        cursor: 'pointer',
-                        transition: 'background 150ms ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {}}
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <Avatar name={student.name} size={32} />
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{student.name}</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{student.email} • Roll: {student.rollNumber || '—'}</div>
-                        </div>
-                      </div>
-                      <Badge variant="success">{student.department || 'Student'}</Badge>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {enrollError && (
-              <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-danger, #dc2626)', fontSize: '13px', marginBottom: '16px' }}>
-                {enrollError}
+            <div className="admin-modal__body">
+              <div style={{ marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Search available students by name, email, roll number..."
+                  value={availableSearch}
+                  onChange={(e) => setAvailableSearch(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-app)', color: 'var(--text-primary)' }}
+                />
               </div>
-            )}
 
-            <div className="admin-batches__modal-actions">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  {selectedAvailableIds.length} student(s) selected
+                </span>
+                {availableStudents.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedAvailableIds.length === availableStudents.length) {
+                        setSelectedAvailableIds([]);
+                      } else {
+                        setSelectedAvailableIds(availableStudents.map(s => s.enrollmentUserId));
+                      }
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--interactive)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                  >
+                    {selectedAvailableIds.length === availableStudents.length ? 'Deselect All' : 'Select All Available'}
+                  </button>
+                )}
+              </div>
+
+              <div style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '10px', background: 'var(--bg-app)', marginBottom: '16px' }}>
+                {availableStudents.length === 0 ? (
+                  <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    No available students found matching your search.
+                  </div>
+                ) : (
+                  availableStudents.map((student) => {
+                    const isSelected = selectedAvailableIds.includes(student.enrollmentUserId);
+                    return (
+                      <div
+                        key={student.id}
+                        onClick={() => {
+                          setSelectedAvailableIds(prev =>
+                            prev.includes(student.enrollmentUserId)
+                              ? prev.filter(i => i !== student.enrollmentUserId)
+                              : [...prev, student.enrollmentUserId]
+                          );
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 16px',
+                          borderBottom: '1px solid var(--border-subtle)',
+                          backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                          cursor: 'pointer',
+                          transition: 'background 150ms ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <Avatar name={student.name} size={32} />
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{student.name}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{student.email} • Roll: {student.rollNumber || '—'}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {academicBatchLabel(student)}
+                              {student.currentAcademicYear?.label ? ` • ${student.currentAcademicYear.label}` : ''}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="success">{student.department || 'Student'}</Badge>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {enrollError && (
+                <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-danger, #dc2626)', fontSize: '13px', marginBottom: '16px' }}>
+                  {enrollError}
+                </div>
+              )}
+            </div>
+
+            <div className="admin-modal__footer">
               <Button type="button" variant="secondary" onClick={() => setAddModalOpen(false)}>Cancel</Button>
               <Button onClick={handleEnrollSubmit} disabled={enrollSubmitting || selectedAvailableIds.length === 0}>
                 {enrollSubmitting ? 'Enrolling...' : `Enroll Selected (${selectedAvailableIds.length})`}
@@ -501,8 +510,8 @@ export default function AdminBatchStudentsList() {
 
       {/* Remove Confirmation Modal */}
       {removeModalOpen && (
-        <div className="admin-batches__modal-overlay" onClick={() => setRemoveModalOpen(false)}>
-          <div className="admin-batches__modal-glass" onClick={(e) => e.stopPropagation()} style={{ width: '440px' }}>
+        <div className="admin-modal-overlay" onClick={() => setRemoveModalOpen(false)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ width: '440px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: 'var(--color-danger)' }}>
               Remove Student Enrollment
             </h2>

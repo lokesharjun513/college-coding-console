@@ -15,6 +15,9 @@ export default function Button({
   type = 'button',
   loading = false,
   className = '',
+  // Forward everything else (aria-label, title, data-*, aria-expanded, …) so
+  // callers can keep icon-only buttons accessible.
+  ...rest
 }) {
   const classes = ['btn', `btn-${variant}`, `btn-${size}`, className]
     .filter(Boolean)
@@ -27,6 +30,7 @@ export default function Button({
       disabled={disabled || loading}
       className={classes}
       aria-busy={loading}
+      {...rest}
     >
       {loading ? (
         <>

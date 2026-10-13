@@ -15,13 +15,16 @@ import '../../styles/pages/admin-batches.css';
 /**
   * Admin Dashboard – Apple-inspired enterprise SaaS redesign.
   */
+const cache = { data: {}, timestamp: 0 };
+const CACHE_TIME = 60 * 1000; // 1 min
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   // Batches state
-  const [batches, setBatches] = useState([]);
-  const [loadingBatches, setLoadingBatches] = useState(true);
+  const [batches, setBatches] = useState(cache.data.batches || []);
+  const [loadingBatches, setLoadingBatches] = useState(!cache.data.batches);
   const [errorBatches, setErrorBatches] = useState(null);
   const [updatingBatchId, setUpdatingBatchId] = useState(null);
   const [statusModal, setStatusModal] = useState(null);
@@ -61,32 +64,36 @@ export default function AdminDashboard() {
   };
 
   // Platform Health state
-  const [platformHealth, setPlatformHealth] = useState([]);
-  const [loadingHealth, setLoadingHealth] = useState(true);
+  const [platformHealth, setPlatformHealth] = useState(cache.data.platformHealth || []);
+  const [loadingHealth, setLoadingHealth] = useState(!cache.data.platformHealth);
   const [errorHealth, setErrorHealth] = useState(null);
 
   // Platform Activity state
-  const [platformActivity, setPlatformActivity] = useState(null);
-  const [loadingPlatformActivity, setLoadingPlatformActivity] = useState(true);
+  const [platformActivity, setPlatformActivity] = useState(cache.data.platformActivity || null);
+  const [loadingPlatformActivity, setLoadingPlatformActivity] = useState(!cache.data.platformActivity);
   const [errorPlatformActivity, setErrorPlatformActivity] = useState(null);
-  const [activityRange, setActivityRange] = useState('7d');
+  const [activityRange, setActivityRange] = useState(cache.data.activityRange || '7d');
 
 // Sparkline Chart Component removed in favor of shared component
 
   // Recent Activity state
-  const [recentActivity, setRecentActivity] = useState(null);
-  const [loadingRecentActivity, setLoadingRecentActivity] = useState(true);
+  const [recentActivity, setRecentActivity] = useState(cache.data.recentActivity || null);
+  const [loadingRecentActivity, setLoadingRecentActivity] = useState(!cache.data.recentActivity);
   const [errorRecentActivity, setErrorRecentActivity] = useState(null);
 
   // KPI state
-  const [trainerCount, setTrainerCount] = useState(null);
-  const [batchCount, setBatchCount] = useState(null);
-  const [systemStatus, setSystemStatus] = useState('Operational');
-  const [loadingKPI, setLoadingKPI] = useState(true);
+  const [trainerCount, setTrainerCount] = useState(cache.data.trainerCount || null);
+  const [batchCount, setBatchCount] = useState(cache.data.batchCount || null);
+  const [systemStatus, setSystemStatus] = useState(cache.data.systemStatus || 'Operational');
+  const [loadingKPI, setLoadingKPI] = useState(cache.data.trainerCount === undefined);
   const [errorKPI, setErrorKPI] = useState(null);
 
   // Fetch KPI data (trainers & batches count & health)
   useEffect(() => {
+    if (cache.data.trainerCount !== undefined && Date.now() - cache.timestamp < CACHE_TIME) {
+      setLoadingKPI(false);
+      return;
+    }
     const fetchKPI = async () => {
       try {
         const [trainersRes, batchesRes, healthRes] = await Promise.all([
@@ -94,13 +101,22 @@ export default function AdminDashboard() {
           getBatches(),
           getAdminSystemHealth()
         ]);
-        setTrainerCount(trainersRes.data?.data?.length ?? 0);
-        setBatchCount(batchesRes.data?.data?.length ?? 0);
+        const tCount = trainersRes.data?.data?.length ?? 0;
+        const bCount = batchesRes.data?.data?.length ?? 0;
+        let sStatus = 'Operational';
         if (healthRes.data?.success) {
           const { api, database, executionEngine } = healthRes.data.data;
           const allHealthy = api.status === 'healthy' && database.status === 'healthy' && executionEngine.status === 'healthy';
-          setSystemStatus(allHealthy ? 'Operational' : 'Degraded');
+          sStatus = allHealthy ? 'Operational' : 'Degraded';
         }
+        setTrainerCount(tCount);
+        setBatchCount(bCount);
+        setSystemStatus(sStatus);
+
+        cache.data.trainerCount = tCount;
+        cache.data.batchCount = bCount;
+        cache.data.systemStatus = sStatus;
+        cache.timestamp = Date.now();
       } catch (err) {
         setErrorKPI(err?.response?.data?.message || 'Failed to load dashboard metrics');
       } finally {
@@ -112,11 +128,17 @@ export default function AdminDashboard() {
 
   // Fetch recent batches (up to 5)
   useEffect(() => {
+    if (cache.data.batches && Date.now() - cache.timestamp < CACHE_TIME) {
+      setLoadingBatches(false);
+      return;
+    }
     const fetchBatches = async () => {
       try {
         const res = await getBatches();
         const recent = (res.data?.data ?? []).slice(0, 5);
         setBatches(recent);
+        cache.data.batches = recent;
+        cache.timestamp = Date.now();
       } catch (err) {
         setErrorBatches(err?.response?.data?.message || 'Failed to load recent batches');
       } finally {
@@ -128,6 +150,10 @@ export default function AdminDashboard() {
 
   // Fetch Platform Health
   useEffect(() => {
+    if (cache.data.platformHealth && Date.now() - cache.timestamp < CACHE_TIME) {
+      setLoadingHealth(false);
+      return;
+    }
     const fetchHealth = async () => {
       try {
         const res = await getAdminSystemHealth();
@@ -139,12 +165,15 @@ export default function AdminDashboard() {
             return 'down'; // unavailable or anything else
           };
           const authStatus = api.status === 'healthy' ? 'operational' : 'degraded';
-          setPlatformHealth([
+          const healthData = [
             { id: 'api', name: 'API Server', status: mapStatus(api.status) },
             { id: 'mongodb', name: 'MongoDB Database', status: mapStatus(database.status) },
             { id: 'auth', name: 'Authentication Service', status: authStatus },
             { id: 'code-execution', name: 'Code Execution Engine', status: mapStatus(executionEngine.status) },
-          ]);
+          ];
+          setPlatformHealth(healthData);
+          cache.data.platformHealth = healthData;
+          cache.timestamp = Date.now();
           setErrorHealth(null);
         } else {
           setErrorHealth('Failed to load platform health');
@@ -161,10 +190,17 @@ export default function AdminDashboard() {
 
   // Fetch Platform Activity
   useEffect(() => {
+    if (cache.data.platformActivity && cache.data.activityRange === activityRange && Date.now() - cache.timestamp < CACHE_TIME) {
+      setLoadingPlatformActivity(false);
+      return;
+    }
     const fetchPlatformActivity = async () => {
       try {
         const res = await getAdminPlatformActivity(activityRange);
         setPlatformActivity(res.data);
+        cache.data.platformActivity = res.data;
+        cache.data.activityRange = activityRange;
+        cache.timestamp = Date.now();
         setErrorPlatformActivity(null);
       } catch (err) {
         setErrorPlatformActivity(err?.response?.data?.message || 'Failed to load platform activity');
@@ -177,10 +213,16 @@ export default function AdminDashboard() {
 
   // Fetch Recent Activity
   useEffect(() => {
+    if (cache.data.recentActivity && Date.now() - cache.timestamp < CACHE_TIME) {
+      setLoadingRecentActivity(false);
+      return;
+    }
     const fetchRecentActivity = async () => {
       try {
         const res = await getAdminRecentActivity();
         setRecentActivity(res.data);
+        cache.data.recentActivity = res.data;
+        cache.timestamp = Date.now();
         setErrorRecentActivity(null);
       } catch (err) {
         setErrorRecentActivity(err?.response?.data?.message || 'Failed to load recent activity');

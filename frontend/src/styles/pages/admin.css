@@ -271,6 +271,10 @@
   background: var(--admin-text-muted);
 }
 
+.admin-badge--exhausted::before {
+  background: var(--admin-text-secondary);
+}
+
 /* Role Badges */
 .admin-badge--role {
   padding: 4px 8px;
@@ -519,6 +523,12 @@
    TABLES
    ───────────────────────────────────────────────────────────────────────── */
 
+.admin-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -697,6 +707,7 @@
   min-height: calc(100vh - 120px);
   background-color: var(--admin-white);
   box-sizing: border-box;
+  animation: fadeInUp 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .admin-page-header {
@@ -736,18 +747,6 @@
   align-items: flex-start;
   gap: 8px;
   flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   TOOLBAR
-   ───────────────────────────────────────────────────────────────────────── */
-
-.admin-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
@@ -842,22 +841,27 @@
   margin: 0;
 }
 
-/* Enhanced Toolbar */
+/* Enhanced Toolbar
+   NOTE: this was previously declared twice and carried a fixed `height: 42px`.
+   The fixed height clipped the filter row once the inner group wrapped, which
+   made the status filter buttons render blank. Height is now content-driven
+   with a consistent control height enforced on the children instead. */
 .admin-toolbar {
-  height: 42px;
-  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 54px;
+  padding: 8px 12px;
   background: var(--admin-surface);
   border: 1px solid var(--admin-border-light);
   border-radius: var(--admin-radius-lg);
   box-shadow: var(--admin-shadow-sm);
-  display: flex;
-  align-items: center;
-  gap: 8px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .admin-toolbar .admin-input {
-  height: 100%;
+  height: 38px;
   padding: 0 12px 0 36px;
   border: none;
   border-radius: var(--admin-radius-lg);
@@ -869,12 +873,17 @@
   box-shadow: none;
 }
 
+.admin-toolbar .admin-input:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: -2px;
+}
+
 .admin-toolbar .admin-select {
-  height: 100%;
+  height: 38px;
   padding: 0 10px;
-  border: none;
+  border: 1px solid var(--admin-border-light);
   border-radius: var(--admin-radius-lg);
-  background: transparent;
+  background: var(--admin-surface);
   box-shadow: none;
 }
 
@@ -882,15 +891,77 @@
   box-shadow: none;
 }
 
+.admin-toolbar .admin-select:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: -1px;
+}
+
 .admin-toolbar .admin-select:hover {
   background: var(--admin-muted);
 }
 
-.admin-toolbar button {
-  height: 100%;
+/* Scope to real buttons only. The previous bare `.admin-toolbar button`
+   selector also hit filter toggles and text links, forcing them to 100% of a
+   fixed-height container. */
+.admin-toolbar .btn {
+  height: 38px;
   padding: 0 12px;
   border-radius: var(--admin-radius-lg);
   font-size: 12px;
+}
+
+/* Toolbar left container – search + filter group */
+.admin-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.admin-toolbar__left .admin-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* Toggle group for filter buttons – matches .admin-input / .admin-select height */
+.admin-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.admin-toggle-group button {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius-lg);
+  color: var(--admin-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: var(--admin-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--admin-transition-base) ease,
+              color var(--admin-transition-base) ease,
+              border-color var(--admin-transition-base) ease;
+}
+.admin-toggle-group button.active {
+  background: var(--admin-primary);
+  color: var(--admin-white);
+  border-color: var(--admin-primary);
+}
+.admin-toggle-group button:hover:not(.active) {
+  background: var(--admin-muted);
+  color: var(--admin-text-primary);
+}
+.admin-toggle-group button:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
 }
 
 @media (max-width: 1024px) {
@@ -964,6 +1035,23 @@
 }
 
 /* Modal System */
+/* Add Student Modal specific styles */
+.admin-add-student-modal .admin-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+}
+.admin-add-student-modal .admin-modal__footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--admin-surface);
+  border-top: 1px solid var(--admin-border-light);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 
 /* Modal Tabs */
 .admin-modal__tabs {
@@ -1037,11 +1125,6 @@
   font-size: 13px;
 }
 
-.admin-error-box {
-  padding: 20px;
-  color: var(--color-danger, #C34954);
-  font-size: 13px;
-}
 .admin-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1064,6 +1147,9 @@
   display: flex;
   flex-direction: column;
   max-height: 90vh;
+  /* Children are flex items and shrink by default; without this a tall body
+     escapes the rounded corners and the viewport. */
+  overflow: hidden;
 }
 
 .admin-modal__header {
@@ -1079,6 +1165,13 @@
   font-weight: 600;
   color: var(--admin-text-primary);
   margin: 0;
+}
+
+.admin-modal__description {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--admin-text-secondary);
 }
 
 .admin-modal__close {
@@ -1116,6 +1209,128 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* Trainer Hero Card */
+.admin-trainer-hero {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius-2xl);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-trainer-hero__header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.admin-trainer-hero__icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: var(--admin-radius-lg);
+  background: rgba(47, 126, 218, 0.1);
+  color: var(--admin-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-trainer-hero__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-trainer-hero__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0 0 4px 0;
+}
+
+.admin-trainer-hero__description {
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+  margin: 0 0 12px 0;
+}
+
+.admin-trainer-hero__info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-trainer-hero__info-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-trainer-hero__info-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}
+
+.admin-trainer-hero__info-email {
+  font-size: 12px;
+  color: var(--admin-text-muted);
+}
+
+.admin-trainer-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Enrollment Header */
+.admin-enrollment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 640px) {
+  .admin-enrollment-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .admin-enrollment-header button {
+    width: 100%;
+  }
+}
+
+.admin-enrollment-header__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+/* Empty state styling */
+.admin-empty {
+  text-align: center;
+  padding: 32px 0;
+}
+.admin-empty h3 {
+  margin-top: 12px;
+  font-size: 18px;
+  color: var(--admin-text-primary);
+}
+.admin-empty p {
+  margin: 8px 0 16px;
+  color: var(--admin-text-secondary);
+}
+.admin-empty button {
+  margin-top: 8px;
 }
 
 /* Focus-visible rule */

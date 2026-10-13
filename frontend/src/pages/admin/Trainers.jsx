@@ -64,6 +64,7 @@ export default function Trainers() {
   const [availableBatches, setAvailableBatches] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [assignStep, setAssignStep] = useState('select');
+  const [assigning, setAssigning] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -297,6 +298,7 @@ export default function Trainers() {
   };
 
   const handleAssignConfirmFinal = async () => {
+    setAssigning(true);
     try {
       await updateBatch(selectedBatchId, { trainer: trainerToAssign.id });
       showToast('Trainer assigned to batch successfully');
@@ -304,6 +306,8 @@ export default function Trainers() {
       await fetchTrainers();
     } catch (err) {
       showToast(err?.response?.data?.message || 'Failed to assign trainer', 'error');
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -536,7 +540,7 @@ export default function Trainers() {
 
       {!loading && !error && (
         <section className="admin-trainers__section">
-          <Card elevation="card" className="admin-trainers__card">
+          <Card variant="elevated" className="admin-card admin-table-wrapper">
             {rows.length === 0 ? (
               <EmptyState
                 message={search || statusFilter ? 'No matching trainers' : 'No trainers found'}
@@ -721,8 +725,10 @@ export default function Trainers() {
                </p>
              </div>
              <div className="admin-modal__footer">
-               <Button variant="secondary" onClick={() => setAssignStep('select')}>Back</Button>
-               <Button variant="primary" onClick={handleAssignConfirmFinal}>Yes, Continue</Button>
+               <Button variant="secondary" onClick={() => setAssignStep('select')} disabled={assigning}>Back</Button>
+               <Button variant="primary" onClick={handleAssignConfirmFinal} disabled={assigning}>
+                 {assigning ? 'Assigning…' : 'Yes, Continue'}
+               </Button>
              </div>
            </div>
          )}

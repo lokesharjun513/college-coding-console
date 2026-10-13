@@ -98,6 +98,6 @@ const problemSchema = new mongoose.Schema({
 problemSchema.index({ createdAt: -1 });
 
 problemSchema.index({ batch: 1, status: 1 });
-problemSchema.index({ slug: 1 }, { unique: true });
+problemSchema.index({ slug: 1, batch: 1 }, { unique: true });
 
 module.exports = mongoose.model('Problem', problemSchema);

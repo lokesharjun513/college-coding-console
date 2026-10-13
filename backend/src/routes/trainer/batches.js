@@ -78,9 +78,7 @@ router.get('/:id', requireAuth, requireRole('TRAINER'), async (req, res) => {   
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    if (!batch.trainer) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) {
 
@@ -133,9 +131,7 @@ router.get('/:batchId/students', requireAuth, requireRole('TRAINER'), async (req
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    if (!batch.trainer) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) {
 
@@ -185,9 +181,7 @@ router.get('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'),
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    if (!batch.trainer) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) {
 
@@ -242,6 +236,7 @@ router.get('/:batchId/students/available', requireAuth, requireRole('TRAINER'), 
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -306,6 +301,7 @@ router.delete('/:batchId/students', requireAuth, requireRole('TRAINER'), async (
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -335,6 +331,7 @@ router.delete('/:batchId/students', requireAuth, requireRole('TRAINER'), async (
     const batch = await Batch.findById(batchId);
     if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
 
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
 
@@ -368,6 +365,7 @@ router.patch('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'
     const batch = await Batch.findById(batchId);
     if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
 
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
 
@@ -390,6 +388,7 @@ router.delete('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER
     const batch = await Batch.findById(batchId);
     if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
 
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
 
@@ -411,6 +410,7 @@ router.get('/:batchId/students/available', requireAuth, requireRole('TRAINER'), 
     const batch = await Batch.findById(batchId);
     if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
 
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
 
@@ -464,6 +464,7 @@ router.delete('/:batchId/students', requireAuth, requireRole('TRAINER'), async (
     const batch = await Batch.findById(batchId);
     if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
 
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
     const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
     if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
 

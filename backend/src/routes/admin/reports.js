@@ -52,7 +52,6 @@ router.get('/overview', requireAuth, requireRole('ADMIN'), async (req, res) => {
       acceptedSubmissions,
     };
     const response = { success: true, data };
-    console.log('[API DEBUG] reports overview response:', response);
     return res.json(response);
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') console.error('Error fetching reports:', err);

@@ -7,7 +7,58 @@ const { requireRole } = require('../../middleware/role');
 const mongoose = require('mongoose');
 const Batch = require('../../models/Batch');
 const User = require('../../models/User');
+const Student = require('../../models/Student');
 const BatchStudent = require('../../models/BatchStudent');
+
+/**
+ * Resolve a client-supplied student identifier to the linked User _id.
+ *
+ * The enrollment selector is populated from GET /api/admin/students, which
+ * returns Student documents carrying BOTH `studentId` (Student._id) and
+ * `userId` (User._id). BatchStudent.student, authentication and submissions all
+ * key off the User id, so a Student document id must be mapped through
+ * Student.userId rather than stored directly.
+ *
+ * Accepts either id, so existing clients keep working.
+ */
+async function resolveEnrollmentUserId(id) {
+  const user = await User.findById(id);
+  if (user) return user;
+  const student = await Student.findById(id).select('userId').lean();
+  return student?.userId ?? null;
+}
+
+/**
+ * Shared shape for the `student` block of every enrollment response, so the
+ * enrolled table, the single-enrollment view and the create response can never
+ * disagree. Populated from the linked User document.
+ */
+function enrolledStudentPayload(user) {
+  if (!user) return null;
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    rollNumber: user.rollNumber || null,
+    department: user.department || null,
+    section: user.section || null,
+    academicBatch: user.academicBatch || null,
+  };
+}
+
+function enrollmentPayload(enrollment) {
+  return {
+    id: enrollment._id,
+    batch: enrollment.batch,
+    student: enrolledStudentPayload(enrollment.student),
+    status: enrollment.status,
+    enrolledAt: enrollment.enrolledAt,
+    createdAt: enrollment.createdAt,
+    updatedAt: enrollment.updatedAt,
+  };
+}
 
 /**
  * ENROLL STUDENT
@@ -35,8 +86,14 @@ router.post('/students', requireAuth, requireRole('ADMIN'), async (req, res) => 
       return res.status(400).json({ success: false, message: 'Batch not active' });
     }
 
-    // Verify student exists, role STUDENT, status ACTIVE
-    const student = await User.findById(studentId);
+    // Verify student exists, role STUDENT, status ACTIVE.
+    // `studentId` may be either the User id or the Student profile id.
+    const resolvedUserId = await resolveEnrollmentUserId(studentId);
+    if (!resolvedUserId) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const student = await User.findById(resolvedUserId);
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
@@ -47,31 +104,16 @@ router.post('/students', requireAuth, requireRole('ADMIN'), async (req, res) => 
       return res.status(400).json({ success: false, message: 'Student not active' });
     }
 
-    // Create enrollment
+    // Create enrollment — always keyed by the linked User id.
     const enrollment = await BatchStudent.create({
       batch: batchId,
-      student: studentId,
+      student: resolvedUserId,
     });
 
     // Populate safe student fields
     await enrollment.populate({ path: 'student', select: '-passwordHash' });
 
-    const data = {
-      id: enrollment._id,
-      batch: enrollment.batch,
-      student: {
-        id: enrollment.student._id,
-        name: enrollment.student.name,
-        email: enrollment.student.email,
-        role: enrollment.student.role,
-        status: enrollment.student.status,
-      },
-      status: enrollment.status,
-      enrolledAt: enrollment.enrolledAt,
-      createdAt: enrollment.createdAt,
-      updatedAt: enrollment.updatedAt,
-    };
-    return res.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data: enrollmentPayload(enrollment) });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error enrolling student:', error);
     if (error.code === 11000) {
@@ -98,21 +140,7 @@ router.get('/students', requireAuth, requireRole('ADMIN'), async (req, res) => {
     const enrollments = await BatchStudent.find({ batch: batchId })
       .populate({ path: 'student', select: '-passwordHash' })
       .select('-__v');
-    const data = enrollments.map(e => ({
-      id: e._id,
-      student: {
-        id: e.student._id,
-        name: e.student.name,
-        email: e.student.email,
-        role: e.student.role,
-        status: e.student.status,
-      },
-      status: e.status,
-      enrolledAt: e.enrolledAt,
-      createdAt: e.createdAt,
-      updatedAt: e.updatedAt,
-    }));
-    return res.json({ success: true, data });
+    return res.json({ success: true, data: enrollments.map(enrollmentPayload) });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error listing batch students:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -135,21 +163,7 @@ router.get('/students/:studentId', requireAuth, requireRole('ADMIN'), async (req
     if (!enrollment) {
       return res.status(404).json({ success: false, message: 'Enrollment not found' });
     }
-    const data = {
-      id: enrollment._id,
-      student: {
-        id: enrollment.student._id,
-        name: enrollment.student.name,
-        email: enrollment.student.email,
-        role: enrollment.student.role,
-        status: enrollment.student.status,
-      },
-      status: enrollment.status,
-      enrolledAt: enrollment.enrolledAt,
-      createdAt: enrollment.createdAt,
-      updatedAt: enrollment.updatedAt,
-    };
-    return res.json({ success: true, data });
+    return res.json({ success: true, data: enrollmentPayload(enrollment) });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error getting enrollment:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -180,21 +194,7 @@ router.patch('/students/:studentId', requireAuth, requireRole('ADMIN'), async (r
     enrollment.status = status;
     await enrollment.save();
     await enrollment.populate({ path: 'student', select: '-passwordHash' });
-    const data = {
-      id: enrollment._id,
-      student: {
-        id: enrollment.student._id,
-        name: enrollment.student.name,
-        email: enrollment.student.email,
-        role: enrollment.student.role,
-        status: enrollment.student.status,
-      },
-      status: enrollment.status,
-      enrolledAt: enrollment.enrolledAt,
-      createdAt: enrollment.createdAt,
-      updatedAt: enrollment.updatedAt,
-    };
-    return res.json({ success: true, data });
+    return res.json({ success: true, data: enrollmentPayload(enrollment) });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error updating enrollment:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

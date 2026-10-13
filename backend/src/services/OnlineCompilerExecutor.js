@@ -1,5 +1,6 @@
 // backend/src/services/OnlineCompilerExecutor.js
 const logger = require('../config/logger');
+const { compilerKeyManager } = require('./CompilerKeyManager');
 
 const { mapLegacyToCompiler } = require('./compilerRegistry');
 
@@ -19,8 +20,18 @@ async function execute({ source, language, stdin, compilerId }) {
     throw new Error(`Unsupported language: ${language}`);
   }
 
+  // Reserve a request against an available compiler key
+  const key = await compilerKeyManager.reserveRequest();
+  if (!key) {
+    throw new Error('No compiler API keys available. All keys have reached their request limits.');
+  }
+
   const baseUrl = process.env.ONLINE_COMPILER_URL || 'https://api.onlinecompiler.io';
-  const apiKey = process.env.ONLINE_COMPILER_API_KEY;
+  const apiKey = await compilerKeyManager.getDecryptedKey(key.keyIndex);
+
+  if (!apiKey) {
+    throw new Error(`API key for compiler key ${key.keyIndex} not found`);
+  }
 
   const compilerUrl = `${baseUrl.replace(/\/+$/, '')}/api/run-code-sync/`;
 
@@ -39,6 +50,7 @@ async function execute({ source, language, stdin, compilerId }) {
     event: 'onlinecompiler.execution.requested',
     language,
     compiler,
+    keyIndex: key.keyIndex
   });
 
   try {
@@ -61,7 +73,14 @@ async function execute({ source, language, stdin, compilerId }) {
         event: 'onlinecompiler.execution.error',
         statusCode: response.status,
         durationMs,
+        keyIndex: key.keyIndex
       });
+
+      // Handle rate limit responses (429) by marking key as exhausted
+      if (response.status === 429) {
+        await compilerKeyManager.updateLimit(key.keyIndex, key.currentRequestCount);
+      }
+
       throw new Error(`OnlineCompiler error ${response.status}: ${text}`);
     }
 
@@ -70,6 +89,7 @@ async function execute({ source, language, stdin, compilerId }) {
       event: 'onlinecompiler.execution.completed',
       language,
       durationMs,
+      keyIndex: key.keyIndex
     });
 
     return result;
@@ -81,6 +101,7 @@ async function execute({ source, language, stdin, compilerId }) {
         event: 'onlinecompiler.execution.timeout',
         language,
         durationMs,
+        keyIndex: key.keyIndex
       });
       const error = new Error('Code execution service timed out. Please try again.');
       error.code = 'ONLINE_COMPILER_TIMEOUT';
@@ -92,6 +113,7 @@ async function execute({ source, language, stdin, compilerId }) {
       language,
       durationMs,
       message: err.message,
+      keyIndex: key.keyIndex
     });
     throw err;
   }

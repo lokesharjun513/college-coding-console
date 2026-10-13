@@ -159,19 +159,6 @@
   margin-bottom: 32px;
 }
 
-/* StatCard */
-.admin-dashboard__stat-card {
-  position: relative;
-  border-radius: 20px;
-  padding: 24px;
-  min-height: 140px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1), box-shadow 200ms cubic-bezier(0.2, 0, 0, 1), filter 200ms cubic-bezier(0.2, 0, 0, 1);
-  overflow: hidden;
-}
-
 .admin-dashboard__stat-card:nth-child(1) {
   background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   box-shadow: 0 8px 20px rgba(15, 36, 65, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.25);

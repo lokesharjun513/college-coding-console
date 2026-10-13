@@ -28,7 +28,7 @@ const problemTopicSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
-}, { timestamps: true });
+}, { timestamps: true, suppressReservedKeysWarning: true });
 
 // Prevent duplicate problem+topic relationship
 problemTopicSchema.index({ problem: 1, topic: 1 }, { unique: true });

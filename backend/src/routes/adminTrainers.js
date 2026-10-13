@@ -5,7 +5,6 @@ const { requireRole } = require('../middleware/role');
 const User = require('../models/User');
 const Batch = require('../models/Batch');
 const authService = require('../auth/authService');
-const { generatePasswordFromEmail } = authService;
 
 /**
  * DOWNLOAD TRAINER TEMPLATE
@@ -73,16 +72,9 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       });
     }
 
-    // Auto-generate password from email (everything before @)
-    let initialPassword;
-    try {
-      initialPassword = generatePasswordFromEmail(normalizedEmail);
-    } catch (err) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid email address for password generation',
-      });
-    }
+    // Credentials must not be derived from public data (the email address).
+    // A random initial password is returned once so an admin can distribute it.
+    const initialPassword = authService.generateStrongPassword();
 
     // Hash password
     const passwordHash = await authService.hashPassword(initialPassword);
@@ -106,6 +98,8 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
         email: trainer.email,
         role: trainer.role,
         status: trainer.status,
+        // Shown once at creation time only; never returned by any read route.
+        initialPassword,
       },
     });
   } catch (error) {
@@ -450,6 +444,7 @@ router.post('/bulk', requireAuth, requireRole('ADMIN'), async (req, res) => {
 
     const errors = [];
     const validTrainers = [];
+    const generatedCredentials = [];
 
     for (let i = 0; i < trainers.length; i++) {
       const t = trainers[i];
@@ -484,8 +479,12 @@ router.post('/bulk', requireAuth, requireRole('ADMIN'), async (req, res) => {
         continue;
       }
 
-      const initialPassword = generatePasswordFromEmail(normalizedEmail);
+      // Credentials must not be derived from public data (the email address).
+      const initialPassword = authService.generateStrongPassword();
       const passwordHash = await authService.hashPassword(initialPassword);
+
+      // Retained so the generated password can be handed back exactly once.
+      generatedCredentials.push({ email: normalizedEmail, initialPassword });
 
       validTrainers.push({
         name: t.name.trim(),
@@ -515,6 +514,10 @@ router.post('/bulk', requireAuth, requireRole('ADMIN'), async (req, res) => {
         failed: errors.length,
       },
       errors: errors.length > 0 ? errors : undefined,
+      // Returned once, immediately after creation, so the initial passwords can
+      // be distributed. These are never persisted in plaintext and never
+      // returned by a read route.
+      credentials: generatedCredentials,
     });
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') console.error('Error bulk importing trainers:', error);

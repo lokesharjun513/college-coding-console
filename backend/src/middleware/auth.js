@@ -39,12 +39,12 @@ async function requireAuth(req, res, next) {
   try {
     let payload;
     try {
-      payload = jwt.verify(token, getJwtSecret());
+      payload = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] });
     } catch (err) {
       // Fallback to default secret ONLY in non-production environments
       if (process.env.NODE_ENV !== 'production') {
         try {
-          payload = jwt.verify(token, 'testsecret');
+          payload = jwt.verify(token, 'testsecret', { algorithms: ['HS256'] });
         } catch (e) {
           return res.status(401).json({
             success: false,
@@ -62,8 +62,20 @@ async function requireAuth(req, res, next) {
     }
     const user = await User.findById(payload.sub);
     if (!user) {
-      // If user no longer exists (e.g., deleted in another test), fall back to token payload
-      req.user = { id: payload.sub, role: payload.role };
+      // Fail closed. Trusting the token payload here would keep a deleted or
+      // deprovisioned account authorised — and would take its role from the
+      // token rather than the database — until the token expired.
+      // The token-payload fallback is retained only for tests, where a fixture
+      // user may legitimately not exist.
+      if (process.env.NODE_ENV !== 'production') {
+        req.user = { id: payload.sub, role: payload.role };
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token',
+          code: 'AUTHENTICATION_REQUIRED',
+        });
+      }
     } else if (user.status !== 'ACTIVE') {
       return res.status(401).json({
         success: false,

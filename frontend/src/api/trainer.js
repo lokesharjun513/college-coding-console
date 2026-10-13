@@ -21,6 +21,18 @@ export const deleteProblem = (batchId, problemId) => api.delete(`/trainer/batche
 export const bulkImportProblems = (batchId, data) => api.post(`/trainer/batches/${batchId}/problems/import`, data);
 export const downloadProblemTemplate = (batchId) => api.get(`/trainer/batches/${batchId}/problems/template`, { responseType: 'blob' });
 
+// Assignments (open-ended practice — no deadlines)
+// Mounted at /api/trainer/batches/:batchId/assignments
+export const getBatchAssignments = (batchId, params) => api.get(`/trainer/batches/${batchId}/assignments`, { params });
+export const getBatchAssignment = (batchId, assignmentId) => api.get(`/trainer/batches/${batchId}/assignments/${assignmentId}`);
+// Problems this trainer may assign to this batch: PUBLISHED GLOBAL, or own PUBLISHED BATCH problems in it.
+export const getAssignableProblems = (batchId) => api.get(`/trainer/batches/${batchId}/assignments/problems`);
+// Payload accepts only problemId, title, availableFrom and status. There is deliberately no dueDate.
+export const createAssignment = (batchId, data) => api.post(`/trainer/batches/${batchId}/assignments`, data);
+export const updateAssignment = (batchId, assignmentId, data) => api.patch(`/trainer/batches/${batchId}/assignments/${assignmentId}`, data);
+// Soft delete: the assignment row is retained and the unique slot is freed.
+export const deleteAssignment = (batchId, assignmentId) => api.delete(`/trainer/batches/${batchId}/assignments/${assignmentId}`);
+
 // Test cases
 export const getTestCases = (problemId) => api.get(`/trainer/problems/${problemId}/test-cases`);
 export const createTestCase = (problemId, data) => api.post(`/trainer/problems/${problemId}/test-cases`, data);

@@ -1,0 +1,127 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN SYSTEM HEALTH PAGE — REFINED STYLING (Matching Admin Design System)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.system-health-page {
+  padding: 24px 28px 40px;
+  width: 100%;
+  min-height: calc(100vh - 120px);
+  background-color: var(--admin-white, #FFFFFF);
+  background-image: radial-gradient(circle at 72% 0%, rgba(47,126,218,0.06), transparent 42%);
+  box-sizing: border-box;
+}
+
+.system-health-page .admin-page-header {
+  margin-bottom: 28px;
+}
+
+.system-health-page .admin-section-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--admin-text-primary);
+  margin-top: 32px;
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+
+.system-health-page .status-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.system-health-page .stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.system-health-page .verdict-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.system-health-page .status-card {
+  background: var(--admin-surface, #FFFFFF);
+  border: 1px solid var(--admin-border-light, #EDEFF3);
+  border-radius: var(--admin-radius-2xl, 16px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--admin-shadow-xl, 0 5px 18px rgba(15,36,65,0.05));
+  transition: transform var(--admin-transition-base) ease, box-shadow var(--admin-transition-base) ease;
+}
+
+.system-health-page .status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 36, 65, 0.08);
+}
+
+.system-health-page .status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.system-health-page .status-label {
+  font-weight: var(--admin-font-weight-semibold, 600);
+  font-size: var(--admin-font-size-sm, 13px);
+  color: var(--admin-text-primary, #0F2441);
+}
+
+.system-health-page .status-details {
+  font-size: var(--admin-font-size-xs, 12px);
+  color: var(--admin-text-secondary, #555663);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.system-health-page .verdict-card {
+  background: var(--admin-surface, #FFFFFF);
+  border: 1px solid var(--admin-border-light, #EDEFF3);
+  border-radius: var(--admin-radius-xl, 14px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--admin-shadow-sm, 0 1px 4px rgba(15,36,65,0.05));
+}
+
+.system-health-page .verdict-label {
+  font-size: var(--admin-font-size-xs, 12px);
+  color: var(--admin-text-muted, #9FA0B5);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.system-health-page .verdict-count {
+  font-size: var(--admin-font-size-2xl, 20px);
+  font-weight: var(--admin-font-weight-semibold, 600);
+  color: var(--admin-text-primary, #0F2441);
+}
+
+/* Responsive Overrides matching Admin Users & Dashboard */
+@media (max-width: 1024px) {
+  .system-health-page {
+    padding: 16px;
+  }
+  .system-health-page .status-card-grid,
+  .system-health-page .stat-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .system-health-page .status-card-grid,
+  .system-health-page .stat-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

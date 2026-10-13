@@ -18,3 +18,10 @@ export const getStudentCollectionTopics = (collectionId, params) => api.get(`/st
 export const getStudentTopic = (topicId) => api.get(`/student/topics/${topicId}`);
 export const getStudentTopicProblems = (topicId, params) => api.get(`/student/topics/${topicId}/problems`, { params });
 export const getStudentNextPracticeProblem = (params) => api.get('/student/practice/next', { params });
+
+// Assignments (open-ended practice — no deadlines)
+// Only ACTIVE, non-deleted, already-available assignments in batches where the
+// student holds an ACTIVE enrollment are returned. `completed` comes from
+// AssignmentCompletion for this student, never from global submission history.
+export const getStudentAssignments = () => api.get('/student/assignments');
+export const getStudentAssignment = (id) => api.get(`/student/assignments/${id}`);

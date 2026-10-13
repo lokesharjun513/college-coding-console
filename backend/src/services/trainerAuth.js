@@ -1,6 +1,7 @@
 // Shared trainer->batch ownership guard.
 // Conventions follow the existing trainer routes:
-//   404 unknown batch, 403 batch assigned to another trainer.
+//   400 invalid id, 404 unknown batch, 403 batch owned by another trainer
+//   (a batch with no assigned trainer is owned by nobody and is denied).
 
 const mongoose = require('mongoose');
 const Batch = require('../models/Batch');
@@ -10,18 +11,20 @@ const Batch = require('../models/Batch');
  * Returns the batch or throws an error with .status for the route's error handler.
  */
 async function assertTrainerOwnsBatch(trainerId, batchId) {
-  if (!mongoose.Types.ObjectId.isValid(batchId)) {
+  if (!mongoose.Types.ObjectId.isValid(batchId && typeof batchId === 'string' ? batchId.trim() : batchId)) {
     const err = new Error('Invalid batch id');
     err.status = 400;
     throw err;
   }
-  const batch = await Batch.findById(batchId);
+  const batchIdToUse = batchId && typeof batchId === 'string' ? batchId.trim() : batchId;
+  const batch = await Batch.findById(batchIdToUse);
   if (!batch) {
     const err = new Error('Batch not found');
     err.status = 404;
     throw err;
   }
-  if (batch.trainer && batch.trainer.toString() !== trainerId.toString()) {
+  // A batch with no assigned trainer belongs to nobody: deny every trainer.
+  if (!batch.trainer || batch.trainer.toString() !== trainerId.toString()) {
     const err = new Error('Access denied');
     err.status = 403;
     throw err;

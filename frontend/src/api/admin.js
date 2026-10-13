@@ -50,7 +50,7 @@ export const createAdminCollection = (data) => api.post('/admin/collections', da
 export const updateAdminCollection = (id, data) => api.patch(`/admin/collections/${id}`, data);
 export const deleteAdminCollection = (id) => api.delete(`/admin/collections/${id}`);
 // Topics
-export const getAdminTopics = (collectionId, params) => api.get(`/admin/collections/${collectionId}/topics`, { params });
+export const getAdminTopics = (collectionId, params) => api.get(`/admin/topics/${collectionId}/topics`, { params });
 export const getAdminTopic = (topicId) => api.get(`/admin/topics/${topicId}`);
 export const createAdminTopic = (collectionId, data) => api.post(`/admin/collections/${collectionId}/topics`, data);
 export const updateAdminTopic = (topicId, data) => api.patch(`/admin/topics/${topicId}`, data);
@@ -73,6 +73,9 @@ export const createUser = (data) => api.post('/admin/users', data);
 export const updateUser = (id, data) => api.patch(`/admin/users/${id}`, data);
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`);
 
+// Leaderboard (admin)
+export const getAdminLeaderboard = (params) => api.get('/admin/leaderboard', { params });
+
 // Submissions (admin)
 export const getAdminSubmissions = (params) => api.get('/admin/submissions', { params });
 export const getAdminSubmission = (id) => api.get(`/admin/submissions/${id}`);
@@ -81,6 +84,14 @@ export const deleteAdminSubmission = (id) => api.delete(`/admin/submissions/${id
 // Settings (admin)
 export const getAdminSettings = () => api.get('/admin/settings');
 export const updateAdminSettings = (data) => api.patch('/admin/settings', data);
+
+// Compiler Keys Management
+export const getCompilerKeys = () => api.get('/admin/compiler-keys');
+export const updateCompilerKeyLimit = (keyIndex, limit, adminPassword) => api.patch(`/admin/compiler-keys/${keyIndex}/limit`, { limit, adminPassword });
+export const resetCompilerKey = (keyIndex, adminPassword) => api.post(`/admin/compiler-keys/${keyIndex}/reset`, { adminPassword });
+export const resetAllCompilerKeys = (confirm, adminPassword) => api.post('/admin/compiler-keys/reset-all', { confirm, adminPassword });
+export const replaceCompilerKey = (keyIndex, data) => api.patch(`/admin/compiler-keys/${keyIndex}`, data);
+export const getCompilerKeysLogs = (params) => api.get('/admin/compiler-keys/logs', { params });
 
 // Reports
 export const getAdminReportsOverview = () => api.get('/admin/reports/overview');

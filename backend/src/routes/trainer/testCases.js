@@ -10,6 +10,30 @@ const Batch = require('../../models/Batch');
 const TestCase = require('../../models/TestCase');
 
 /**
+ * Validate test case payload for required fields.
+ * Ensures input and expectedOutput are present and non-empty (for creation).
+ * Also validates optional fields types.
+ */
+function validateTestCasePayload(req, res, next) {
+  const { input, expectedOutput, isHidden, sampleExplanation, order } = req.body;
+  // Require both input and expectedOutput when creating
+  if (input !== undefined && expectedOutput !== undefined &&
+      (input === '' || expectedOutput === '')) {
+    return res.status(400).json({ success: false, message: 'Input and expectedOutput cannot be empty' });
+  }
+  if (isHidden !== undefined && typeof isHidden !== 'boolean') {
+    return res.status(400).json({ success: false, message: 'Invalid isHidden value' });
+  }
+  if (order !== undefined && typeof order !== 'number') {
+    return res.status(400).json({ success: false, message: 'Invalid order value' });
+  }
+  if (sampleExplanation !== undefined && typeof sampleExplanation !== 'string') {
+    return res.status(400).json({ success: false, message: 'Invalid sampleExplanation value' });
+  }
+  next();
+}
+
+/**
  * Middleware to verify problem ownership for the authenticated trainer.
  */
 async function verifyProblemOwnership(req, res, next) {
@@ -34,7 +58,8 @@ async function verifyProblemOwnership(req, res, next) {
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
 
-    if (batch.trainer.toString() !== req.user.id.toString()) {
+    // A batch with no assigned trainer belongs to nobody: deny every trainer
+    if (!batch.trainer || batch.trainer.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -50,7 +75,7 @@ async function verifyProblemOwnership(req, res, next) {
  * CREATE TEST CASE
  * POST /api/trainer/problems/:problemId/test-cases
  */
-router.post('/', requireAuth, requireRole('TRAINER'), verifyProblemOwnership, async (req, res) => {
+router.post('/', requireAuth, requireRole('TRAINER'), validateTestCasePayload, verifyProblemOwnership, async (req, res) => {
   try {
     const { problemId } = req.params;
     const { input, expectedOutput, isHidden, sampleExplanation, order } = req.body;
@@ -170,7 +195,7 @@ router.get('/:testCaseId', requireAuth, requireRole('TRAINER'), verifyProblemOwn
  * UPDATE TEST CASE
  * PATCH /api/trainer/problems/:problemId/test-cases/:testCaseId
  */
-router.patch('/:testCaseId', requireAuth, requireRole('TRAINER'), verifyProblemOwnership, async (req, res) => {
+router.patch('/:testCaseId', requireAuth, requireRole('TRAINER'), validateTestCasePayload, verifyProblemOwnership, async (req, res) => {
   try {
     const { problemId, testCaseId } = req.params;
 

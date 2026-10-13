@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/models/User');
+const Student = require('../src/models/Student');
 const authService = require('../src/auth/authService');
 const jwt = require('jsonwebtoken');
 
@@ -28,6 +29,7 @@ describe('Admin Student Management', () => {
 
   afterEach(async () => {
     // Clean up students
+    await Student.deleteMany({});
     await User.deleteMany({ role: 'STUDENT' });
   });
 
@@ -57,8 +59,22 @@ describe('Admin Student Management', () => {
     const student = await User.findOne({ email: 'student@example.com' }).select('+passwordHash');
     expect(student).toBeDefined();
     expect(student.passwordHash).toBeDefined();
-    // Verify password generation
-    const isMatch = await authService.verifyPassword('student', student.passwordHash);
+
+    // The initial password must NOT be derivable from public data. It used to be
+    // the email local part ('student'), which let anyone who knew the address
+    // sign in as the new student.
+    const isLegacyGuess = await authService.verifyPassword('student', student.passwordHash);
+    expect(isLegacyGuess).toBe(false);
+
+    // It is returned exactly once so an admin can distribute it, and it is the
+    // password the account actually has.
+    expect(res.body.data.initialPassword).toBeDefined();
+    expect(res.body.data.initialPassword).not.toBe('student');
+    expect(res.body.data.initialPassword.length).toBeGreaterThanOrEqual(12);
+    const isMatch = await authService.verifyPassword(
+      res.body.data.initialPassword,
+      student.passwordHash
+    );
     expect(isMatch).toBe(true);
   });
 
@@ -101,7 +117,12 @@ describe('Admin Student Management', () => {
   });
 
   test('GET list students', async () => {
-    await createTestUser({ name: 'Student 1', email: 's1@example.com', password: 'password', role: 'STUDENT' });
+    // Create via API to ensure Student and User are both created
+    const createRes = await request(app)
+      .post('/api/admin/students')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Student 1', email: 's1@example.com', rollNumber: 'S010', department: 'CSE', academicBatch: { startYear: 2023, endYear: 2027 } });
+    expect(createRes.status).toBe(201);
     const res = await request(app)
       .get('/api/admin/students')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -110,17 +131,15 @@ describe('Admin Student Management', () => {
   });
 
   test('PATCH student', async () => {
-    const student = await User.create({
-      name: 'S1',
-      email: 's1@example.com',
-      rollNumber: 'S004',
-      passwordHash: 'dummy',
-      role: 'STUDENT',
-      academicBatch: { startYear: 2023, endYear: 2027 },
-      department: 'CSE'
-    });
+    // Create via API
+    const createRes = await request(app)
+      .post('/api/admin/students')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'S1', email: 's1@example.com', rollNumber: 'S004', department: 'CSE', academicBatch: { startYear: 2023, endYear: 2027 } });
+    expect(createRes.status).toBe(201);
+    const studentId = createRes.body.data.id;
     const res = await request(app)
-      .patch(`/api/admin/students/${student._id}`)
+      .patch(`/api/admin/students/${studentId}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: 'S1 Updated', email: 's1@example.com', rollNumber: 'S004', department: 'CSE', academicBatch: { startYear: 2023, endYear: 2027 } });
     expect(res.status).toBe(200);
@@ -128,9 +147,15 @@ describe('Admin Student Management', () => {
   });
 
   test('DELETE student', async () => {
-    const student = await createTestUser({ name: 'S1', email: 's1@example.com', password: 'password', role: 'STUDENT' });
+    // Create via API
+    const createRes = await request(app)
+      .post('/api/admin/students')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'S1', email: 's1@example.com', rollNumber: 'S005', department: 'CSE', academicBatch: { startYear: 2023, endYear: 2027 } });
+    expect(createRes.status).toBe(201);
+    const studentId = createRes.body.data.id;
     const res = await request(app)
-      .delete(`/api/admin/students/${student._id}`)
+      .delete(`/api/admin/students/${studentId}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
   });

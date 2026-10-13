@@ -12,6 +12,7 @@ const ProblemTopic = require('../../models/ProblemTopic');
 const Submission = require('../../models/Submission');
 const User = require('../../models/User');
 const { getCompilerById, mapLegacyToCompiler } = require('../../services/compilerRegistry');
+const { slugify, findSlugConflict, pickScopeConflict } = require('../../services/problemSlug');
 
 /**
  * CREATE PROBLEM (ADMIN)
@@ -117,13 +118,11 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
     }
 
     // Generate slug
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^[-]+|-+$/g, '');
+    const slug = slugify(title.trim());
 
-    // Check duplicate slug
-    const existing = await Problem.findOne({ slug });
+    // Slugs are unique per uniqueness scope: per batch for BATCH problems,
+    // across all batch-less problems for GLOBAL ones (services/problemSlug.js)
+    const existing = await findSlugConflict(Problem, { slug, scope, batch: batchId });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
     }
@@ -453,13 +452,15 @@ router.patch('/:problemId', requireAuth, requireRole('ADMIN'), async (req, res) 
             throw new Error('Both collectionId and topicId must be provided together');
           }
 
-          // If title changes, regenerate slug and check duplicate
+          // If title changes, regenerate slug and check for a duplicate inside the
+          // problem's resulting uniqueness scope (services/problemSlug.js)
           if (title && title.trim() !== problem.title) {
-            const newSlug = title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/^[-]+|-+$/g, '');
-            const existing = await Problem.findOne({ slug: newSlug, _id: { $ne: problemId } }, null, { session });
+            const newSlug = slugify(title.trim());
+            const targetBatch = batch !== undefined ? batch : problem.batch;
+            const existing = await findSlugConflict(
+              Problem,
+              { slug: newSlug, scope: problem.scope, batch: targetBatch, excludeId: problem._id, session }
+            );
             if (existing) {
               throw new Error('Conflict: slug already exists');
             }
@@ -619,18 +620,22 @@ router.patch('/:problemId', requireAuth, requireRole('ADMIN'), async (req, res) 
         return res.status(400).json({ success: false, message: 'Both collectionId and topicId must be provided together' });
       }
 
-      // If title changes, regenerate slug and check duplicate
-      if (title && title.trim() !== problem.title) {
-        const newSlug = title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^[-]+|-+$/g, '');
-        const existing = await Problem.findOne({ slug: newSlug, _id: { $ne: problemId } });
-        if (existing) {
-          return res.status(409).json({ success: false, message: 'Conflict: slug already exists' });
+// If title changes, regenerate slug and check for a duplicate inside the
+        // problem's resulting uniqueness scope (services/problemSlug.js)
+        if (title && title.trim() !== problem.title) {
+          const newSlug = slugify(title.trim());
+          const targetBatch = batch !== undefined ? batch : problem.batch;
+          const existing = await findSlugConflict(Problem, {
+            slug: newSlug,
+            scope: problem.scope,
+            batch: targetBatch,
+            excludeId: problem._id,
+          });
+          if (existing) {
+            return res.status(409).json({ success: false, message: 'Conflict: slug already exists' });
+          }
+          problem.slug = newSlug;
         }
-        problem.slug = newSlug;
-      }
 
       // Apply updates
       if (title !== undefined) problem.title = title.trim();
@@ -797,9 +802,8 @@ router.post('/import/preview', requireAuth, requireRole('ADMIN'), async (req, re
     const allowedDifficulties = ['EASY', 'MEDIUM', 'HARD'];
     const validLanguages = ['c', 'cpp', 'java', 'python', 'typescript', 'php', 'ruby', 'haskell', 'go', 'rust', 'csharp', 'fsharp'];
     const errors = [];
-    const newProblems = [];
+const newProblems = [];
     const existingProblems = [];
-    function slugify(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^[-]+|-+$/g, ''); }
 
     // Preprocess entries and collect slugs
     const entries = [];
@@ -816,9 +820,14 @@ router.post('/import/preview', requireAuth, requireRole('ADMIN'), async (req, re
       slugs.push(slug);
     }
 
-    // Find existing slugs in a single query
-    const existingProblemsDB = await Problem.find({ slug: { $in: slugs } }).select('_id slug title description difficulty constraints inputFormat outputFormat examples starterCode allowedLanguages');
-    const existingProblemMap = new Map(existingProblemsDB.map(p => [p.slug, p]));
+    // Find existing slugs in a single query (across scopes, matched per row below)
+    const existingProblemsDB = await Problem.find({ slug: { $in: slugs } }).select('_id slug batch title description difficulty constraints inputFormat outputFormat examples starterCode allowedLanguages');
+    const existingProblemMap = new Map();
+    for (const p of existingProblemsDB) {
+      const list = existingProblemMap.get(p.slug) || [];
+      list.push(p);
+      existingProblemMap.set(p.slug, list);
+    }
 
     for (const { row, p } of entries) {
       // Validate required fields
@@ -845,7 +854,11 @@ router.post('/import/preview', requireAuth, requireRole('ADMIN'), async (req, re
       }
 
       const slug = slugify(p.title);
-      const existingProblem = existingProblemMap.get(slug);
+      // Reuse/compare only against a problem in the same uniqueness scope
+      const existingProblem = pickScopeConflict(existingProblemMap, slug, {
+        scope: p.scope || 'GLOBAL',
+        batch: p.batch,
+      });
 
       if (existingProblem) {
         // Build current fields for comparison
@@ -957,9 +970,8 @@ router.post('/import', requireAuth, requireRole('ADMIN'), async (req, res) => {
     const allowedStatus = ['DRAFT', 'PUBLISHED', 'ARCHIVED'];
     const validLanguages = ['c', 'cpp', 'java', 'python', 'typescript', 'php', 'ruby', 'haskell', 'go', 'rust', 'csharp', 'fsharp'];
     const errors = [];
-    const validProblems = [];
+const validProblems = [];
     const topicLinks = [];
-    function slugify(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^[-]+|-+$/g, ''); }
 
     // Preprocess entries and collect slugs for bulk duplicate check
     const entries = [];
@@ -980,9 +992,14 @@ router.post('/import', requireAuth, requireRole('ADMIN'), async (req, res) => {
       slugs.push(slug);
     }
 
-    // Find existing slugs in a single query
-    const existingProblems = await Problem.find({ slug: { $in: slugs } }).select('_id slug');
-    const existingProblemMap = new Map(existingProblems.map(p => [p.slug, p]));
+    // Find existing slugs in a single query (across scopes, matched per row below)
+    const existingProblems = await Problem.find({ slug: { $in: slugs } }).select('_id slug batch');
+    const existingProblemMap = new Map();
+    for (const p of existingProblems) {
+      const list = existingProblemMap.get(p.slug) || [];
+      list.push(p);
+      existingProblemMap.set(p.slug, list);
+    }
 
     for (const { row, p, collectionName, topicName } of entries) {
       // Validate required fields
@@ -1042,7 +1059,9 @@ router.post('/import', requireAuth, requireRole('ADMIN'), async (req, res) => {
       }
 
       const slug = slugify(p.title);
-      const existingProblem = existingProblemMap.get(slug);
+      // Reuse an existing problem only when it sits in the same uniqueness scope,
+      // so re-importing the same file stays idempotent
+      const existingProblem = pickScopeConflict(existingProblemMap, slug, { scope, batch: p.batch });
 
       if (existingProblem) {
         // Reuse existing problem - skip but track for relationship handling

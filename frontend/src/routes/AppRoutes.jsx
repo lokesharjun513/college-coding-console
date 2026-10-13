@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../components/Login';
 import AdminDashboard from '../pages/admin/Index';
@@ -7,7 +6,6 @@ import TrainerDetails from '../pages/admin/TrainerDetails';
 import Students from '../pages/admin/Students';
 import Batches from '../pages/admin/Batches';
 import AdminBatchDetails from '../pages/admin/BatchDetails';
-import AdminBatchStudentsList from '../pages/admin/BatchStudentsList';
 import Users from '../pages/admin/Users';
 import AdminProblemsList from '../pages/admin/ProblemsList';
 import AdminProblemEditor from '../pages/admin/ProblemEditor';
@@ -29,6 +27,7 @@ import TrainerBatchPerformance from '../pages/trainer/Performance/BatchPerforman
 import TrainerStudentPerformance from '../pages/trainer/Performance/StudentPerformance';
 import TrainerProblemPerformance from '../pages/trainer/Performance/ProblemPerformance';
 import TrainerTestCasesList from '../pages/trainer/TestCasesList';
+import TrainerAssignments from '../pages/trainer/Assignments';
 import TrainerEnrollmentDetails from '../pages/trainer/EnrollmentDetails';
 import TrainerProfile from '../pages/trainer/TrainerProfile';
 import Practice from '../pages/student/Practice';
@@ -47,6 +46,7 @@ import Reports from '../pages/admin/Reports';
 import SubmissionsList from '../pages/admin/SubmissionsList';
 import SubmissionDetail from '../pages/admin/SubmissionDetail';
 import AdminSettings from '../pages/admin/Settings';
+import CompilerKeys from '../pages/admin/CompilerKeys';
 import SystemHealth from '../pages/admin/SystemHealth';
 import AdminLayout from '../pages/admin/AdminLayout';
 
@@ -73,7 +73,6 @@ export default function AppRoutes() {
           <Route path="students" element={<Students />} />
           <Route path="batches" element={<Batches />} />
           <Route path="batches/:batchId" element={<AdminBatchDetails />} />
-          <Route path="batches/:batchId/students" element={<AdminBatchStudentsList />} />
           <Route path="users" element={<Users />} />
           <Route path="problems/*" element={<AdminProblemsList />} />
           <Route path="problems/create" element={<AdminProblemEditor />} />
@@ -84,6 +83,7 @@ export default function AppRoutes() {
           <Route path="submissions" element={<SubmissionsList />} />
           <Route path="submissions/:id" element={<SubmissionDetail />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="compiler-keys" element={<CompilerKeys />} />
           <Route path="system-health" element={<SystemHealth />} />
         </Route>
 
@@ -103,6 +103,8 @@ export default function AppRoutes() {
           <Route path="analytics" element={<TrainerAnalytics />} />
           <Route path="monitoring" element={<TrainerMonitoring />} />
           <Route path="batches" element={<TrainerBatchesList />} />
+          <Route path="assignments" element={<TrainerAssignments />} />
+          <Route path="batches/:batchId/assignments" element={<TrainerAssignments />} />
           <Route path="problems" element={<TrainerProblems />} />
           <Route path="students" element={<TrainerStudents />} />
           <Route path="batches/:batchId/students" element={<TrainerBatchStudentsList />} />

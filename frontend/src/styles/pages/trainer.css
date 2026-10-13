@@ -1,0 +1,630 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRAINER DESIGN SYSTEM — SHARED TOKENS & PRIMITIVES
+   Shared CSS foundation for Dashboard, Batches, Students, Problems, Training.
+   Premium Apple-inspired SaaS aesthetic with iOS polish.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Trainer Color Palette - Aligned with admin.css */
+  --trainer-surface: #FFFFFF;
+  --trainer-white: #FFFFFF;
+  --trainer-muted: #F7F9FC;
+  --trainer-border-light: #EDEFF3;
+  --trainer-border: #C6D1D7;
+  --trainer-text-muted: #9FA0B5;
+  --trainer-text-secondary: #555663;
+  --trainer-text-primary: #0F2441;
+  --trainer-primary: #2F7EDA;
+  --trainer-primary-hover: #255FA8;
+  --trainer-primary-dark: #1d5ab8;
+  --trainer-accent: #3B67B0;
+
+  /* Trainer Typography */
+  --trainer-font-size-2xs: 0.6875rem; /* 11px */
+  --trainer-font-size-xs: 0.75rem;    /* 12px */
+  --trainer-font-size-sm: 0.8125rem;  /* 13px */
+  --trainer-font-size-base: 0.875rem; /* 14px */
+  --trainer-font-size-md: 0.9375rem;  /* 15px */
+  --trainer-font-size-lg: 1rem;       /* 16px */
+  --trainer-font-size-xl: 1.125rem;   /* 18px */
+  --trainer-font-size-2xl: 1.25rem;   /* 20px */
+  --trainer-font-size-3xl: 1.5rem;    /* 24px */
+  --trainer-font-size-4xl: 1.875rem;  /* 30px */
+  --trainer-font-size-5xl: 2.25rem;   /* 36px */
+
+  --trainer-font-weight-normal: 400;
+  --trainer-font-weight-medium: 500;
+  --trainer-font-weight-semibold: 600;
+  --trainer-font-weight-bold: 700;
+
+  --trainer-line-height-tight: 1.25;
+  --trainer-line-height-normal: 1.5;
+
+  /* Status Colors */
+  --trainer-success-bg: #E8F8F0;
+  --trainer-success-text: #059669;
+  --trainer-success-dot: #10B981;
+  --trainer-danger-bg: #FFF0F4;
+  --trainer-danger-text: #D94668;
+  --trainer-danger-border: #FFD6DD;
+  --trainer-inactive-bg: #F3F4F6;
+
+  /* Avatar Colors */
+  --trainer-avatar-trainer-bg: #E7DFFF;
+  --trainer-avatar-trainer-text: #7652D8;
+  --trainer-avatar-student-bg: #FFE4CC;
+  --trainer-avatar-student-text: #F28A20;
+
+  /* Spacing & Sizing */
+  --trainer-radius-sm: 8px;
+  --trainer-radius-md: 9px;
+  --trainer-radius-lg: 10px;
+  --trainer-radius-xl: 14px;
+  --trainer-radius-2xl: 16px;
+  --trainer-radius-pill: 999px;
+
+  /* Shadows */
+  --trainer-shadow-sm: 0 1px 4px rgba(15, 36, 65, 0.05);
+  --trainer-shadow-md: 0 2px 8px rgba(15, 36, 65, 0.03);
+  --trainer-shadow-lg: 0 4px 16px rgba(15, 36, 65, 0.05);
+  --trainer-shadow-xl: 0 5px 18px rgba(15, 36, 65, 0.05);
+  --trainer-shadow-btn: 0 4px 12px rgba(47, 126, 218, 0.16);
+
+  /* Transitions */
+  --trainer-transition-fast: 120ms;
+  --trainer-transition-base: 150ms;
+  --trainer-transition-slow: 180ms;
+  --trainer-ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   UTILITIES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-page {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.trainer-page-header {
+  margin-bottom: 24px;
+}
+
+.trainer-page-title {
+  font-size: var(--trainer-font-size-4xl);
+  font-weight: var(--trainer-font-weight-bold);
+  color: var(--trainer-text-primary);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+.trainer-page-description {
+  font-size: var(--trainer-font-size-sm);
+  color: rgba(15, 36, 65, 0.6);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.trainer-eyebrow {
+  font-size: var(--trainer-font-size-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: var(--trainer-font-weight-semibold);
+  color: var(--trainer-accent);
+  margin: 0 0 6px 0;
+}
+
+.trainer-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: var(--trainer-font-size-2xs);
+  color: var(--trainer-text-secondary);
+}
+
+.trainer-breadcrumb a {
+  color: var(--trainer-primary);
+  text-decoration: none;
+  font-weight: var(--trainer-font-weight-medium);
+}
+
+.trainer-breadcrumb a:hover {
+  color: var(--trainer-primary-hover);
+}
+
+.trainer-breadcrumb-sep {
+  color: var(--trainer-text-muted);
+}
+
+.trainer-breadcrumb-current {
+  color: var(--trainer-text-primary);
+  font-weight: var(--trainer-font-weight-bold);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CARD SURFACES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-card {
+  background: var(--trainer-surface);
+  border: 1px solid var(--trainer-border-light);
+  border-radius: var(--trainer-radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--trainer-shadow-xl);
+}
+
+.trainer-card--hover {
+  transition: transform var(--trainer-transition-base) ease,
+              box-shadow var(--trainer-transition-base) ease;
+}
+
+.trainer-card--hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 36, 65, 0.08);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ICON CONTAINERS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trainer-icon-box--sm {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--trainer-radius-sm);
+}
+
+.trainer-icon-box--md {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--trainer-radius-md);
+}
+
+.trainer-icon-box--lg {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--trainer-radius-lg);
+}
+
+.trainer-icon-box--muted {
+  background: var(--trainer-border-light);
+  color: var(--trainer-text-primary);
+}
+
+.trainer-icon-box--primary {
+  background: var(--trainer-success-bg);
+  color: var(--trainer-success-text);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BADGES & PILLS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--trainer-radius-pill);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.trainer-badge--status {
+  padding: 3px 8px;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+}
+
+.trainer-badge--status::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.trainer-badge--active {
+  background: var(--trainer-success-bg);
+  color: var(--trainer-success-text);
+}
+
+.trainer-badge--active::before {
+  background: var(--trainer-success-dot);
+}
+
+.trainer-badge--inactive {
+  background: var(--trainer-inactive-bg);
+  color: var(--trainer-text-secondary);
+}
+
+.trainer-badge--inactive::before {
+  background: var(--trainer-text-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BUTTONS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--trainer-radius-md);
+  font-size: 12.5px;
+  font-weight: 580;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--trainer-transition-base) ease;
+  white-space: nowrap;
+}
+
+.trainer-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.12);
+}
+
+.trainer-btn--primary {
+  background: var(--trainer-primary);
+  color: var(--trainer-white);
+  border: 1px solid var(--trainer-primary);
+  box-shadow: var(--trainer-shadow-btn);
+}
+
+.trainer-btn--primary:hover {
+  background: var(--trainer-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(47, 126, 218, 0.25);
+}
+
+.trainer-btn--primary:active {
+  transform: translateY(0);
+}
+
+.trainer-btn--secondary {
+  background: var(--trainer-surface);
+  color: var(--trainer-text-primary);
+  border: 1px solid var(--trainer-border-light);
+  box-shadow: var(--trainer-shadow-md);
+}
+
+.trainer-btn--secondary:hover {
+  background: var(--trainer-muted);
+  border-color: var(--trainer-border);
+}
+
+.trainer-btn--ghost {
+  background: transparent;
+  color: var(--trainer-primary);
+  border: 1px solid var(--trainer-border-light);
+}
+
+.trainer-btn--ghost:hover {
+  background: var(--trainer-muted);
+}
+
+.trainer-btn--danger {
+  background: var(--trainer-danger-bg);
+  color: var(--trainer-danger-text);
+  border: 1px solid var(--trainer-danger-border);
+}
+
+.trainer-btn--sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--trainer-font-size-2xs);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FORM INPUTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--trainer-border-light);
+  border-radius: var(--trainer-radius-md);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--trainer-surface);
+  color: var(--trainer-text-primary);
+  outline: none;
+  box-shadow: var(--trainer-shadow-md);
+  transition: border-color var(--trainer-transition-base),
+              box-shadow var(--trainer-transition-base);
+}
+
+.trainer-input:focus {
+  border-color: var(--trainer-primary);
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.12);
+}
+
+.trainer-input::placeholder {
+  color: var(--trainer-text-muted);
+}
+
+.trainer-select {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--trainer-border-light);
+  border-radius: var(--trainer-radius-md);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--trainer-surface);
+  color: var(--trainer-text-primary);
+  outline: none;
+  cursor: pointer;
+  box-shadow: var(--trainer-shadow-md);
+  transition: border-color var(--trainer-transition-base),
+              background var(--trainer-transition-base);
+}
+
+.trainer-select:focus {
+  border-color: var(--trainer-primary);
+}
+
+.trainer-select:hover {
+  background: var(--trainer-muted);
+  border-color: var(--trainer-border);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TABLES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.trainer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.trainer-table thead tr {
+  background: var(--trainer-muted);
+}
+
+.trainer-table th {
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--trainer-text-secondary);
+  white-space: nowrap;
+  text-align: center;
+  border-bottom: 1px solid var(--trainer-border-light);
+  border-right: 1px solid var(--trainer-border-light);
+}
+
+.trainer-table th:last-child {
+  border-right: none;
+}
+
+.trainer-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--trainer-border-light);
+  border-right: 1px solid var(--trainer-border-light);
+  color: var(--trainer-text-primary);
+  vertical-align: middle;
+  text-align: center;
+  background: var(--trainer-surface);
+}
+
+.trainer-table td:last-child {
+  border-right: none;
+}
+
+.trainer-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.trainer-table tbody tr {
+  transition: background var(--trainer-transition-fast);
+}
+
+.trainer-table tbody tr:hover {
+  background: #F7FAFE;
+}
+
+.trainer-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.trainer-avatar--student {
+  background: var(--trainer-avatar-student-bg);
+  color: var(--trainer-avatar-student-text);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PAGE CONTAINERS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-page-container {
+  padding: 24px 28px 40px;
+  width: 100%;
+  min-height: calc(100vh - 120px);
+  background-color: var(--trainer-white);
+  box-sizing: border-box;
+  animation: trainerPageFadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes trainerPageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TOOLBAR
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SECTION HEADERS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--trainer-border-light);
+  background: var(--trainer-surface);
+  gap: 12px;
+}
+
+.trainer-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trainer-section-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--trainer-text-primary);
+  margin: 0 0 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LOADING, ERROR, EMPTY STATES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.trainer-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 32px;
+  color: var(--trainer-text-secondary);
+  background: rgba(252, 253, 253, 0.6);
+  border: 1px dashed var(--trainer-border);
+  border-radius: var(--trainer-radius-xl);
+}
+
+.trainer-empty h2 {
+  font-size: var(--trainer-font-size-lg);
+  font-weight: var(--trainer-font-weight-semibold);
+  color: var(--trainer-text-primary);
+  margin: 0;
+}
+
+.trainer-empty p {
+  font-size: var(--trainer-font-size-sm);
+  color: var(--trainer-text-secondary);
+  margin: 0;
+}
+
+.trainer-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 32px;
+  color: var(--trainer-danger-text);
+  background: var(--trainer-danger-bg);
+  border: 1px solid var(--trainer-danger-border);
+  border-radius: var(--trainer-radius-xl);
+}
+
+.trainer-error h2 {
+  font-size: var(--trainer-font-size-lg);
+  font-weight: var(--trainer-font-weight-semibold);
+  margin: 0;
+}
+
+.trainer-error p {
+  font-size: var(--trainer-font-size-sm);
+  margin: 0;
+}
+
+.trainer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: var(--trainer-text-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RESPONSIVE
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .trainer-page-container {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .trainer-page-container {
+    padding: 16px;
+  }
+
+  .trainer-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trainer-btn {
+    width: 100%;
+  }
+
+  .trainer-page-title {
+    font-size: var(--trainer-font-size-2xl);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   REDUCED MOTION
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .trainer-card--hover {
+    transition: none;
+  }
+}

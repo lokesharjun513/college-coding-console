@@ -84,12 +84,14 @@ app.use('/api/admin/topics', adminTopicsRouter);
 // Admin Test Cases routes (nested under problem)
 app.use('/api/admin/problems/:problemId/test-cases', adminTestCasesRouter);
 app.use('/api/admin/reports', adminReportsRouter);
-app.use('/api/admin/submissions', adminSubmissionsRouter);
+app.use('/api/admin/leaderboard', adminSubmissionsRouter);
 app.use('/api/admin/settings', adminSettingsRouter);
 app.use('/api/admin/system', adminSystemRouter);
 app.use('/api/admin/platform-activity', adminPlatformActivityRouter);
 app.use('/api/admin/recent-activity', adminRecentActivityRouter);
 app.use('/api/admin/students', adminStudentsRouter);
+// Admin Compiler Keys routes
+app.use('/api/admin/compiler-keys', require('./routes/admin/compilerKeys'));
 
 app.use(
   '/api/trainer/batches',
@@ -104,6 +106,12 @@ app.use(
 app.use(
   '/api/trainer/batches/:batchId/problems',
   trainerProblemRouter
+);
+
+// Trainer assignment management (open-ended practice)
+app.use(
+  '/api/trainer/batches/:batchId/assignments',
+  require('./routes/trainer/assignments')
 );
 
 // Trainer read-only Training (Collection) / Day (Topic) metadata
@@ -130,6 +138,8 @@ app.use('/api/student/performance', require('./routes/student/performance'));
 app.use('/api/student/leaderboard', require('./routes/student/leaderboard'));
 app.use('/api/student/console', studentConsoleRouter);
 app.use('/api/student/practice', studentPracticeRouter);
+// Student assignment feed (open-ended practice)
+app.use('/api/student/assignments', require('./routes/student/assignments'));
 app.use('/api/student/compilers', require('./routes/student/compiler'));
 
 // Centralized error handling middleware

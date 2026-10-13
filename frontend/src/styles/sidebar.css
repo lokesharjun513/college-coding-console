@@ -47,7 +47,7 @@
   min-width: 0;
   flex: 1;
   height: 44px;
-  padding: 0 4px;
+  padding: 0 8px; /* Increased padding */
   border: 0;
   background: transparent;
   border-radius: 10px;
@@ -56,7 +56,7 @@
 }
 
 .sidebar__brand:hover {
-  background: rgba(15, 36, 65, 0.045);
+  background: rgba(15, 36, 65, 0.06); /* Slightly more visible hover */
 }
 
 .sidebar__brand:active {
@@ -125,6 +125,25 @@
   overflow-x: visible;
   padding: 12px 12px;
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.sidebar__content:hover {
+  scrollbar-color: rgba(15, 36, 65, 0.2) transparent;
+}
+
+.sidebar__content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar__content::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.sidebar__content:hover::-webkit-scrollbar-thumb {
+  background: rgba(15, 36, 65, 0.2);
 }
 
 /* ── Composable Group / Menu ──────────────────────────── */
@@ -160,11 +179,11 @@
 
 .sidebar-menu-item {
   margin: 0;
-  padding: 0 12px;
+  padding: 0 14px; /* Increased padding */
   display: flex;
   align-items: center;
-  height: 42px;
-  gap: 12px;
+  height: 44px; /* Increased height */
+  gap: 14px; /* Increased gap */
   width: 100%;
   text-decoration: none;
   color: #0f2441;
@@ -175,7 +194,7 @@
 
 .sidebar--collapsed .sidebar-menu-item {
   width: 42px;
-  height: 42px;
+  height: 44px;
   margin-inline: auto;
   padding: 0;
   display: flex;
@@ -185,7 +204,7 @@
 
 .sidebar--collapsed .sidebar-menu-item--active {
   width: 42px;
-  height: 42px;
+  height: 44px;
   border-radius: 10px;
 }
 
@@ -217,8 +236,8 @@
 }
 
 .sidebar-menu-item--active {
-  background-color: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.15);
+  background-color: rgba(37, 99, 235, 0.06); /* Softer background */
+  border: 1px solid rgba(37, 99, 235, 0.12); /* Softer border */
   color: #2563eb;
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05);

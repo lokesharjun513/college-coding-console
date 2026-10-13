@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
+// Pre-save hook to enforce email uniqueness at application level (supplements DB index)
   name: {
     type: String,
     required: true,

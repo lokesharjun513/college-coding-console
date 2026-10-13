@@ -13,6 +13,7 @@ const Collection = require('../../models/Collection');
 const User = require('../../models/User');
 const { mapLegacyToCompiler } = require('../../services/compilerRegistry');
 const { assertTrainerOwnsBatch, assertTrainerOwnsProblem } = require('../../services/trainerAuth');
+const { slugify, findSlugConflict, findSlugConflicts } = require('../../services/problemSlug');
 
 // Route-level error wrapper: forwards thrown auth helpers to the JSON handler
 const handle = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
@@ -32,7 +33,7 @@ const createdByPayload = (user) => user ? {
 } : null;
 
 const problemPayload = (p) => ({
-  id: p._id,
+  id: p._id.toString(),
   title: p.title,
   slug: p.slug,
   description: p.description,
@@ -147,14 +148,18 @@ router.post('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) =>
     bodyCompilers = resolved.compilers;
   }
 
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  // Validate batchId is a valid ObjectId and normalize
+  if (!mongoose.Types.ObjectId.isValid(batchId)) {
+    return res.status(400).json({ success: false, message: 'Invalid batch id' });
+  }
+  const batchIdToUse = batchId && typeof batchId === 'string' ? batchId.trim() : batchId;
 
-  const existingProblem = await Problem.findOne({ slug });
+  const slug = slugify(title.trim());
+
+  // Slugs are unique per batch (see services/problemSlug.js)
+  const existingProblem = await findSlugConflict(Problem, { slug, scope: 'BATCH', batch: batchIdToUse });
   if (existingProblem) {
-    return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
+    return res.status(409).json({ success: false, message: 'Problem with this slug already exists in this batch' });
   }
 
   if (practiceDate) {
@@ -164,25 +169,34 @@ router.post('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) =>
     }
   }
 
-  const problem = await Problem.create({
-    title: title.trim(),
-    slug,
-    description: description.trim(),
-    difficulty,
-    constraints: constraints ? constraints.trim() : undefined,
-    inputFormat: inputFormat ? inputFormat.trim() : undefined,
-    outputFormat: outputFormat ? outputFormat.trim() : undefined,
-    examples: Array.isArray(examples) ? examples : [],
-    starterCode: starterCode && typeof starterCode === 'object' ? starterCode : {},
-    allowedLanguages: Array.isArray(allowedLanguages) ? allowedLanguages : [],
-    compilers: bodyCompilers || {},
-    // BATCH scope: visible only to students of this batch
-    scope: 'BATCH',
-    batch: batchId,
-    createdBy: req.user.id,
-    status: status || 'DRAFT',
-    practiceDate: practiceDate ? new Date(practiceDate) : null,
-  });
+  let problem;
+  try {
+    problem = await Problem.create({
+      title: title.trim(),
+      slug,
+      description: description.trim(),
+      difficulty,
+      constraints: constraints ? constraints.trim() : undefined,
+      inputFormat: inputFormat ? inputFormat.trim() : undefined,
+      outputFormat: outputFormat ? outputFormat.trim() : undefined,
+      examples: Array.isArray(examples) ? examples : [],
+      starterCode: starterCode && typeof starterCode === 'object' ? starterCode : {},
+      allowedLanguages: Array.isArray(allowedLanguages) ? allowedLanguages : [],
+      compilers: bodyCompilers || {},
+      // BATCH scope: visible only to students of this batch
+      scope: 'BATCH',
+      batch: new mongoose.Types.ObjectId(batchId),
+      createdBy: req.user.id,
+      status: status || 'DRAFT',
+      practiceDate: practiceDate ? new Date(practiceDate) : null,
+    });
+  } catch (err) {
+    console.error('Error creating problem:', err);
+    if (err && err.code === 11000) {
+      return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
+    }
+    throw err;
+  }
 
   if (collectionId && topicId) {
     await ProblemTopic.create({
@@ -198,7 +212,8 @@ router.post('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) =>
     { path: 'batch', select: '-__v' }
   ]);
 
-  return res.status(201).json({ success: true, data: problemPayload(problem) });
+  const payload = problemPayload(problem);
+  return res.status(201).json({ success: true, data: payload });
 }));
 
 /**
@@ -209,7 +224,7 @@ router.get('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) => 
   const { batchId } = req.params;
   await assertTrainerOwnsBatch(req.user.id, batchId);
 
-  const problems = await Problem.find({ batch: batchId })
+  const problems = await Problem.find({ batch: new mongoose.Types.ObjectId(batchId) })
     .populate({ path: 'createdBy', select: '-passwordHash' })
     .populate({ path: 'batch', select: '-__v' })
     .select('-__v');
@@ -217,6 +232,46 @@ router.get('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) => 
   const payloads = await withAssociations(problems.map(problemPayload), problems);
 
   return res.json({ success: true, data: payloads });
+}));
+
+/**
+ * DOWNLOAD PROBLEM TEMPLATE (batch-scoped import format)
+ * GET /api/trainer/batches/:batchId/problems/template
+ * Registered before "/:problemId" so the literal path is not read as an id.
+ */
+router.get('/template', requireAuth, requireRole('TRAINER'), handle(async (req, res) => {
+  await assertTrainerOwnsBatch(req.user.id, req.params.batchId);
+
+  const template = JSON.stringify([
+    {
+      topicId: '<optional topic (Day) id>',
+      problem: {
+        title: 'Two Sum',
+        description: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.',
+        difficulty: 'EASY',
+        constraints: '-10^9 <= nums[i] <= 10^9',
+        inputFormat: 'An array of integers and a target integer.',
+        outputFormat: 'Two integers representing the indices.',
+        examples: [{ input: 'nums = [2,7,11,15], target = 9', output: '[0,1]', explanation: 'nums[0] + nums[1] = 2 + 7 = 9' }],
+        starterCode: {
+          c: 'int* twoSum(int* nums, int numsSize, int target, int* returnSize) {}',
+          cpp: 'vector<int> twoSum(vector<int>& nums, int target) {}',
+          java: 'int[] twoSum(int[] nums, int target) {}',
+          python: 'def two_sum(nums, target):'
+        },
+        allowedLanguages: ['c', 'cpp', 'java', 'python'],
+        status: 'PUBLISHED',
+        testCases: [
+          { input: '2 7 11 15\n9', expectedOutput: '0 1', isHidden: false, order: 0 },
+          { input: '3 2 4\n6', expectedOutput: '1 2', isHidden: true, order: 1 }
+        ]
+      }
+    }
+  ], null, 2);
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', 'attachment; filename=trainer_problem_template.json');
+  res.send(template);
 }));
 
 /**
@@ -313,13 +368,15 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), handle(async (r
   }
 
   if (title && title.trim() !== problem.title) {
-    const newSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    const existing = await Problem.findOne({ slug: newSlug, _id: { $ne: problem._id } });
+    const newSlug = slugify(title.trim());
+    const existing = await findSlugConflict(Problem, {
+      slug: newSlug,
+      scope: 'BATCH',
+      batch: problem.batch._id,
+      excludeId: problem._id,
+    });
     if (existing) {
-      return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
+      return res.status(409).json({ success: false, message: 'Problem with this slug already exists in this batch' });
     }
     problem.slug = newSlug;
   }
@@ -345,7 +402,14 @@ router.patch('/:problemId', requireAuth, requireRole('TRAINER'), handle(async (r
   // Never allow the client to unscope the problem
   problem.scope = 'BATCH';
 
-  await problem.save();
+  try {
+    await problem.save();
+  } catch (err) {
+    if (err && err.code === 11000) {
+      return res.status(409).json({ success: false, message: 'Problem with this slug already exists' });
+    }
+    throw err;
+  }
 
   await problem.populate([
     { path: 'createdBy', select: '-passwordHash' },
@@ -378,7 +442,6 @@ router.post('/import', requireAuth, requireRole('TRAINER'), handle(async (req, r
   const errors = [];
   const validProblems = [];
   const topicLinks = [];
-  const slugify = (t) => (t || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
   const entries = [];
   const slugs = [];
@@ -395,7 +458,9 @@ router.post('/import', requireAuth, requireRole('TRAINER'), handle(async (req, r
     slugs.push(slugify(p.title));
   }
 
-  const existingProblems = await Problem.find({ slug: { $in: slugs } }).select('slug');
+  // Import is batch-scoped: a slug that already exists in THIS batch is a
+  // duplicate, while the same title in another batch is not (services/problemSlug.js)
+  const existingProblems = await findSlugConflicts(Problem, { slugs, scope: 'BATCH', batch: batchId, select: 'slug' });
   const existingSlugSet = new Set(existingProblems.map(p => p.slug));
 
   for (const { row, p, collectionId, topicId } of entries) {
@@ -545,45 +610,6 @@ router.post('/import', requireAuth, requireRole('TRAINER'), handle(async (req, r
     },
     errors: errors.length > 0 ? errors : undefined,
   });
-}));
-
-/**
- * DOWNLOAD PROBLEM TEMPLATE (batch-scoped import format)
- * GET /api/trainer/batches/:batchId/problems/template
- */
-router.get('/template', requireAuth, requireRole('TRAINER'), handle(async (req, res) => {
-  await assertTrainerOwnsBatch(req.user.id, req.params.batchId);
-
-  const template = JSON.stringify([
-    {
-      topicId: '<optional topic (Day) id>',
-      problem: {
-        title: 'Two Sum',
-        description: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.',
-        difficulty: 'EASY',
-        constraints: '-10^9 <= nums[i] <= 10^9',
-        inputFormat: 'An array of integers and a target integer.',
-        outputFormat: 'Two integers representing the indices.',
-        examples: [{ input: 'nums = [2,7,11,15], target = 9', output: '[0,1]', explanation: 'nums[0] + nums[1] = 2 + 7 = 9' }],
-        starterCode: {
-          c: 'int* twoSum(int* nums, int numsSize, int target, int* returnSize) {}',
-          cpp: 'vector<int> twoSum(vector<int>& nums, int target) {}',
-          java: 'int[] twoSum(int[] nums, int target) {}',
-          python: 'def twoSum(nums, target):'
-        },
-        allowedLanguages: ['c', 'cpp', 'java', 'python'],
-        status: 'PUBLISHED',
-        testCases: [
-          { input: '2 7 11 15\n9', expectedOutput: '0 1', isHidden: false, order: 0 },
-          { input: '3 2 4\n6', expectedOutput: '1 2', isHidden: true, order: 1 }
-        ]
-      }
-    }
-  ], null, 2);
-
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Content-Disposition', 'attachment; filename=trainer_problem_template.json');
-  res.send(template);
 }));
 
 /**

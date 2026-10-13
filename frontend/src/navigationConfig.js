@@ -18,8 +18,9 @@ export const navigationConfig = {
         { label: 'Trainers', path: '/admin/trainers', icon: 'userCheck' },
         { label: 'Students', path: '/admin/students', icon: 'user' },
         { label: 'Batches', path: '/admin/batches', icon: 'layers' },
-        { label: 'Problems', path: '/admin/problems', icon: 'fileCode' },
-        { label: 'Submissions', path: '/admin/submissions', icon: 'fileCode' },
+         { label: 'Problems', path: '/admin/problems', icon: 'fileCode' },
+         { label: 'Global Leaderboard', path: '/admin/submissions', icon: 'trophy' },
+         { label: 'Compiler Keys', path: '/admin/compiler-keys', icon: 'key' },
       ],
     },
     {
@@ -41,6 +42,7 @@ export const navigationConfig = {
       label: 'Management',
       items: [
         { label: 'Batches', path: '/trainer/batches', icon: 'layers' },
+    { label: 'Assignments', path: '/trainer/assignments', icon: 'checkSquare' },
         { label: 'Students', path: '/trainer/students', icon: 'users' },
         { label: 'Problems', path: '/trainer/problems', icon: 'fileCode' },
       ],

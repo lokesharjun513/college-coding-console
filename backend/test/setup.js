@@ -1,56 +1,44 @@
-// Suppress dotenv injected env debug messages
-const originalConsoleError = console.error;
-console.error = (...args) => {
-  if (typeof args[0] === 'string' && args[0].includes('injected env')) {
-    return;
-  }
-  originalConsoleError.apply(console, args);
-};
+// Load test environment variables first (before any other imports)
+require('dotenv').config({ path: '.env.test', quiet: true });
 
-const path = require('path');
-const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
-require('dotenv').config({ path: path.join(__dirname, '..', envFile), silent: true, debug: false });
+// Set test environment variables (override if needed)
+process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'testencryptionkey01234567890123';
+process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-jwt-secret';
+process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-jwt-refresh-secret';
+process.env.NODE_ENV = 'test';
 
-const mongoose = require('mongoose');
-const { connectDB, disconnectDB } = require('../src/config/db');
+// Suppress SMTP verification errors in test environment
+process.env.SMTP_HOST = process.env.SMTP_HOST || 'localhost';
+process.env.SMTP_PORT = process.env.SMTP_PORT || '587';
+process.env.SMTP_USER = process.env.SMTP_USER || 'test';
+process.env.SMTP_PASS = process.env.SMTP_PASS || 'test';
+process.env.SMTP_FROM = process.env.SMTP_FROM || 'test@example.com';
 
-async function cleanCollections() {
-  const collections = mongoose.connection.collections;
-  for (const key of Object.keys(collections)) {
-    try {
-      await collections[key].deleteMany({});
-    } catch (error) {
-      console.error(`[TEST SETUP] Failed cleaning ${key}:`, error.message);
-    }
-  }
-}
-
-// Single connection managed per Jest worker
-let connectionPromise = null;
-
+// Connect to MongoDB before any tests run
+const { connectDB } = require('../src/config/db');
 beforeAll(async () => {
-  // Use worker-specific database to avoid collisions during parallel runs
-  if (process.env.JEST_WORKER_ID) {
-    const dbName = `CodingConsoleTest_${process.env.JEST_WORKER_ID}`;
-    process.env.MONGO_URI = process.env.MONGO_URI.replace(/\/CodingConsoleTest$/, `/${dbName}`);
-  }
-
-  if (!connectionPromise) {
-    connectionPromise = connectDB();
-  }
-  try {
-    await connectionPromise;
-  } catch (error) {
-    // Reset so a re-run in this worker can retry; fail the hook cleanly.
-    connectionPromise = null;
-    throw new Error(`[TEST SETUP] MongoDB connection failed: ${error.message}`);
-  }
-  // Cleanup only after a confirmed connection, fully awaited.
-  await cleanCollections();
+  await connectDB();
 });
 
+// Disconnect from MongoDB after all tests complete
+const { disconnectDB } = require('../src/config/db');
 afterAll(async () => {
   await disconnectDB();
 });
 
+let originalConsoleError;
 
+// Suppress console.error during tests
+beforeAll(async () => {
+  originalConsoleError = console.error;
+  console.error = function (...args) {
+    // Suppress error logs in test environment
+    return;
+  };
+});
+
+afterAll(async () => {
+  if (originalConsoleError) {
+    console.error = originalConsoleError;
+  }
+});

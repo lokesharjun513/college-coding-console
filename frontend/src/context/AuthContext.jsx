@@ -23,8 +23,12 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     const jwt = res.data?.token;
+    const refreshToken = res.data?.refreshToken;
     if (jwt) {
       localStorage.setItem('token', jwt);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
       setToken(jwt);
       // fetch user after login
       const meRes = await api.get('/auth/me');
@@ -34,6 +38,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     setToken(null);
     setUser(null);
   };

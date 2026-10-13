@@ -1,0 +1,422 @@
+/* =============================================================
+   ENROLLMENT SECTION — header, segmented filter, chips
+   Scoped to the batch page; the Admin Students table styles are a
+   separate stylesheet and are not imported here on purpose.
+   ============================================================= */
+
+.admin-enroll-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.admin-enroll-header__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-enroll-header__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--admin-radius-md, 10px);
+  background: var(--admin-avatar-admin-bg, #DCEBFF);
+  color: var(--admin-primary);
+}
+
+.admin-enroll-header__text {
+  min-width: 0;
+}
+
+.admin-enroll-header__title {
+  margin: 0;
+  font-size: var(--admin-font-size-xl, 18px);
+  font-weight: var(--admin-font-weight-semibold, 600);
+  color: var(--admin-text-primary);
+  line-height: 1.3;
+}
+
+.admin-enroll-header__subtitle {
+  margin: 3px 0 0;
+  font-size: var(--admin-font-size-sm, 13px);
+  color: var(--admin-text-secondary);
+  line-height: 1.4;
+}
+
+.admin-enroll-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.admin-enroll-header__actions .btn {
+  height: 38px;
+}
+
+/* ── Enrolled count pill ── */
+
+.admin-enroll-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: var(--admin-radius-lg, 12px);
+  border: 1px solid var(--admin-border-light);
+  background: var(--admin-surface);
+}
+
+.admin-enroll-count__icon {
+  display: grid;
+  place-items: center;
+  color: var(--admin-text-secondary);
+}
+
+.admin-enroll-count__body {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1;
+}
+
+.admin-enroll-count__label {
+  font-size: var(--admin-font-size-xs, 11px);
+  color: var(--admin-text-secondary);
+}
+
+.admin-enroll-count__value {
+  font-size: var(--admin-font-size-sm, 13px);
+  font-weight: var(--admin-font-weight-semibold, 600);
+  color: var(--admin-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Filters toggle ── */
+
+.admin-enroll-filter-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  font-size: var(--admin-font-size-sm, 13px);
+  font-weight: var(--admin-font-weight-medium, 500);
+  color: var(--admin-text-primary);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius-lg, 12px);
+  cursor: pointer;
+  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-filter-btn:hover {
+  background: var(--admin-muted);
+}
+
+.admin-enroll-filter-btn.is-active {
+  border-color: var(--admin-primary);
+  color: var(--admin-primary);
+}
+
+.admin-enroll-filter-btn:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+.admin-enroll-filter-btn__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--admin-primary);
+}
+
+/* ── Status segmented control ── */
+
+.admin-enroll-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--admin-muted);
+  border-radius: var(--admin-radius-lg, 12px);
+}
+
+.admin-enroll-segment__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: var(--admin-font-size-xs, 11px);
+  font-weight: var(--admin-font-weight-medium, 500);
+  color: var(--admin-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--admin-radius-sm, 8px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-segment__btn:hover {
+  color: var(--admin-text-primary);
+}
+
+.admin-enroll-segment__btn.is-selected {
+  background: var(--admin-surface);
+  color: var(--admin-text-primary);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+.admin-enroll-segment__btn:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 1px;
+}
+
+.admin-enroll-segment__count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}
+
+/* ── Active filter chips ── */
+
+.admin-enroll-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.admin-enroll-chips__label {
+  font-size: var(--admin-font-size-xs, 11px);
+  color: var(--admin-text-secondary);
+}
+
+.admin-enroll-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px 0 10px;
+  font-size: var(--admin-font-size-xs, 11px);
+  color: var(--admin-text-primary);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: 999px;
+  cursor: pointer;
+  max-width: 260px;
+}
+
+.admin-enroll-chip:hover {
+  background: var(--admin-muted);
+}
+
+.admin-enroll-chip:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+.admin-enroll-chip__x {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--admin-text-secondary);
+}
+
+.admin-enroll-chips__clear {
+  font-size: var(--admin-font-size-xs, 11px);
+  color: var(--admin-primary);
+  background: none;
+  border: none;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.admin-enroll-chips__clear:hover {
+  text-decoration: underline;
+}
+
+/* =============================================================
+   ENROLLMENT TABLE CELLS
+   ============================================================= */
+
+.admin-enroll-student {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--space-3, 12px);
+  /* The cell inherits `text-align` from the table; without this reset the
+     name drifts away from the avatar inside the flexible info column. */
+  text-align: left;
+}
+
+.admin-enroll-student__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-enroll-student__name {
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-primary, var(--admin-text-primary));
+  font-size: var(--font-size-base, 14px);
+}
+
+/* The status badge *is* the control, so it must not inherit the disabled
+   look of a plain badge and must expose a visible focus ring. */
+.admin-enroll-status {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-status:hover {
+  box-shadow: 0 0 0 3px var(--admin-border-light);
+}
+
+.admin-enroll-status:active {
+  transform: scale(0.97);
+}
+
+.admin-enroll-status:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+/* =============================================================
+   PAGINATION
+   ============================================================= */
+
+.admin-batch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--admin-border-light);
+  font-size: var(--admin-font-size-sm, 13px);
+  color: var(--admin-text-secondary);
+}
+
+.admin-batch-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-page-btn {
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--admin-font-size-sm, 13px);
+  font-weight: var(--admin-font-weight-medium, 500);
+  color: var(--admin-text-primary);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius-sm, 8px);
+  cursor: pointer;
+  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-page-btn:hover:not(:disabled) {
+  background: var(--admin-muted);
+}
+
+.admin-page-btn:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+.admin-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =============================================================
+   CONFIRMATION MODAL BODIES
+   ============================================================= */
+
+.admin-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--admin-radius-md, 10px);
+  border: 1px solid var(--admin-border-light);
+  background: var(--admin-muted);
+}
+
+.admin-confirm--danger {
+  border-color: var(--admin-danger-border, rgba(217, 70, 104, 0.28));
+  background: var(--admin-danger-bg, rgba(217, 70, 104, 0.06));
+}
+
+.admin-confirm--success {
+  border-color: var(--admin-border-light);
+  background: var(--admin-success-bg, rgba(16, 145, 105, 0.06));
+}
+
+.admin-confirm__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--admin-danger-text, #D94668);
+}
+
+.admin-confirm--success .admin-confirm__icon {
+  color: var(--admin-success-text, #109169);
+}
+
+.admin-confirm__message {
+  margin: 0;
+  font-size: var(--admin-font-size-sm, 13px);
+  line-height: 1.5;
+  color: var(--admin-text-primary);
+}
+
+.admin-confirm__note {
+  margin: 6px 0 0;
+  font-size: var(--admin-font-size-xs, 11px);
+  line-height: 1.5;
+  color: var(--admin-text-secondary);
+}
+
+/* =============================================================
+   RESPONSIVE
+   ============================================================= */
+
+@media (max-width: 768px) {
+  .admin-enroll-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-enroll-header__actions {
+    width: 100%;
+  }
+
+  .admin-enroll-segment {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .admin-batch-pagination {
+    justify-content: center;
+    text-align: center;
+  }
+}

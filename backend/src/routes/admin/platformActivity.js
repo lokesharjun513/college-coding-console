@@ -208,7 +208,6 @@ router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       }
     };
 
-    console.log('[API DEBUG] platformActivity response:', response);
     res.json(response);
   } catch (err) {
     console.error('Error fetching platform activity:', err);

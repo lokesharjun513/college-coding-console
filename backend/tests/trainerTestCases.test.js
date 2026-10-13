@@ -40,8 +40,10 @@ async function createAdminAndTrainer() {
   const adminEmail = generateUniqueEmail('admin@testmail.com');
   const trainerEmail = generateUniqueEmail('trainer@testmail.com');
   const password = 'StrongP@ssw0rd';
+  // Create admin user
   await createTestUser({ name: 'Admin', email: adminEmail, password, role: 'ADMIN' });
   const adminToken = await loginAndGetToken(adminEmail, password);
+  // Create trainer user
   const trainer = await createTestUser({ name: 'Trainer', email: trainerEmail, password, role: 'TRAINER' });
   return { adminToken, trainer, password };
 }

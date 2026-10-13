@@ -3,15 +3,51 @@ const router = express.Router();
 const requireAuth = require('../../middleware/auth');
 const { requireRole } = require('../../middleware/role');
 const mongoose = require('mongoose');
+const { getGlobalLeaderboard } = require('../../services/leaderboard');
 const Submission = require('../../models/Submission');
 const User = require('../../models/User');
 const Problem = require('../../models/Problem');
 
 /**
+ * GET /api/admin/leaderboard
+ * Get global student leaderboard for admin.
+ */
+router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
+  try {
+    // Validate pagination parameters
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 500);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    const search = String(req.query.search || '').trim();
+    
+    const data = await getGlobalLeaderboard({
+      limit,
+      offset,
+      search,
+    });
+    
+    return res.json({
+      success: true,
+      data,
+      meta: {
+        limit,
+        offset,
+        totalCount: data.totalCount,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching admin leaderboard:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Unable to load leaderboard.' 
+    });
+  }
+});
+
+/**
  * GET /api/admin/submissions
  * List submissions with optional filters and pagination.
  */
-router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
+router.get('/submissions', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const {
       page = 1,

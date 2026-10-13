@@ -32,8 +32,11 @@ export default function Icon({ name, size = 20, color = 'currentColor', ariaLabe
     code: 'Code',
     bell: 'Bell',
     notebook: 'Notebook',
-    // Add more mappings as needed.
-  };
+     checkSquare: 'SquareCheck',
+     // Add more mappings as needed.
+     key: 'Key',
+     trophy: 'Trophy',
+   };
 
   const componentName = iconMap[name] || name;
   const IconComponent = LucideIcons[componentName];

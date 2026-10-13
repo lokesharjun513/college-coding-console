@@ -205,7 +205,13 @@
 .admin-students__student {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  flex-wrap: nowrap;
+  gap: var(--space-3, 12px);
+  /* The table cell is `text-align: center`, and text-align is inherited by
+     descendants. Without this reset the name centres inside the wide
+     `flex: 1` info column and drifts away from the avatar. Mirrors
+     `.admin-trainers__user-cell` in the Admin Trainers table. */
+  text-align: left;
   min-width: 200px;
 }
 
@@ -429,4 +435,54 @@
 .admin-students__status-toggle:focus-visible {
   outline: 2px solid var(--interactive);
   outline-offset: 2px;
+}
+
+/* Academic batch + current year cells */
+.admin-students__batch,
+.admin-students__year {
+  display: inline-block;
+  font-size: var(--font-size-sm, 13px);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.admin-students__year {
+  color: var(--text-secondary);
+}
+
+/* Status cell: the badge itself is the toggle button.
+   It reuses the shared .admin-badge / .admin-badge--active / --inactive rules
+   from admin.css (same tokens and colours as the Admin Trainers table); only
+   the button-element resets live here. */
+.admin-students__status-toggle {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  transition: filter var(--duration-fast) var(--motion-ease);
+}
+
+.admin-students__status-toggle:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.admin-students__status-toggle:focus-visible {
+  outline: 2px solid var(--interactive, #2F7EDA);
+  outline-offset: 2px;
+}
+
+.admin-students__status-toggle:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ----------------------------------------
+   Student identity – narrow screens
+   ---------------------------------------- */
+@media (max-width: 767px) {
+  .admin-students__student {
+    /* Keep the avatar/name rhythm tight and let the column shrink instead of
+       forcing a fixed width on a narrow viewport. */
+    gap: var(--space-2, 8px);
+    min-width: 0;
+  }
 }

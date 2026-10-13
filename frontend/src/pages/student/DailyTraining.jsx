@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStudentTraining, getStudentTopicProblems, getStudentNextPracticeProblem } from '../../api/student';
+import AssignmentFeed from './AssignmentFeed';
 import './Practice.css';
 import './DailyTraining.css';
 
@@ -181,6 +182,9 @@ export default function DailyTraining() {
           </button>
         </div>
       )}
+
+      {/* Open-ended practice assignments — pending vs completed, server-authoritative. */}
+      <AssignmentFeed />
 
       {trainings.length === 0 && (
         <div className="practice-empty-state">

@@ -281,7 +281,7 @@ export default function TrainerStudents() {
       ) : isMobile ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           {filtered.map((row) => (
-            <Card key={row.id} variant="interactive">
+            <Card key={row.enrollmentId || row.id} variant="interactive">
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <Avatar name={row.student?.name} size={40} />
                 <div style={{ flex: 1 }}>

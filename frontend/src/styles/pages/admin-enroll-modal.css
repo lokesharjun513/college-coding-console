@@ -1,0 +1,736 @@
+/* =============================================================
+   ENROLL STUDENTS MODAL
+   Scoped to .admin-enroll-*. Tokens come from admin.css / tokens.css so the
+   dialog matches the rest of the Admin surface without redefining them.
+   ============================================================= */
+
+.admin-enroll-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px) saturate(140%);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
+  animation: admin-enroll-fade 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(96%, 1180px);
+  /* Never taller than the viewport: the footer must stay reachable. */
+  max-height: calc(100vh - 48px);
+  background: var(--admin-surface, #FFFFFF);
+  border: 1px solid var(--admin-border-light, #E6EAF0);
+  border-radius: 24px;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 12px 28px rgba(16, 24, 40, 0.10),
+    0 40px 80px rgba(16, 24, 40, 0.16);
+  overflow: hidden;
+  animation: admin-enroll-rise 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes admin-enroll-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes admin-enroll-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Header ── */
+
+.admin-enroll-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--admin-border-light, #E6EAF0);
+}
+
+.admin-enroll-modal__heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.admin-enroll-modal__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: var(--admin-avatar-admin-bg, #DCEBFF);
+  color: var(--admin-primary, #2F7EDA);
+}
+
+.admin-enroll-modal__title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--admin-navy, #0F172A);
+}
+
+.admin-enroll-modal__subtitle {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--admin-text-secondary, #64748B);
+}
+
+.admin-enroll-modal__close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  color: var(--admin-text-secondary, #64748B);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-modal__close:hover {
+  background: var(--admin-muted, #F1F5F9);
+  color: var(--admin-text-primary, #0F172A);
+}
+
+.admin-enroll-modal__close:focus-visible {
+  outline: 2px solid var(--admin-primary, #2F7EDA);
+  outline-offset: 2px;
+}
+
+/* ── Search + filter panel ── */
+
+.admin-enroll-modal__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 24px 0;
+}
+
+.admin-enroll-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.admin-enroll-search__icon {
+  position: absolute;
+  left: 13px;
+  display: grid;
+  place-items: center;
+  color: var(--admin-text-tertiary, #94A3B8);
+  pointer-events: none;
+}
+
+.admin-enroll-search__input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px 0 38px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--admin-text-primary, #0F172A);
+  background: #FFFFFF;
+  border: 1px solid var(--admin-border-light, #E6EAF0);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-search__input::placeholder {
+  color: var(--admin-text-tertiary, #94A3B8);
+}
+
+.admin-enroll-search__input:hover {
+  border-color: var(--admin-border, #D6DEE8);
+}
+
+.admin-enroll-search__input:focus {
+  border-color: var(--admin-primary, #2F7EDA);
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.16);
+}
+
+.admin-enroll-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-enroll-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-enroll-filters__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--admin-text-secondary, #64748B);
+}
+
+.admin-enroll-filters__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.admin-enroll-filters__select {
+  width: 100%;
+  height: 38px;
+  padding: 0 32px 0 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--admin-text-primary, #0F172A);
+  background: #FFFFFF;
+  border: 1px solid var(--admin-border-light, #E6EAF0);
+  border-radius: 10px;
+  outline: none;
+  /* The native arrow is replaced by .admin-enroll-filters__chevron. */
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-filters__select.is-active {
+  border-color: var(--admin-primary, #2F7EDA);
+  color: var(--admin-primary, #2F7EDA);
+  font-weight: 500;
+}
+
+.admin-enroll-filters__select:focus-visible {
+  border-color: var(--admin-primary, #2F7EDA);
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.16);
+}
+
+.admin-enroll-filters__chevron {
+  position: absolute;
+  right: 11px;
+  color: var(--admin-text-tertiary, #94A3B8);
+  pointer-events: none;
+}
+
+/* ── Segments + eligible count ── */
+
+.admin-enroll-modal__segments-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 24px 14px;
+}
+
+.admin-enroll-modal__segments {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.admin-enroll-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 13px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--admin-navy, #0F172A);
+  background: #FFFFFF;
+  border: 1px solid var(--admin-border-light, #E6EAF0);
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-enroll-segment:hover {
+  border-color: var(--admin-border, #D6DEE8);
+  background: var(--admin-muted, #F1F5F9);
+}
+
+.admin-enroll-segment:focus-visible {
+  outline: 2px solid var(--admin-primary, #2F7EDA);
+  outline-offset: 2px;
+}
+
+.admin-enroll-segment.is-selected {
+  color: var(--admin-primary, #2F7EDA);
+  background: var(--admin-avatar-admin-bg, #DCEBFF);
+  border-color: rgba(47, 126, 218, 0.42);
+  font-weight: 600;
+}
+
+.admin-enroll-segment__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--admin-text-secondary, #64748B);
+  background: var(--admin-muted, #F1F5F9);
+  border-radius: 999px;
+}
+
+.admin-enroll-segment.is-selected .admin-enroll-segment__count {
+  color: var(--admin-primary, #2F7EDA);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-enroll-modal__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.admin-enroll-modal__count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--admin-text-secondary, #64748B);
+}
+
+.admin-enroll-modal__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--admin-primary, #2F7EDA);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.admin-enroll-modal__clear:hover {
+  text-decoration: underline;
+}
+
+.admin-enroll-modal__clear:focus-visible {
+  outline: 2px solid var(--admin-primary, #2F7EDA);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Inline alert (submission failure) ── */
+
+.admin-enroll-alert {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 24px 12px;
+  padding: 10px 13px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.admin-enroll-alert--danger {
+  color: var(--admin-danger-text, #D94668);
+  background: var(--admin-danger-bg, rgba(217, 70, 104, 0.06));
+  border: 1px solid var(--admin-danger-border, rgba(217, 70, 104, 0.28));
+}
+
+/* ── Scrollable body ── */
+
+.admin-enroll-modal__body {
+  flex: 1;
+  min-height: 0;
+  margin: 0 24px 18px;
+  border: 1px solid var(--admin-border-light, #E6EAF0);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.admin-enroll-table-wrap {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.admin-enroll-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.admin-enroll-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--admin-text-secondary, #64748B);
+  background: #F5F8FC;
+  border-bottom: 1px solid var(--admin-border-light, #E6EAF0);
+  white-space: nowrap;
+}
+
+.admin-enroll-table thead th.is-check,
+.admin-enroll-table tbody td.is-check {
+  width: 44px;
+  padding-left: 16px;
+  padding-right: 8px;
+}
+
+.admin-enroll-table thead th.is-index,
+.admin-enroll-table tbody td.is-index {
+  width: 44px;
+  color: var(--admin-text-tertiary, #94A3B8);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-enroll-table tbody td {
+  padding: 11px 14px;
+  color: var(--admin-text-primary, #0F172A);
+  background: #FFFFFF;
+  border-bottom: 1px solid #F1F4F8;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Subtle zebra keeps a dense table scannable without extra borders. */
+.admin-enroll-table tbody tr:nth-child(even) td {
+  background: #FCFDFE;
+}
+
+.admin-enroll-table tbody tr:hover td {
+  background: #F7FAFD;
+}
+
+.admin-enroll-table tbody tr.is-selected td {
+  background: rgba(47, 126, 218, 0.07);
+}
+
+.admin-enroll-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Student identity ── */
+
+.admin-enroll-identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  /* The cell inherits text-align from the table; reset so the name stays
+     glued to the avatar instead of drifting inside the flexible box. */
+  text-align: left;
+}
+
+.admin-enroll-identity .admin-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.admin-enroll-identity__name {
+  font-weight: 600;
+  color: var(--admin-navy, #0F172A);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Long values are truncated rather than allowed to push columns out of
+   alignment; the full value stays available via the cell's title. */
+.admin-enroll-cell-code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  color: var(--admin-text-secondary, #64748B);
+}
+
+.admin-enroll-cell-email {
+  display: inline-block;
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  color: var(--admin-text-secondary, #64748B);
+}
+
+.admin-enroll-cell-batch,
+.admin-enroll-cell-year {
+  color: var(--admin-text-secondary, #64748B);
+}
+
+/* ── Empty / loading / error states ── */
+
+.admin-enroll-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 260px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.admin-enroll-state__icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 4px;
+  color: var(--admin-primary, #2F7EDA);
+  background: var(--admin-avatar-admin-bg, #DCEBFF);
+  border-radius: 18px;
+}
+
+.admin-enroll-state__icon--danger {
+  color: var(--admin-danger-text, #D94668);
+  background: var(--admin-danger-bg, rgba(217, 70, 104, 0.08));
+}
+
+.admin-enroll-state__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--admin-navy, #0F172A);
+}
+
+.admin-enroll-state__text {
+  margin: 0 0 8px;
+  max-width: 42ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--admin-text-secondary, #64748B);
+}
+
+.admin-enroll-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-enroll-skeleton__row {
+  display: grid;
+  grid-template-columns: 44px 1.6fr 1fr 1.4fr 0.9fr;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #F1F4F8;
+}
+
+.admin-enroll-skeleton__cell {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    #EEF2F7 25%,
+    #F6F8FB 37%,
+    #EEF2F7 63%
+  );
+  background-size: 400% 100%;
+  animation: admin-enroll-shimmer 1.4s ease-in-out infinite;
+}
+
+.admin-enroll-skeleton__cell--check {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+}
+
+@keyframes admin-enroll-shimmer {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-enroll-overlay,
+  .admin-enroll-modal,
+  .admin-enroll-skeleton__cell {
+    animation: none;
+  }
+}
+
+/* ── Sticky footer ── */
+
+.admin-enroll-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  border-top: 1px solid var(--admin-border-light, #E6EAF0);
+  background: #FCFDFE;
+}
+
+.admin-enroll-modal__selection {
+  font-size: 13px;
+  color: var(--admin-text-secondary, #64748B);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-enroll-modal__selection strong {
+  color: var(--admin-navy, #0F172A);
+  font-weight: 650;
+}
+
+.admin-enroll-modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-enroll-modal__actions .btn {
+  height: 40px;
+  border-radius: 11px;
+}
+
+.admin-enroll-modal__actions .btn-primary {
+  box-shadow: 0 1px 2px rgba(47, 126, 218, 0.24), 0 6px 16px rgba(47, 126, 218, 0.20);
+}
+
+.admin-enroll-modal__actions .btn-primary:hover:not(:disabled) {
+  box-shadow: 0 2px 4px rgba(47, 126, 218, 0.28), 0 10px 22px rgba(47, 126, 218, 0.24);
+}
+
+.admin-enroll-modal__actions .btn-primary:focus-visible {
+  outline: 2px solid var(--admin-primary, #2F7EDA);
+  outline-offset: 2px;
+}
+
+.admin-enroll-modal__actions .btn-secondary {
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+.admin-enroll-modal__actions .btn-secondary:focus-visible {
+  outline: 2px solid var(--admin-primary, #2F7EDA);
+  outline-offset: 2px;
+}
+
+/* =============================================================
+   RESPONSIVE
+   ============================================================= */
+
+@media (max-width: 900px) {
+  .admin-enroll-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-enroll-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .admin-enroll-modal {
+    width: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+  }
+
+  .admin-enroll-modal__header {
+    padding: 16px 16px 14px;
+    gap: 12px;
+  }
+
+  .admin-enroll-modal__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .admin-enroll-modal__title {
+    font-size: 17px;
+  }
+
+  .admin-enroll-modal__controls {
+    padding: 14px 16px 0;
+  }
+
+  .admin-enroll-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .admin-enroll-modal__segments-row {
+    padding: 14px 16px 12px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Horizontal scroll beats wrapping into an unusable block of chips. */
+  .admin-enroll-modal__segments {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .admin-enroll-modal__segments::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-enroll-alert {
+    margin: 0 16px 12px;
+  }
+
+  .admin-enroll-modal__body {
+    margin: 0 16px 14px;
+  }
+
+  .admin-enroll-modal__footer {
+    padding: 12px 16px;
+    /* Keep both controls reachable without pinching them. */
+    gap: 10px;
+  }
+
+  .admin-enroll-modal__actions {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .admin-enroll-modal__actions .btn {
+    flex: 1;
+    max-width: 200px;
+  }
+}

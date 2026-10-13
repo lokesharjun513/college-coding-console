@@ -10,6 +10,8 @@ describe('User Model', () => {
   beforeEach(async () => {
     // Ensure a clean collection before each test to avoid leftover data
     await User.deleteMany({});
+    // Ensure indexes are created (especially unique index on email) after dropping database
+    await User.syncIndexes();
   });
 
 

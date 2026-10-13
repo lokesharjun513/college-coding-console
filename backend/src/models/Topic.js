@@ -36,7 +36,7 @@ const topicSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-}, { timestamps: true });
+}, { timestamps: true, suppressReservedKeysWarning: true });
 
 // Ensure unique topic name/slug within a collection
 topicSchema.index({ collection: 1, slug: 1 }, { unique: true });

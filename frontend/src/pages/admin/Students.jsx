@@ -10,6 +10,7 @@ import Spinner from '../../components/ui/Spinner';
 import Avatar from '../../components/ui/Avatar';
 import Card from '../../components/ui/Card';
 import { getStudents, createStudent, updateStudent, deleteStudent, downloadStudentTemplate } from '../../api/admin';
+import { academicBatchLabel, currentYearLabel, readYears } from '../../utils/academicBatch';
 import PageHeader from '../../components/ui/PageHeader';
 import BulkUploadModal from './BulkUploadModal';
 import '../../styles/pages/admin.css';
@@ -19,6 +20,14 @@ import '../../styles/pages/admin-students.css';
 /**
  * Admin Students page - Manage students across the institution.
  */
+
+// Mirrors the Trainers table initials helper.
+const getInitials = (name) => {
+  if (!name) return '';
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
 export default function Students() {
   // Data state
   const [students, setStudents] = useState([]);
@@ -33,6 +42,8 @@ export default function Students() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [academicYearFilter, setAcademicYearFilter] = useState('all');
+  const [sectionFilter, setSectionFilter] = useState('all');
 
   // Modal state
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -44,10 +55,11 @@ export default function Students() {
   // Selected student for edit/delete
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Status toggle confirmation (follows Trainers page pattern)
+  // Status control state. `statusPendingId` tracks the single row allowed to be
+  // in flight, which prevents duplicate requests.
   const [statusConfirmStudent, setStatusConfirmStudent] = useState(null);
   const [statusTarget, setStatusTarget] = useState(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusPendingId, setStatusPendingId] = useState(null);
 
   // Form state
   const [addForm, setAddForm] = useState({ name: '', email: '', rollNumber: '', startYear: '', endYear: '', department: '', section: '' });
@@ -61,7 +73,9 @@ export default function Students() {
     setError(null);
     try {
       const res = await getStudents();
-      const formatted = (res.data?.data || []).map(s => ({ ...s, id: s._id }));
+      // `_id` stays the Student document id (edit/delete resolve it), while
+      // `userId` is the linked User id used by enrollment and auth.
+      const formatted = (res.data?.data || []).map(s => ({ ...s, id: s._id || s.id }));
       setStudents(formatted);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load students');
@@ -76,6 +90,16 @@ export default function Students() {
   // Unique departments for filter dropdown
   const departments = React.useMemo(() => {
     const uniq = [...new Set(students.map(s => s.department).filter(Boolean))];
+    return uniq.sort();
+  }, [students]);
+
+  const academicYears = React.useMemo(() => {
+    const uniq = [...new Set(students.map(s => academicBatchLabel(s)).filter(Boolean))];
+    return uniq.sort();
+  }, [students]);
+
+  const sections = React.useMemo(() => {
+    const uniq = [...new Set(students.map(s => s.section).filter(Boolean))];
     return uniq.sort();
   }, [students]);
 
@@ -97,15 +121,21 @@ export default function Students() {
     if (departmentFilter !== 'all') {
       result = result.filter(s => s.department === departmentFilter);
     }
+    if (academicYearFilter !== 'all') {
+      result = result.filter(s => academicBatchLabel(s) === academicYearFilter);
+    }
+    if (sectionFilter !== 'all') {
+      result = result.filter(s => s.section === sectionFilter);
+    }
     return result;
-  }, [students, searchQuery, statusFilter, departmentFilter]);
+  }, [students, searchQuery, statusFilter, departmentFilter, academicYearFilter, sectionFilter]);
 
   // Pagination
   const paginatedStudents = filteredStudents.slice((meta.page - 1) * meta.limit, meta.page * meta.limit);
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / meta.limit));
 
   // Reset page when filters change
-  useEffect(() => { setMeta(prev => ({ ...prev, page: 1 })); }, [searchQuery, statusFilter, departmentFilter]);
+  useEffect(() => { setMeta(prev => ({ ...prev, page: 1 })); }, [searchQuery, statusFilter, departmentFilter, academicYearFilter, sectionFilter]);
 
   // KPI metrics
   const kpis = React.useMemo(() => {
@@ -119,12 +149,13 @@ export default function Students() {
   // Open edit modal
   const openEditModal = (student) => {
     setSelectedStudent(student);
+    const { startYear, endYear } = readYears(student);
     setEditForm({
       name: student.name || '',
       email: student.email || '',
       rollNumber: student.rollNumber || '',
-      startYear: student.academicBatch?.startYear || '',
-      endYear: student.academicBatch?.endYear || '',
+      startYear: startYear ?? '',
+      endYear: endYear ?? '',
       department: student.department || '',
       section: student.section || '',
     });
@@ -223,26 +254,42 @@ export default function Students() {
     }
   };
 
-  const toggleStatus = (student) => {
+  // Deactivation is destructive (requireAuth rejects inactive users), so it asks
+  // for confirmation. Reactivation is reversible, so it applies immediately.
+  const requestDeactivate = (student) => {
     setStatusConfirmStudent(student);
-    setStatusTarget(student.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+    setStatusTarget('INACTIVE');
   };
 
-  const confirmToggleStatus = async () => {
-    if (!statusConfirmStudent) return;
-    setUpdatingStatus(true);
+  const applyStatus = async (student, nextStatus) => {
+    if (statusPendingId) return; // a request is already in flight
+    setStatusPendingId(student.id);
     try {
-      await updateStudent(statusConfirmStudent.id, { ...statusConfirmStudent, status: statusTarget });
-      setToast({ message: `Student status updated to ${statusTarget.toLowerCase()}`, type: 'success' });
-      setStatusConfirmStudent(null);
-      setStatusTarget(null);
-      await fetchStudents();
+      const res = await updateStudent(student.id, { status: nextStatus });
+      // Keep the UI in step with the server response instead of guessing.
+      const updated = res?.data?.data;
+      if (updated?.status) {
+        setStudents(prev => prev.map(s => (s.id === student.id
+          ? { ...s, status: updated.status, academicBatch: updated.academicBatch ?? s.academicBatch, currentAcademicYear: updated.currentAcademicYear ?? s.currentAcademicYear }
+          : s)));
+      }
+      setToast({ message: `${student.name} is now ${nextStatus === 'ACTIVE' ? 'active' : 'inactive'}`, type: 'success' });
     } catch (err) {
       setToast({ message: err?.response?.data?.message || 'Failed to update status', type: 'error' });
     } finally {
-      setUpdatingStatus(false);
+      setStatusPendingId(null);
     }
   };
+
+  const confirmDeactivate = async () => {
+    if (!statusConfirmStudent) return;
+    const target = statusConfirmStudent;
+    setStatusConfirmStudent(null);
+    setStatusTarget(null);
+    await applyStatus(target, 'INACTIVE');
+  };
+
+  const activateStudent = (student) => applyStatus(student, 'ACTIVE');
 
 
   const [downloading, setDownloading] = useState(false);
@@ -267,7 +314,13 @@ export default function Students() {
     }
   };
 
-  const clearFilters = () => { setSearchQuery(''); setStatusFilter('all'); setDepartmentFilter('all'); };
+  const clearFilters = () => {
+  setSearchQuery('');
+  setStatusFilter('all');
+  setDepartmentFilter('all');
+  setAcademicYearFilter('all');
+  setSectionFilter('all');
+};
   const filtersActive = searchQuery || statusFilter !== 'all' || departmentFilter !== 'all';
 
   // Table columns
@@ -276,6 +329,7 @@ export default function Students() {
     { key: 'rollNumber', header: 'Roll Number' },
     { key: 'email', header: 'Email' },
     { key: 'academicBatch', header: 'Academic Batch' },
+    { key: 'currentYear', header: 'Current Year' },
     { key: 'department', header: 'Department' },
     { key: 'section', header: 'Section' },
     { key: 'status', header: 'Status' },
@@ -283,31 +337,47 @@ export default function Students() {
   ];
 
   // Table rows
-  const rows = paginatedStudents.map((student) => ({
+  const rows = paginatedStudents.map((student) => {
+    const isActive = student.status === 'ACTIVE';
+    const isStatusPending = statusPendingId === student.id;
+
+    return {
     student: (
       <div className="admin-students__student">
-        <Avatar name={student.name} size={36} />
+        <div className="admin-avatar admin-avatar--student" aria-hidden="true">
+          {getInitials(student.name)}
+        </div>
         <div className="admin-students__student-info">
           <span className="admin-students__student-name">{student.name}</span>
-          <span className="admin-students__student-id">{student.id?.slice(-6)}</span>
         </div>
       </div>
     ),
     rollNumber: student.rollNumber || '—',
     email: student.email,
-    academicBatch: student.academicBatch?.startYear && student.academicBatch?.endYear ? `${student.academicBatch.startYear} – ${student.academicBatch.endYear}` : '—',
+    academicBatch: (
+      <span className="admin-students__batch">{academicBatchLabel(student)}</span>
+    ),
+    currentYear: (
+      <span className="admin-students__year">{currentYearLabel(student)}</span>
+    ),
     department: student.department || '—',
     section: student.section || '—',
     status: (
+      // The badge is the control: clicking Active asks to deactivate, clicking
+      // Inactive activates straight away. Same classes, tokens and colours as
+      // the Admin Trainers status badge.
       <button
         type="button"
-        className="admin-students__status-toggle"
-        onClick={() => toggleStatus(student)}
-        title="Click to toggle status"
+        className={`admin-badge admin-badge--status admin-students__status-toggle ${isActive ? 'admin-badge--active' : 'admin-badge--inactive'}`}
+        onClick={() => (isActive ? requestDeactivate(student) : activateStudent(student))}
+        disabled={isStatusPending}
+        aria-busy={isStatusPending || undefined}
+        aria-label={isStatusPending
+          ? `Updating status for ${student.name}`
+          : `${isActive ? 'Deactivate' : 'Activate'} ${student.name}`}
+        title={`${isActive ? 'Deactivate' : 'Activate'} ${student.name}`}
       >
-        <span className={`admin-badge admin-badge--status ${student.status === 'ACTIVE' ? 'admin-badge--active' : 'admin-badge--inactive'}`}>
-          {student.status}
-        </span>
+        {isStatusPending ? 'Working…' : (isActive ? 'Active' : 'Inactive')}
       </button>
     ),
     actions: (
@@ -318,7 +388,8 @@ export default function Students() {
         ]}
       />
     ),
-  }));
+  };
+  });
 
   return (
     <div className="admin-students">
@@ -413,6 +484,28 @@ export default function Students() {
             <option value="all">All Departments</option>
             {departments.map(d => (
               <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+          <select
+            className="admin-students__filter"
+            value={academicYearFilter}
+            onChange={e => setAcademicYearFilter(e.target.value)}
+            aria-label="Filter by academic year"
+          >
+            <option value="all">All Years</option>
+            {academicYears.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <select
+            className="admin-students__filter"
+            value={sectionFilter}
+            onChange={e => setSectionFilter(e.target.value)}
+            aria-label="Filter by section"
+          >
+            <option value="all">All Sections</option>
+            {sections.map(s => (
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
@@ -607,26 +700,25 @@ export default function Students() {
         )}
       </Modal>
 
-      {/* Status Toggle Confirmation Modal */}
-      <Modal isOpen={!!statusConfirmStudent} onClose={() => statusConfirmStudent ? setStatusConfirmStudent(null) : null} title={statusTarget === 'INACTIVE' ? 'Deactivate Student?' : 'Activate Student?'}>
+      {/* Deactivation Confirmation Modal */}
+      <Modal isOpen={!!statusConfirmStudent} onClose={() => setStatusConfirmStudent(null)} title={statusTarget === 'INACTIVE' ? 'Deactivate Student?' : 'Activate Student?'}>
         {statusConfirmStudent && (
           <div>
             <p style={{ marginBottom: 'var(--space-4)', color: 'var(--text-primary)' }}>
               Are you sure you want to make <strong>{statusConfirmStudent.name}</strong>{' '}
-              {statusTarget === 'INACTIVE' ? 'inactive' : 'active'}?
+              {statusTarget === 'INACTIVE' ? 'inactive' : 'active'}? Inactive students cannot sign in.
             </p>
             <div className="admin-students__modal-actions">
               <Button
                 variant="secondary"
                 onClick={() => setStatusConfirmStudent(null)}
-                disabled={updatingStatus}
               >
                 Cancel
               </Button>
               <Button
                 variant={statusTarget === 'INACTIVE' ? 'danger' : 'primary'}
-                onClick={confirmToggleStatus}
-                loading={updatingStatus}
+                onClick={confirmDeactivate}
+                disabled={statusPendingId === statusConfirmStudent.id}
               >
                 {statusTarget === 'INACTIVE' ? 'Yes, Deactivate' : 'Yes, Activate'}
               </Button>

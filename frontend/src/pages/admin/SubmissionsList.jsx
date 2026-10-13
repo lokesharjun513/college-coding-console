@@ -1,199 +1,168 @@
-/* eslint-disable-next-line no-unused-vars */
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getAdminSubmissions, deleteAdminSubmission } from '../../api/admin';
-import '../../styles/pages/admin-trainers.css';
-import PageHeader from '../../components/ui/PageHeader';
-import DataTable from '../../components/ui/DataTable';
+import { getAdminLeaderboard } from '../../api/admin';
+import '../../styles/pages/admin.css';
+import '../../styles/pages/admin-users.css';
 import Button from '../../components/ui/Button';
 import Toast from '../../components/ui/Toast';
-import Spinner from '../../components/ui/Spinner';
 import EmptyState from '../../components/ui/EmptyState';
+import './Leaderboard.css';
 
-export default function SubmissionsList() {
-  const [submissions, setSubmissions] = useState([]);
+export default function LeaderboardPage() {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
-  const [meta, setMeta] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [search, setSearch] = useState('');
+  const [offset, setOffset] = useState(0);
+  const [limit] = useState(50);
 
-  const [language, setLanguage] = useState('');
-  const [verdict, setVerdict] = useState('');
-
-  const fetchData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = {
-        page: meta.page,
-        limit: meta.limit,
-      };
-      if (language) params.language = language;
-      if (verdict) params.verdict = verdict;
-
-      const res = await getAdminSubmissions(params);
-      setSubmissions(res.data?.data || []);
-      setMeta(res.data?.meta || { page: 1, limit: 20, total: 0, totalPages: 0 });
+      const res = await getAdminLeaderboard({ offset, limit, search });
+      setData(res.data?.data || null);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to load submissions');
-      setToast({ message: err?.response?.data?.message || 'Failed to load submissions', type: 'error' });
+      setError(err?.response?.data?.message || 'Failed to load leaderboard');
+      setToast({ message: err?.response?.data?.message || 'Failed to load leaderboard', type: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [meta.page, meta.limit, language, verdict]);
+  }, [offset, limit, search]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    loadData();
+  }, [loadData]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this submission? This action cannot be undone.')) return;
-    try {
-      await deleteAdminSubmission(id);
-      setToast({ message: 'Submission deleted', type: 'success' });
-      await fetchData();
-    } catch (err) {
-      setToast({ message: err?.response?.data?.message || 'Delete failed', type: 'error' });
-    }
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setOffset(0);
   };
 
-  const columns = [
-    { key: 'studentName', header: 'Student' },
-    { key: 'problemTitle', header: 'Problem' },
-    { key: 'language', header: 'Language' },
-    { key: 'verdict', header: 'Verdict' },
-    { key: 'runtime', header: 'Runtime (s)' },
-    { key: 'memory', header: 'Memory (KB)' },
-    { key: 'createdAt', header: 'Submitted' },
-    { key: 'actions', header: 'Actions' },
-  ];
-
-  const rows = submissions.map((s) => ({
-    id: s.id,
-    studentName: s.student ? s.student.name : '',
-    problemTitle: s.problem ? s.problem.title : '',
-    language: s.language,
-    verdict: s.verdict,
-    runtime: s.runtime != null ? s.runtime.toFixed(3) : '',
-    memory: s.memory != null ? s.memory : '',
-    createdAt: new Date(s.createdAt).toLocaleString(),
-    actions: (
-      <>
-        <Link to={`/admin/submissions/${s.id}`}>
-          <Button variant="secondary" size="sm" ariaLabel="View">View</Button>
-        </Link>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => handleDelete(s.id)}
-          ariaLabel="Delete"
-          style={{ marginLeft: 'var(--space-2)' }}
-        >
-          Delete
-        </Button>
-      </>
-    ),
-  }));
+  const leaderboard = data?.leaderboard || [];
+  const metrics = data?.metrics || { assignedProblems: 0, eligibleStudents: 0 };
+  const totalCount = data?.totalCount || 0;
 
   return (
-    <>
-      <PageHeader
-        title="Submissions"
-        description="View and manage all platform submissions."
-      />
-      {/* Filters */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="admin-trainers__select"
-        >
-          <option value="">All Languages</option>
-          <option value="c">C</option>
-          <option value="cpp">C++</option>
-          <option value="java">Java</option>
-          <option value="python">Python</option>
-          <option value="javascript">JavaScript</option>
-        </select>
-        <select
-          value={verdict}
-          onChange={(e) => setVerdict(e.target.value)}
-          className="admin-trainers__select"
-        >
-          <option value="">All Verdicts</option>
-          <option value="ACCEPTED">Accepted</option>
-          <option value="WRONG_ANSWER">Wrong Answer</option>
-          <option value="COMPILATION_ERROR">Compilation Error</option>
-          <option value="RUNTIME_ERROR">Runtime Error</option>
-          <option value="TIME_LIMIT_EXCEEDED">Time Limit Exceeded</option>
-          <option value="MEMORY_LIMIT_EXCEEDED">Memory Limit Exceeded</option>
-          <option value="EXECUTION_ERROR">Execution Error</option>
-        </select>
-        {(language || verdict) && (
-          <Button variant="secondary" size="sm" onClick={() => { setLanguage(''); setVerdict(''); }}>
-            Clear Filters
-          </Button>
-        )}
+    <div className="admin-page leaderboard-page">
+      {/* Page Header */}
+      <div className="admin-page-header">
+        <nav className="admin-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/admin" className="admin-breadcrumb__item">Home</Link>
+          <span className="admin-breadcrumb__separator">/</span>
+          <span className="admin-breadcrumb__current" aria-current="page">Global Leaderboard</span>
+        </nav>
+        <div className="admin-page-header-content">
+          <div className="admin-page-header-text">
+            <h1 className="admin-page-title">Global Leaderboard</h1>
+            <p className="admin-page-description">Ranking students across the entire platform by problem-solving progress.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary KPI cards */}
+      <div className="admin-dashboard__kpi-grid">
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Total Students</span>
+          </div>
+          <div className="admin-dashboard__stat-value">{metrics.eligibleStudents}</div>
+          <div className="admin-dashboard__stat-meta">Active students ranked</div>
+        </div>
+        <div className="admin-dashboard__stat-card">
+          <div className="admin-dashboard__stat-header">
+            <span className="admin-dashboard__stat-label">Assigned Problems</span>
+          </div>
+          <div className="admin-dashboard__stat-value">{metrics.assignedProblems}</div>
+          <div className="admin-dashboard__stat-meta">Published global problems</div>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="admin-toolbar">
+        <div className="admin-search-wrapper">
+          <span className="admin-search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search by student name..."
+            value={search}
+            onChange={handleSearchChange}
+            className="admin-input admin-input--with-icon"
+          />
+        </div>
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {loading && <Spinner />}
+      {loading && (
+        <div className="admin-card">
+          <div className="admin-table-skeleton" />
+        </div>
+      )}
 
-      {error && <div style={{ color: 'var(--color-danger)' }}>{error}</div>}
+      {error && !loading && (
+        <div className="admin-error-box">
+          <span>{error}</span>
+          <Button variant="secondary" size="sm" onClick={loadData}>Retry</Button>
+        </div>
+      )}
 
       {!loading && !error && (
-        <>
-          {submissions.length === 0 ? (
-            <EmptyState
-              message="No submissions"
-            />
-          ) : (
-            <div>
-              <DataTable
-                columns={columns}
-                data={rows}
-                loading={false}
-                error={null}
-                emptyMessage="No submissions available."
+        <div className="admin-card">
+          {leaderboard.length === 0 ? (
+            <div className="admin-card-empty">
+              <EmptyState
+                message={search ? 'No students found matching your search' : 'No leaderboard data available yet'}
               />
+            </div>
+          ) : (
+            <div className="admin-table-wrapper">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Student</th>
+                    <th>Problems Solved</th>
+                    <th>Assigned</th>
+                    <th>Completion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((row) => (
+                    <tr key={row.studentId}>
+                      <td>{row.rank}</td>
+                      <td>{row.name}</td>
+                      <td>{row.solved}</td>
+                      <td>{row.assigned}</td>
+                      <td>
+                        <div className="progress-bar-container">
+                          <span className="progress-text">{row.completionPercentage}%</span>
+                          <div className="progress-track">
+                            <div className="progress-fill" style={{ width: `${row.completionPercentage}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
               {/* Pagination */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: 'var(--space-4)',
-                  flexWrap: 'wrap',
-                  gap: 'var(--space-2)',
-                }}
-              >
-                <div>
-                  Page {meta.page} of {meta.totalPages || 1}
+              <div className="admin-pagination">
+                <div className="admin-pagination-info">
+                  Showing {Math.min(offset + 1, totalCount)} - {Math.min(offset + limit, totalCount)} of {totalCount}
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={meta.page === 1}
-                    onClick={() => setMeta((m) => ({ ...m, page: m.page - 1 }))}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={meta.page >= meta.totalPages}
-                    onClick={() => setMeta((m) => ({ ...m, page: m.page + 1 }))}
-                  >
-                    Next
-                  </Button>
+                <div className="admin-pagination-controls">
+                  <Button variant="secondary" size="sm" disabled={offset === 0} onClick={() => setOffset(o => o - limit)}>Previous</Button>
+                  <Button variant="secondary" size="sm" disabled={offset + limit >= totalCount} onClick={() => setOffset(o => o + limit)}>Next</Button>
                 </div>
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
-    </>
+    </div>
   );
 }
+

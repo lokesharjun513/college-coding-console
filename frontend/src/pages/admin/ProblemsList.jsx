@@ -74,6 +74,7 @@ export default function ProblemsList() {
   const [problemStatus, setProblemStatus] = useState('DRAFT');
   const [problemCollectionId, setProblemCollectionId] = useState('');
   const [problemTopicId, setProblemTopicId] = useState('');
+  const [problemSubmitting, setProblemSubmitting] = useState(false);
 
   // Archive / Delete confirmation state (collection management)
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
@@ -749,7 +750,7 @@ export default function ProblemsList() {
               </EmptyState>
             ) : collections.filter(c => c.name?.toLowerCase().includes(collectionSearch.trim().toLowerCase())).length === 0 ? (
               <div style={{ padding: '32px', textAlign: 'center', color: 'var(--admin-text-muted)', fontSize: '13px' }}>
-                No collections match "{collectionSearch}"
+                No collections match {`'`}{collectionSearch}{`'`}
               </div>
             ) : (
               collections

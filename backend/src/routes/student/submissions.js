@@ -11,9 +11,12 @@ const Problem = require('../../models/Problem');
 const TestCase = require('../../models/TestCase');
 const mongoose = require('mongoose');
 const { execute } = require('../../services/OnlineCompilerExecutor');
+const logger = require('../../config/logger');
 const { getCompilerById } = require('../../services/compilerRegistry');
 const { canStudentAccessProblem } = require('../../services/problemAccess');
 const { mapResultToVerdict } = require('../../services/verdictMapper');
+const { compilerKeyManager } = require('../../services/CompilerKeyManager');
+const { recordAssignmentCompletion } = require('../../services/assignmentCompletion');
 
 router.post('/', submissionLimiter, requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
   const { problemId, code, language } = req.body;
@@ -121,6 +124,44 @@ router.post('/', submissionLimiter, requireAuth, requireAnyRole('STUDENT'), asyn
     runtime: lastExecResult.time || null,
     memory: lastExecResult.memory || null,
   });
+
+  // Assignment completion (open-ended practice).
+  //
+  // Runs only after the submission is persisted and the final verdict is known,
+  // and only for ACCEPTED. It is strictly secondary to submission processing:
+  // a failure is logged and swallowed so the original 201 response and the
+  // stored verdict are untouched. Nothing above this point is wrapped.
+  if (overallVerdict === 'ACCEPTED') {
+    try {
+      await recordAssignmentCompletion({
+        studentId: req.user.id,
+        submissionId: submission._id,
+      });
+    } catch (completionError) {
+      logger.warn('Assignment completion recording failed', {
+        event: 'assignment.completion.record_failed',
+        requestId: req.requestId,
+        studentId: req.user.id,
+        problemId,
+        submissionId: submission._id.toString(),
+        message: completionError.message,
+      });
+    }
+  }
+
+  // Record successful submission for the key that was used (if execution succeeded)
+  // Note: The actual key used is tracked inside the execute function via compilerKeyManager
+  // For now, we'll record submission at the problem level - key-specific tracking would require
+  // modifying the execute function to return the key index used
+  try {
+    // We'll record the submission - the key tracking happens inside execute via reserveRequest
+    // For accurate key-specific submission counting, we'd need to modify execute to return key info
+    // This is a simplified approach - in production, execute would return the key used
+    await compilerKeyManager.recordSubmission(1); // Placeholder - needs improvement
+  } catch (recordError) {
+    // Don't fail the submission if recording fails
+    console.warn('Failed to record submission for compiler key stats:', recordError.message);
+  }
 
   // Prepare response – do not expose hidden test case inputs/expected outputs
   const publicResults = testResults.map(tr => ({

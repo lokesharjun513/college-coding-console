@@ -24,8 +24,8 @@ router.get('/batch/:batchId', requireAuth, requireRole('TRAINER'), async (req, r
     if (!batch) {
       return res.status(404).json({ success: false, message: 'Batch not found' });
     }
-    // Ensure trainer owns the batch
-    if (batch.trainer.toString() !== req.user.id.toString()) {
+    // Ensure trainer owns the batch (an unassigned batch belongs to nobody)
+    if (!batch.trainer || batch.trainer.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     const totalStudents = await BatchStudent.countDocuments({ batch: batchId });
@@ -78,8 +78,8 @@ router.get('/student/:studentId', requireAuth, requireRole('TRAINER'), async (re
     if (!enrollment) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    // Ensure the batch belongs to this trainer
-    if (enrollment.batch.trainer.toString() !== req.user.id.toString()) {
+    // Ensure the batch belongs to this trainer (unassigned batch belongs to nobody)
+    if (!enrollment.batch || !enrollment.batch.trainer || enrollment.batch.trainer.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     const problemFilter = batchId ? { batch: batchId } : {};
@@ -121,8 +121,8 @@ router.get('/problem/:problemId', requireAuth, requireRole('TRAINER'), async (re
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem not found' });
     }
-    // Ensure trainer owns the batch of the problem
-    if (problem.batch.trainer.toString() !== req.user.id.toString()) {
+    // Ensure trainer owns the batch of the problem (unassigned batch belongs to nobody)
+    if (!problem.batch || !problem.batch.trainer || problem.batch.trainer.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     const submissions = await Submission.find({ problem: problemId });

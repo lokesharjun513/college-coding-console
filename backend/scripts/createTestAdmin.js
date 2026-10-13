@@ -24,12 +24,33 @@ async function run() {
     process.exit(1);
   }
 
+  // Never provision a known-credential admin against a real deployment.
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Refusing to run: this script must not create accounts in production.');
+    process.exit(1);
+  }
+
   await mongoose.connect(mongoUri);
   console.log('Connected to MongoDB');
 
-  const email = 'testadmin@gmail.com';
-  const password = 'testadmin';
-  const name = 'Test Admin';
+  // Credentials must be supplied explicitly. Hardcoded defaults would mean that
+  // running this script provisions an ADMIN account whose password is public in
+  // the repository.
+  const email = process.env.SEED_ADMIN_EMAIL;
+  const password = process.env.SEED_ADMIN_PASSWORD;
+  const name = process.env.SEED_ADMIN_NAME || 'Seeded Admin';
+
+  if (!email || !password) {
+    console.error('Error: set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD before running this script');
+    await mongoose.disconnect();
+    process.exit(1);
+  }
+
+  if (password.length < 12) {
+    console.error('Error: SEED_ADMIN_PASSWORD must be at least 12 characters');
+    await mongoose.disconnect();
+    process.exit(1);
+  }
 
   const passwordHash = await authService.hashPassword(password);
 
