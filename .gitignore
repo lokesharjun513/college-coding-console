@@ -31,3 +31,10 @@ memory/
 
 # Local test output artifacts
 /test_output.txt
+
+# Local agent/tool state (not needed to install, run, or deploy)
+/.claude/
+/skills-lock.json
+
+# Local scratch prototype (unreferenced)
+/test/
