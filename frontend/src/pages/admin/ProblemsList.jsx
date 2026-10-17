@@ -14,7 +14,7 @@ import Toast from '../../components/ui/Toast';
 import Modal from '../../components/ui/Modal';
 import {
   ChevronRight, Pencil, Trash2, Plus,
-  Eye, Filter, Upload, Download, Folder, MoreVertical,
+  Eye, Filter, Upload, Download, Folder,
   Archive as ArchiveIcon
 } from 'lucide-react';
 import '../../styles/pages/admin.css';
@@ -258,6 +258,12 @@ export default function ProblemsList() {
   };
 
   const closeProblemModal = () => {
+    setProblemTitle('');
+    setProblemDescription('');
+    setProblemDifficulty('EASY');
+    setProblemStatus('DRAFT');
+    setProblemCollectionId('');
+    setProblemTopicId('');
   };
 
   const fetchTopicsForProblemCollection = async (collectionId) => {

@@ -218,7 +218,11 @@ describe('Student assignment routes', () => {
   });
 
   test('shows assignments that became available in the past', async () => {
-    const past = await createAssignment({ problem, batch: batchOne, trainer, availableFrom: new Date('2015-01-01') });
+    // Its own problem: the feed now collapses to one row per (batch, problem),
+    // so reusing the shared fixture problem would make this a duplicate of the
+    // beforeAll row and the representative would be that one instead.
+    const pastProblem = await createProblem({ createdBy: trainer });
+    const past = await createAssignment({ problem: pastProblem, batch: batchOne, trainer, availableFrom: new Date('2015-01-01') });
 
     const res = await request(app).get('/api/student/assignments').set('Authorization', `Bearer ${studentAToken}`);
     expect(res.body.data.some((a) => a.id === past._id.toString())).toBe(true);
@@ -280,8 +284,11 @@ describe('Student assignment routes', () => {
 
   test('completion in one batch never marks another batch complete', async () => {
     await enroll(studentA, batchTwo);
-    const batchOneAssignment = await createAssignment({ problem, batch: batchOne, trainer, availableFrom: new Date('2026-10-08') });
-    const batchTwoAssignment = await createAssignment({ problem, batch: batchTwo, trainer, availableFrom: new Date('2026-10-08') });
+    // Own problem so the two rows below are the representatives of their own
+    // (batch, problem) groups; batching stays independent regardless.
+    const shared = await createProblem({ createdBy: trainer });
+    const batchOneAssignment = await createAssignment({ problem: shared, batch: batchOne, trainer, availableFrom: new Date('2026-10-08') });
+    const batchTwoAssignment = await createAssignment({ problem: shared, batch: batchTwo, trainer, availableFrom: new Date('2026-10-08') });
 
     const completion = await AssignmentCompletion.create({
       assignment: batchOneAssignment._id,
@@ -302,11 +309,15 @@ describe('Student assignment routes', () => {
   });
 
   test('global problem submission history is not assignment completion', async () => {
-    const assignment = await createAssignment({ problem, batch: batchOne, trainer, availableFrom: new Date('2026-10-09') });
+    // Own problem: a submission only completes an Assignment when an
+    // AssignmentCompletion exists, and an earlier test has already completed the
+    // shared fixture problem.
+    const ownProblem = await createProblem({ createdBy: trainer });
+    const assignment = await createAssignment({ problem: ownProblem, batch: batchOne, trainer, availableFrom: new Date('2026-10-09') });
 
     const submission = await Submission.create({
       student: studentA._id,
-      problem: problem._id,
+      problem: ownProblem._id,
       code: 'int main(){}',
       language: 'cpp',
       verdict: 'ACCEPTED',
@@ -325,7 +336,10 @@ describe('Student assignment routes', () => {
     const studentBToken = await login(studentB.email);
     await enroll(studentB, batchOne);
 
-    const assignment = await createAssignment({ problem, batch: batchOne, trainer, availableFrom: new Date('2026-10-10') });
+    // Own problem: the detail route reports the PROBLEM's state, so a row that
+    // duplicates an already-completed problem would report completed for both.
+    const ownProblem = await createProblem({ createdBy: trainer });
+    const assignment = await createAssignment({ problem: ownProblem, batch: batchOne, trainer, availableFrom: new Date('2026-10-10') });
     const completion = await AssignmentCompletion.create({
       assignment: assignment._id,
       student: studentB._id,

@@ -4,6 +4,10 @@
    dialog matches the rest of the Admin surface without redefining them.
    ============================================================= */
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .admin-enroll-overlay {
   position: fixed;
   inset: 0;
@@ -380,7 +384,7 @@
 
 .admin-enroll-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 600px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
@@ -409,12 +413,6 @@
   padding-right: 8px;
 }
 
-.admin-enroll-table thead th.is-index,
-.admin-enroll-table tbody td.is-index {
-  width: 44px;
-  color: var(--admin-text-tertiary, #94A3B8);
-  font-variant-numeric: tabular-nums;
-}
 
 .admin-enroll-table tbody td {
   padding: 11px 14px;
@@ -545,7 +543,7 @@
 
 .admin-enroll-skeleton__row {
   display: grid;
-  grid-template-columns: 44px 1.6fr 1fr 1.4fr 0.9fr;
+  grid-template-columns: 44px 2fr 1fr 1fr 1fr;
   align-items: center;
   gap: 14px;
   padding: 12px 16px;

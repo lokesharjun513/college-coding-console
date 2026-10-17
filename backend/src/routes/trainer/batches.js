@@ -9,6 +9,11 @@ const Batch = require('../../models/Batch');
 const BatchStudent = require('../../models/BatchStudent');
 const User = require('../../models/User');
 
+/** Escape a user-supplied search term so it is matched literally by RegExp. */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * LIST TRAINER'S BATCHES
  * GET /api/trainer/batches
@@ -64,7 +69,7 @@ router.get('/', requireAuth, requireRole('TRAINER'), async (req, res) => {
  * GET SINGLE TRAINER BATCH
  * GET /api/trainer/batches/:id
  */
-router.get('/:id', requireAuth, requireRole('TRAINER'), async (req, res) => {   try {
+router.get('/:id', requireAuth, requireRole('TRAINER'), async (req, res) => { try {
     const { id } = req.params;
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ success: false, message: 'Invalid batch id' });
@@ -165,8 +170,93 @@ router.get('/:batchId/students', requireAuth, requireRole('TRAINER'), async (req
 });
 
 /**
+ * GET AVAILABLE STUDENTS FOR A BATCH
+ * GET /api/trainer/batches/:batchId/students/available
+ *
+ * ROUTE ORDER IS A SECURITY-RELEVANT INVARIANT.
+ * This literal segment MUST stay registered above "/:batchId/students/:studentId"
+ * below. ":studentId" is a wildcard, so if it were declared first it would swallow
+ * "available", reject it as a non-ObjectId and answer 400 before any ownership
+ * check ran — which would both break this endpoint and leak the difference
+ * between "batch exists" and "batch is yours" to an unassigned/foreign trainer.
+ * Every status this endpoint can produce is a deliberate authorization decision:
+ *   400 malformed batch id | 404 unknown batch | 403 batch owned by nobody/others
+ *   200 active, not-yet-enrolled students of an owned batch.
+ */
+router.get('/:batchId/students/available', requireAuth, requireRole('TRAINER'), async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const { search } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(batchId)) {
+      return res.status(400).json({ success: false, message: 'Invalid batch id' });
+    }
+
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      return res.status(404).json({ success: false, message: 'Batch not found' });
+    }
+
+    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
+    const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
+    if (trainerId !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Find already enrolled student IDs
+    const existingEnrollments = await BatchStudent.find({ batch: batchId }).select('student');
+    const enrolledStudentIds = existingEnrollments.map(e => e.student);
+
+    // Build query for available students
+    const query = {
+      role: 'STUDENT',
+      status: 'ACTIVE',
+      _id: { $nin: enrolledStudentIds },
+    };
+
+    if (search) {
+      // The search term is user input: escape it so it is matched literally.
+      // Passing the raw string to RegExp lets a malformed pattern ("(") throw
+      // into the generic handler and a pathological one backtrack.
+      const searchRegex = new RegExp(escapeRegExp(String(search)), 'i');
+      query.$or = [
+        { name: searchRegex },
+        { email: searchRegex },
+        { rollNumber: searchRegex },
+      ];
+    }
+
+    const students = await User.find(query)
+      .select('name email rollNumber role status department section academicBatch createdAt updatedAt')
+      .sort({ name: 1, _id: 1 })
+      .limit(50);
+
+    const data = students.map(s => ({
+      id: s._id,
+      name: s.name,
+      email: s.email,
+      rollNumber: s.rollNumber,
+      role: s.role,
+      status: s.status,
+      department: s.department,
+      section: s.section,
+      startYear: s.academicBatch?.startYear,
+      endYear: s.academicBatch?.endYear,
+    }));
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error listing available students:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
  * GET SINGLE STUDENT ENROLLMENT IN TRAINER'S BATCH
  * GET /api/trainer/batches/:batchId/students/:studentId
+ *
+ * Registered AFTER "/:batchId/students/available" on purpose — see the ordering
+ * invariant documented on that route above.
  */
 router.get('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'), async (req, res) => {
   try {
@@ -214,70 +304,6 @@ router.get('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER'),
     return res.json({ success: true, data });
   } catch (error) {
     console.error('Error getting enrollment:', error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-/**
- * GET AVAILABLE STUDENTS FOR A BATCH
- * GET /api/trainer/batches/:batchId/students/available
- */
-router.get('/:batchId/students/available', requireAuth, requireRole('TRAINER'), async (req, res) => {
-  try {
-    const { batchId } = req.params;
-    const { search } = req.query;
-
-    if (!mongoose.Types.ObjectId.isValid(batchId)) {
-      return res.status(400).json({ success: false, message: 'Invalid batch id' });
-    }
-
-    const batch = await Batch.findById(batchId);
-    if (!batch) {
-      return res.status(404).json({ success: false, message: 'Batch not found' });
-    }
-
-    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
-    const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
-    if (trainerId !== req.user.id.toString()) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
-    }
-
-    // Find already enrolled student IDs
-    const existingEnrollments = await BatchStudent.find({ batch: batchId }).select('student');
-    const enrolledStudentIds = existingEnrollments.map(e => e.student);
-
-    // Build query for available students
-    const query = {
-      role: 'STUDENT',
-      status: 'ACTIVE',
-      _id: { $nin: enrolledStudentIds },
-    };
-
-    if (search) {
-      const searchRegex = new RegExp(search, 'i');
-      query.$or = [
-        { name: searchRegex },
-        { email: searchRegex },
-        { rollNumber: searchRegex },
-      ];
-    }
-
-    const students = await User.find(query)
-      .select('name email rollNumber role status createdAt updatedAt')
-      .limit(50);
-
-    const data = students.map(s => ({
-      id: s._id,
-      name: s.name,
-      email: s.email,
-      rollNumber: s.rollNumber,
-      role: s.role,
-      status: s.status,
-    }));
-
-    return res.json({ success: true, data });
-  } catch (error) {
-    console.error('Error listing available students:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -397,85 +423,6 @@ router.delete('/:batchId/students/:studentId', requireAuth, requireRole('TRAINER
 
     return res.json({ success: true, data: null });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-// GET /api/trainer/batches/:batchId/students/available
-router.get('/:batchId/students/available', requireAuth, requireRole('TRAINER'), async (req, res) => {
-  try {
-    const { batchId } = req.params;
-    const { search } = req.query;
-
-    const batch = await Batch.findById(batchId);
-    if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
-
-    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
-    const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
-    if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
-
-    // Get already enrolled student IDs
-    const enrolled = await BatchStudent.find({ batch: batchId }).select('student');
-    const enrolledIds = enrolled.map(e => e.student);
-
-    // Build query: active students not already enrolled
-    const query = { role: 'STUDENT', status: 'ACTIVE', _id: { $nin: enrolledIds } };
-
-    // Search by name, email, or rollNumber
-    if (search) {
-      const searchRegex = new RegExp(search, 'i');
-      query.$or = [
-        { name: searchRegex },
-        { email: searchRegex },
-        { rollNumber: searchRegex },
-      ];
-    }
-
-    const students = await User.find(query)
-      .select('name email rollNumber')
-      .sort({ name: 1 })
-      .limit(100);
-
-    return res.json({
-      success: true,
-      data: students.map(s => ({
-        id: s._id,
-        name: s.name,
-        email: s.email,
-        rollNumber: s.rollNumber || null,
-      })),
-    });
-  } catch (error) {
-    console.error('Error fetching available students:', error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-// DELETE /api/trainer/batches/:batchId/students
-router.delete('/:batchId/students', requireAuth, requireRole('TRAINER'), async (req, res) => {
-  try {
-    const { batchId } = req.params;
-    const { studentIds } = req.body;
-
-    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'No students provided' });
-    }
-
-    const batch = await Batch.findById(batchId);
-    if (!batch) return res.status(404).json({ success: false, message: 'Batch not found' });
-
-    if (!batch.trainer) return res.status(403).json({ success: false, message: 'Access denied' });
-    const trainerId = batch.trainer._id ? batch.trainer._id.toString() : batch.trainer.toString();
-    if (trainerId !== req.user.id.toString()) return res.status(403).json({ success: false, message: 'Access denied' });
-
-    const result = await BatchStudent.deleteMany({ batch: batchId, student: { $in: studentIds } });
-
-    return res.json({
-      success: true,
-      data: { deleted: result.deletedCount },
-    });
-  } catch (error) {
-    console.error('Error bulk unenrolling students:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

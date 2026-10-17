@@ -1,0 +1,581 @@
+/* ── Trainer-specific refinements that override or extend shared base styles ── */
+/* Design token aliases for Trainer components */
+:root {
+  /* Surface and colors */
+  --trainer-surface: var(--bg-surface);
+  --trainer-border-light: var(--border-subtle);
+  --trainer-border: var(--border-default);
+  /* Radius */
+  --trainer-radius-2xl: var(--radius-xl);
+  /* Shadows */
+  --trainer-shadow-sm: var(--shadow-sm);
+  --trainer-shadow-lift: var(--shadow-md);
+  /* Spacing */
+  --trainer-gap-lg: var(--space-6);
+  --trainer-gap-md: var(--space-4);
+  /* Typography */
+  --trainer-font-size-md: var(--font-size-md);
+  --trainer-font-size-sm: var(--font-size-sm);
+  --trainer-font-size-xs: var(--font-size-xs);
+  --trainer-font-weight-medium: var(--font-weight-medium);
+  --trainer-font-weight-semibold: var(--font-weight-semibold);
+  /* Text colors */
+  --trainer-text-primary: var(--text-primary);
+  --trainer-text-secondary: var(--text-secondary);
+  --trainer-text-muted: var(--text-muted);
+}
+
+/* Trainer page container – matches Admin dashboard */
+.trainer-page {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 32px;
+  animation: dashboard-fade-in 220ms var(--apple-ease);
+  box-sizing: border-box;
+}
+
+/* Keyframe reuse – defined here to avoid CSS duplication across files */
+@keyframes dashboard-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trainer-page__header {
+  margin-bottom: 24px;
+}
+
+.trainer-page-header {
+  margin-bottom: 24px;
+}
+/* Header content flex layout for title/description and actions */
+.trainer-page-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.trainer-page-header-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+/* Neumorphic button styling – scoped to batch details page */
+.trainer-page-header-actions .admin-trainers__add-btn {
+  /* Preserve primary button styling, add subtle neumorphic depth */
+  box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.05), -4px -4px 6px rgba(255, 255, 255, 0.6);
+  transition: box-shadow var(--admin-transition-base) ease, transform var(--admin-transition-base) ease;
+}
+.trainer-page-header-actions .admin-trainers__add-btn:hover {
+  box-shadow: 6px 6px 8px rgba(0, 0, 0, 0.07), -6px -6px 8px rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+}
+.trainer-page-header-actions .admin-trainers__add-btn:active {
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.07), inset -2px -2px 4px rgba(255, 255, 255, 0.6);
+  transform: translateY(0);
+}
+.trainer-page-header-actions .admin-trainers__add-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+/* Ensure the admin enroll modal respects the design constraints for Trainer page */
+.trainer-page .admin-enroll-modal {
+  max-height: 85vh;
+  min-height: 560px;
+}
+
+.trainer-page__actions {
+  margin-bottom: 24px;
+}
+
+/* Page header wrapper – copy from admin-dashboard__header */
+.trainer-page-header-content {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 32px;
+}
+
+/* Page header text container – copy from admin-dashboard__header-text */
+.trainer-page-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Page title – copy from admin-dashboard__title */
+.trainer-page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-ink, #0F2441);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+/* Page description – copy from admin-dashboard__description */
+.trainer-page-description {
+  font-size: 14px;
+  color: rgba(15, 36, 65, 0.62);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Breadcrumb – copy from admin-breadcrumb */
+.trainer-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--admin-text-muted);
+}
+
+.trainer-breadcrumb__item {
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  transition: color var(--admin-transition-base);
+}
+
+.trainer-breadcrumb__item:hover {
+  color: var(--admin-primary);
+}
+
+.trainer-breadcrumb__separator {
+  color: var(--admin-text-muted);
+  margin: 0 3px;
+  user-select: none;
+}
+
+.trainer-breadcrumb__current {
+  color: var(--admin-text-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* KPI Grid – copy from admin-dashboard__kpi-grid */
+.trainer-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 32px;
+}
+
+/* KPI Card – copy from admin-dashboard__stat-card */
+.trainer-kpi-card {
+  background: var(--trainer-surface);
+  border: 1px solid var(--trainer-border-light);
+  border-radius: var(--trainer-radius-2xl);
+  padding: 20px 24px;
+  box-shadow: var(--trainer-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform var(--trainer-transition-base) ease, box-shadow var(--trainer-transition-base) ease;
+  height: 100%;
+  width: 100%;
+}
+
+.trainer-kpi-card:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+  box-shadow: 0 14px 30px rgba(15, 36, 65, 0.18);
+}
+
+/* KPI Card inner header */
+.trainer-kpi-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.trainer-kpi-card__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--trainer-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.trainer-kpi-card__value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--trainer-text-primary);
+  line-height: 1;
+}
+
+.trainer-kpi-card__meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--trainer-text-secondary);
+  line-height: 1.4;
+}
+
+/* KPI Card tone variants – copy from admin-dashboard__stat-card */
+.trainer-kpi-card[data-tone="blue"] {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  color: #ffffff;
+}
+
+.trainer-kpi-card[data-tone="green"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.trainer-kpi-card[data-tone="red"] {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #ffffff;
+}
+
+.trainer-kpi-card[data-tone="orange"] {
+  background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+  color: #ffffff;
+}
+
+.trainer-kpi-card[data-tone] .trainer-kpi-card__label,
+.trainer-kpi-card[data-tone] .trainer-kpi-card__value,
+.trainer-kpi-card[data-tone] .trainer-kpi-card__meta {
+  color: #ffffff;
+}
+
+/* ── Batch Info Card (iOS-inspired) ───────────────────────────────────────── */
+.batch-info-card {
+  background: #FCFDFD;
+  border: 1px solid #C6D1D7;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 36, 65, .05);
+  padding: var(--space-8);
+  margin-bottom: var(--space-6);
+  transition: box-shadow var(--admin-transition-base) ease, transform var(--admin-transition-base) ease;
+}
+.batch-info-card:hover {
+  box-shadow: 6px 6px 8px rgba(0, 0, 0, 0.07), -6px -6px 8px rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+}
+
+.batch-info-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.batch-info-card__icon {
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.batch-info-card__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.batch-info-card__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.batch-info-card__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-5);
+}
+
+/* Status badge positioned at top‑right of the card header */
+.batch-info-card__status {
+  margin-left: auto;
+}
+
+.batch-info-card__field {
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-info-card__label {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+.batch-info-card__value {
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+@media (max-width: 1024px) {
+  .trainer-page {
+    padding: 24px;
+  }
+
+  .trainer-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .trainer-page {
+    padding: 16px;
+  }
+
+  .batch-info-card {
+    padding: var(--space-5);
+  }
+
+  .batch-info-card__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .trainer-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard__title {
+    font-size: 24px;
+  }
+
+  .batch-info-card__title {
+    font-size: 18px;
+  }
+}
+
+/* Table wrapper for responsive scrolling */
+.trainer-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: var(--space-4);
+}
+
+/* ── Trainer Import Modal (Apple-inspired neumorphic UI) ─────────────────── */
+.trainer-import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: #FCFDFD;
+  border-radius: 16px;
+  max-height: 90vh;
+  overflow-x: hidden;
+}
+
+.trainer-import-form__section {
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #C6D1D7;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 36, 65, 0.04);
+}
+
+/* Compact version for the Download Template section */
+.trainer-import-form__section--compact {
+  padding: 12px;
+  margin: 0;
+}
+
+.trainer-import-form__section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F2441;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+
+.trainer-import-form__section-desc {
+  font-size: 13px;
+  color: #2F7EDA;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.trainer-import-form__divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+.trainer-import-form__divider span {
+  padding: 6px 12px;
+  background: #EDEFF3;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0F2441;
+  font-weight: 500;
+}
+
+.trainer-import-form__textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 16px;
+  border: 1px solid #C6D1D7;
+  border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: #0F2441;
+  background: #ffffff;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.trainer-import-form__textarea:focus {
+  outline: none;
+  border-color: #2F7EDA;
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.12);
+}
+
+.trainer-import-form__preview {
+  margin-top: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #C6D1D7;
+  border-radius: 12px;
+}
+
+.trainer-import-form__preview .trainer-import-preview__head {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #C6D1D7;
+}
+
+.trainer-import-form__preview .trainer-import-preview__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F2441;
+  margin: 0 0 4px;
+}
+
+.trainer-import-form__preview .trainer-import-preview__counts {
+  font-size: 13px;
+  color: #2F7EDA;
+  margin: 0;
+}
+
+.trainer-import-form__hint {
+  font-size: 12px;
+  color: #2F7EDA;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.trainer-import-form__error {
+  font-size: 13px;
+  color: #D93025;
+  background: #FCE8E6;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 3px solid #D93025;
+  margin: 0;
+}
+
+.trainer-import-form__notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.trainer-import-form__notice--success {
+  background: #E6F4EA;
+  color: #1E8E3E;
+  border-left: 3px solid #1E8E3E;
+}
+
+.trainer-import-form__notice--error {
+  background: #FCE8E6;
+  color: #D93025;
+  border-left: 3px solid #D93025;
+}
+
+.trainer-import-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #C6D1D7;
+  margin-top: 12px;
+}
+
+/* File upload styling */
+.trainer-file-upload {
+  position: relative;
+}
+
+.trainer-file-upload__input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.trainer-file-upload__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: linear-gradient(135deg, #F8F9FC 0%, #F0F2F6 100%);
+  border: 2px dashed #C6D1D7;
+  border-radius: 12px;
+  color: #0F2441;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-align: center;
+}
+
+.trainer-file-upload__label:hover {
+  background: linear-gradient(135deg, #EDEFF3 0%, #E6E9ED 100%);
+  border-color: #2F7EDA;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(47, 126, 218, 0.08);
+}
+
+.trainer-file-upload__input:focus + .trainer-file-upload__label {
+  border-color: #2F7EDA;
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.12);
+}
+
+.trainer-file-upload__selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #F8F9FC;
+  border: 1px solid #C6D1D7;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0F2441;
+}

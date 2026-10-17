@@ -13,14 +13,13 @@ import AdminTestCasesList from '../pages/admin/TestCasesList';
 import TrainerLayout from '../pages/trainer/TrainerLayout';
 import TrainerDashboard from '../pages/trainer/Index';
 import TrainerBatchesList from '../pages/trainer/BatchesList';
-import TrainerBatchDetails from '../pages/trainer/BatchDetails';
+import TrainerBatchDetails from '../pages/trainer/TrainerBatchDetails';
 import TrainerBatchStudentsList from '../pages/trainer/BatchStudentsList';
 import TrainerStudents from '../pages/trainer/Students';
 import TrainerProblemsList from '../pages/trainer/ProblemsList';
-import TrainerTrainingManagement from '../pages/trainer/TrainingManagement';
 import TrainerAnalytics from '../pages/trainer/Analytics';
+import TrainerLeaderboard from '../pages/trainer/Leaderboard';
 import TrainerMonitoring from '../pages/trainer/Monitoring';
-import TrainerProblems from '../pages/trainer/TrainerProblems';
 import TrainerProblemDetails from '../pages/trainer/ProblemDetails';
 import TrainerProblemEditor from '../pages/trainer/ProblemEditor';
 import TrainerBatchPerformance from '../pages/trainer/Performance/BatchPerformance';
@@ -33,6 +32,9 @@ import TrainerProfile from '../pages/trainer/TrainerProfile';
 import Practice from '../pages/student/Practice';
 import Batch from '../pages/student/Batch';
 import FreeConsole from '../pages/student/FreeConsole';
+// TEMPORARY EXPERIMENT: embedded OneCompiler editor. Delete this import and the
+// `onecompiler` route below to remove the trial.
+import OneCompiler from '../pages/student/OneCompiler';
 import Performance from '../pages/student/Performance';
 import Leaderboard from '../pages/student/Leaderboard';
 import StudentDashboard from '../pages/student/StudentDashboard';
@@ -99,13 +101,12 @@ export default function AppRoutes() {
           }
         >
           <Route index element={<TrainerDashboard />} />
-          <Route path="training" element={<TrainerTrainingManagement />} />
           <Route path="analytics" element={<TrainerAnalytics />} />
           <Route path="monitoring" element={<TrainerMonitoring />} />
           <Route path="batches" element={<TrainerBatchesList />} />
           <Route path="assignments" element={<TrainerAssignments />} />
           <Route path="batches/:batchId/assignments" element={<TrainerAssignments />} />
-          <Route path="problems" element={<TrainerProblems />} />
+          <Route path="problems" element={<TrainerProblemsList />} />
           <Route path="students" element={<TrainerStudents />} />
           <Route path="batches/:batchId/students" element={<TrainerBatchStudentsList />} />
           <Route path="batches/:batchId/students/:studentId/performance" element={<TrainerStudentPerformance />} />
@@ -118,6 +119,7 @@ export default function AppRoutes() {
           <Route path="batches/:batchId/problems/:problemId/testcases" element={<TrainerTestCasesList />} />
           <Route path="batches/:batchId/problems/:problemId/edit" element={<TrainerProblemEditor />} />
           <Route path="batches/:batchId/students/:studentId" element={<TrainerEnrollmentDetails />} />
+          <Route path="leaderboard" element={<TrainerLeaderboard />} />
         </Route>
 
         {/* Trainer Profile (shared with general profile route) */}
@@ -151,21 +153,11 @@ export default function AppRoutes() {
           <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="problems" element={<StudentProblems />} />
           <Route path="problems/:id" element={<StudentProblemDetail />} />
+          <Route path="freeconsole" element={<FreeConsole />} />
+          {/* TEMPORARY EXPERIMENT. Inherits the student auth + layout shell above. */}
+          <Route path="onecompiler" element={<OneCompiler />} />
         </Route>
 
-        {/* Student Free Console – fullscreen workspace inside the shared shell */}
-        <Route
-          path="/student/freeconsole"
-          element={
-            <ProtectedRoute>
-              <RoleRoute allowedRoles={['STUDENT']}>
-                <StudentLayout layoutMode="fullscreen">
-                  <FreeConsole />
-                </StudentLayout>
-              </RoleRoute>
-            </ProtectedRoute>
-          }
-        />
 
         {/* Profile page (accessible to any authenticated user) */}
         <Route

@@ -24,6 +24,26 @@ async function getActiveBatchIds(studentId) {
   return enrollments.map(e => e.batch);
 }
 
+/**
+ * Curricula a student may see: platform GLOBAL curriculum plus any BATCH
+ * curriculum belonging to a batch they are actively enrolled in. BATCH
+ * curriculum for a batch they are not in is another trainer's content and must
+ * not appear.
+ */
+function visibleCollectionQuery(batchIds) {
+  return {
+    status: 'ACTIVE',
+    $or: [
+      // `scope: null` also matches documents written before the field existed,
+      // which are all admin GLOBAL curriculum. Without it, deploying this
+      // change would hide existing published curriculum from students until the
+      // migration ran.
+      { scope: { $in: ['GLOBAL', null] } },
+      { scope: 'BATCH', batch: { $in: batchIds || [] } },
+    ],
+  };
+}
+
 // Filter problem IDs to only those visible to the student (GLOBAL or enrolled BATCH, PUBLISHED)
 async function filterVisibleProblemIds(problemIds, batchIds, scope = null) {
   if (problemIds.length === 0) return [];
@@ -60,7 +80,7 @@ router.get('/training', requireAuth, requireAnyRole('STUDENT'), async (req, res)
     const solvedIds = await getSolvedProblemIds(studentId);
     const batchIds = await getActiveBatchIds(studentId);
 
-    const collections = await Collection.find({ status: 'ACTIVE' }).sort({ createdAt: 1 }).lean();
+    const collections = await Collection.find(visibleCollectionQuery(batchIds)).sort({ createdAt: 1 }).lean();
 
     // Fetch everything needed in bulk — no per-entity N+1 loops
     const topics = await Topic.find({ status: 'ACTIVE' }).lean();
@@ -145,10 +165,9 @@ router.get('/training', requireAuth, requireAnyRole('STUDENT'), async (req, res)
 router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
   try {
     const studentId = req.user.id;
-    const collections = await Collection.find({ status: 'ACTIVE' }).lean();
-
     const solvedIds = await getSolvedProblemIds(studentId);
     const batchIds = await getActiveBatchIds(studentId);
+    const collections = await Collection.find(visibleCollectionQuery(batchIds)).lean();
 
     const data = await Promise.all(collections.map(async (c) => {
       const topicCount = await Topic.countDocuments({ collection: c._id, status: 'ACTIVE' });
@@ -195,6 +214,15 @@ router.get('/:id/topics', requireAuth, requireAnyRole('STUDENT'), async (req, re
     const studentId = req.user.id;
     const solvedIds = await getSolvedProblemIds(studentId);
     const batchIds = await getActiveBatchIds(studentId);
+
+    // Scope check on the detail route too: a direct id must not bypass the list.
+    const visible = await Collection.findOne({
+      _id: collection._id,
+      ...visibleCollectionQuery(batchIds),
+    }).lean();
+    if (!visible) {
+      return res.status(404).json({ success: false, message: 'Collection not found' });
+    }
 
     const topics = await Topic.find({ collection: id, status: 'ACTIVE' }).lean();
     const data = await Promise.all(topics.map(async (t) => {

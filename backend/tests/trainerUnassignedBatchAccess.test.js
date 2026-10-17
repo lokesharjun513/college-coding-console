@@ -39,6 +39,10 @@ async function createAdminAndTrainer() {
   return { adminToken, trainer, trainerToken };
 }
 
+// Records created by the current test, so cleanup never touches fixtures
+// belonging to another suite sharing the same test database.
+const created = { batches: [], problems: [] };
+
 // Admin-created batch; `trainerId` omitted leaves the batch unassigned.
 async function createBatch(adminToken, trainerId) {
   const payload = { name: 'Batch Name', code: `CODE${uniqueSuffix()}`, description: 'Batch description' };
@@ -48,6 +52,7 @@ async function createBatch(adminToken, trainerId) {
     .set('Authorization', `Bearer ${adminToken}`)
     .send(payload);
   if (res.status !== 201) throw new Error(`setup failed: ${res.status} ${JSON.stringify(res.body)}`);
+  created.batches.push(res.body.data.id);
   return res.body.data;
 }
 
@@ -66,6 +71,7 @@ async function createAdminProblem(adminToken, batchId, overrides = {}) {
       ...overrides,
     });
   if (res.status !== 201) throw new Error(`setup failed: ${res.status} ${JSON.stringify(res.body)}`);
+  created.problems.push(res.body.data.id);
   return res.body.data;
 }
 
@@ -85,10 +91,15 @@ describe('Trainer access to unassigned batches', () => {
     unassignedProblemId = problem.id;
   });
 
-  afterEach(async () => {
-    await TestCase.deleteMany({});
-    await Problem.deleteMany({});
-    await Batch.deleteMany({});
+afterEach(async () => {
+    // Scoped cleanup: every suite shares one test database, so a blanket
+    // deleteMany({}) here would erase other suites' fixtures and make results
+    // order-dependent.
+    await TestCase.deleteMany({ problem: { $in: created.problems } });
+    await Problem.deleteMany({ _id: { $in: created.problems } });
+    await Batch.deleteMany({ _id: { $in: created.batches } });
+    created.batches = [];
+    created.problems = [];
   });
 
   // ---------- batch-level helper (assertTrainerOwnsBatch) ----------
@@ -196,16 +207,101 @@ describe('Trainer access to unassigned batches', () => {
     }
   });
 
-  // ---------- preserved behaviour ----------
-  test('known pre-existing routing bug: students/available is shadowed by :studentId', async () => {
-    // The literal path is registered after "/:batchId/students/:studentId", so
-    // "available" is parsed as a student id and rejected with 400 before any
-    // ownership check runs. Documented here so it is not mistaken for the
-    // authorization behaviour asserted above; fixing the ordering is separate work.
+// ---------- preserved behaviour ----------
+  //
+  // Route ordering is a security-relevant invariant for /students/available.
+  // ":studentId" is a wildcard, so "/:batchId/students/available" must be
+  // registered first; otherwise "available" is parsed as a student id and
+  // rejected with 400 before the ownership check ever runs. The assertions
+  // below pin that ordering AND the resulting authorization contract, so the
+  // behaviour cannot silently regress in either direction.
+  test('students/available is not shadowed by :studentId and denies an unassigned batch', async () => {
     const res = await request(app)
       .get(`/api/trainer/batches/${unassignedBatch.id}/students/available`)
       .set('Authorization', `Bearer ${trainerToken}`);
-    expect(res.status).toBe(400);
+    // The literal route is reached (batch id is valid) and ownership is
+    // enforced: a batch with no trainer belongs to nobody.
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+    // 400 is the signature of the shadowing bug: it can only be produced by the
+    // ":studentId" route rejecting "available" as a non-ObjectId.
+    expect(res.status).not.toBe(400);
+  });
+
+  test('students/available serves the assigned trainer their own batch', async () => {
+    await createTestUser({ name: 'Enrollable', email: uniqueEmail('enrollable@testmail.com') });
+
+    const res = await request(app)
+      .get(`/api/trainer/batches/${ownBatch.id}/students/available`)
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    // Ownership leaked nothing: no member of another trainer's batch appears.
+    const { trainer: otherTrainer } = await createAdminAndTrainer();
+    const otherBatch = await createBatch(adminToken, otherTrainer._id);
+    const otherRes = await request(app)
+      .get(`/api/trainer/batches/${otherBatch.id}/students/available`)
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(otherRes.status).toBe(403);
+  });
+
+  test('the :studentId route still resolves a real student id in an owned batch', async () => {
+    const student = await createTestUser({ name: 'Enrolled', email: uniqueEmail('enrolled@testmail.com') });
+    const studentId = student._id.toString();
+    await request(app)
+      .post(`/api/trainer/batches/${ownBatch.id}/students`)
+      .set('Authorization', `Bearer ${trainerToken}`)
+      .send({ studentId })
+      .expect(201);
+
+    // Proof that ":studentId" is live and still guarded: a valid id answers
+    // 200 for an owned batch and 403 for an unassigned one.
+    const ok = await request(app)
+      .get(`/api/trainer/batches/${ownBatch.id}/students/${studentId}`)
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.student.id).toBe(studentId);
+
+    const denied = await request(app)
+      .get(`/api/trainer/batches/${unassignedBatch.id}/students/${studentId}`)
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(denied.status).toBe(403);
+  });
+
+  test('students/available maps malformed and unknown batch ids to 400 and 404', async () => {
+    const invalid = await request(app)
+      .get('/api/trainer/batches/not-an-id/students/available')
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(invalid.status).toBe(400);
+
+    const unknown = await request(app)
+      .get('/api/trainer/batches/000000000000000000000001/students/available')
+      .set('Authorization', `Bearer ${trainerToken}`);
+    expect(unknown.status).toBe(404);
+  });
+
+  test('students/available rejects unauthenticated and non-trainer callers', async () => {
+    const anonymous = await request(app)
+      .get(`/api/trainer/batches/${ownBatch.id}/students/available`);
+    expect(anonymous.status).toBe(401);
+
+    const student = await createTestUser({ name: 'Student', email: uniqueEmail('student@testmail.com') });
+    const studentToken = await login(student.email);
+    const wrongRole = await request(app)
+      .get(`/api/trainer/batches/${ownBatch.id}/students/available`)
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(wrongRole.status).toBe(403);
+  });
+
+  test('students/available treats a regex-looking search term as literal text', async () => {
+    const res = await request(app)
+      .get(`/api/trainer/batches/${ownBatch.id}/students/available`)
+      .query({ search: '(' })
+      .set('Authorization', `Bearer ${trainerToken}`);
+    // An unescaped term would throw inside RegExp and answer 500.
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
   });
 
   test('trainer keeps full access to their own assigned batch', async () => {

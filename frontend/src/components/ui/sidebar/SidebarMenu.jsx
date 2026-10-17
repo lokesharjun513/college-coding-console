@@ -34,7 +34,14 @@ export function SidebarMenuItem({ item, isActive: propIsActive, collapsed: propC
       <NavLink
         to={path}
         className={`sidebar-menu-item ${isActive ? 'sidebar-menu-item--active' : ''}`}
-        aria-current={isActive ? 'page' : undefined}
+        // NavLink adds aria-current="page" itself whenever IT considers the
+        // link active, and its own rule treats a section root such as
+        // /student as active on every child route. Passing the caller's value
+        // explicitly — `null`, not `undefined`, because `undefined` would fall
+        // back to NavLink's own default — keeps the accessible indicator in step
+        // with the class above it, so a section root is not announced as two
+        // current pages at once.
+        aria-current={isActive ? 'page' : null}
         title={collapsed ? label : undefined}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}

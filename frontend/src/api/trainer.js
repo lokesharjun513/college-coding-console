@@ -13,11 +13,26 @@ export const updateStudentEnrollment = (batchId, studentId, status) => api.patch
 export const deleteStudentEnrollment = (batchId, studentId) => api.delete(`/trainer/batches/${batchId}/students/${studentId}`);
 
 // Problems
-export const getBatchProblems = (batchId) => api.get(`/trainer/batches/${batchId}/problems`);
+// deleteProblem is a soft delete: the server archives the problem and preserves
+// submissions and completions. unarchiveProblem restores the pre-archive status.
+//
+// getBatchProblems accepts the full server-side filter set. Every parameter is
+// optional and they are all additive:
+//   { collectionId, topicId, status, difficulty, search, page, limit }
+// `collectionId` and `topicId` narrow the batch to a Training / Day of the
+// curriculum; the server asserts that the Training is the caller's, belongs to
+// this batch, and that the Day belongs to the Training. `page` is 1-based and
+// `limit` is 1..100. The response is `{ success, data, meta }` where `meta` is
+// `{ total, page, limit, totalPages, hasNext, hasPrev }` counted from the same
+// filtered set that produced `data`.
+export const getBatchProblems = (batchId, params) => api.get(`/trainer/batches/${batchId}/problems`, { params });
 export const createProblem = (batchId, data) => api.post(`/trainer/batches/${batchId}/problems`, data);
 export const getProblem = (batchId, problemId) => api.get(`/trainer/batches/${batchId}/problems/${problemId}`);
 export const updateProblem = (batchId, problemId, data) => api.patch(`/trainer/batches/${batchId}/problems/${problemId}`, data);
+export const updateProblemStatus = (batchId, problemId, status) =>
+  api.patch(`/trainer/batches/${batchId}/problems/${problemId}`, { status });
 export const deleteProblem = (batchId, problemId) => api.delete(`/trainer/batches/${batchId}/problems/${problemId}`);
+export const unarchiveProblem = (batchId, problemId) => api.patch(`/trainer/batches/${batchId}/problems/${problemId}/unarchive`);
 export const bulkImportProblems = (batchId, data) => api.post(`/trainer/batches/${batchId}/problems/import`, data);
 export const downloadProblemTemplate = (batchId) => api.get(`/trainer/batches/${batchId}/problems/template`, { responseType: 'blob' });
 
@@ -25,7 +40,10 @@ export const downloadProblemTemplate = (batchId) => api.get(`/trainer/batches/${
 // Mounted at /api/trainer/batches/:batchId/assignments
 export const getBatchAssignments = (batchId, params) => api.get(`/trainer/batches/${batchId}/assignments`, { params });
 export const getBatchAssignment = (batchId, assignmentId) => api.get(`/trainer/batches/${batchId}/assignments/${assignmentId}`);
-// Problems this trainer may assign to this batch: PUBLISHED GLOBAL, or own PUBLISHED BATCH problems in it.
+// Problems this trainer may assign to this batch: PUBLISHED GLOBAL problems only.
+// Batch-scoped problems are excluded because they are already associated with the
+// batch — adding a problem to a batch is the association, so assigning it again
+// would be a duplicate representation of the same thing.
 export const getAssignableProblems = (batchId) => api.get(`/trainer/batches/${batchId}/assignments/problems`);
 // Payload accepts only problemId, title, availableFrom and status. There is deliberately no dueDate.
 export const createAssignment = (batchId, data) => api.post(`/trainer/batches/${batchId}/assignments`, data);
@@ -45,9 +63,19 @@ export const getBatchPerformance = (batchId) => api.get(`/trainer/performance/ba
 export const getStudentPerformance = (studentId, batchId) => api.get(`/trainer/performance/student/${studentId}`, { params: { batchId } });
 export const getProblemPerformance = (problemId) => api.get(`/trainer/performance/problem/${problemId}`);
 
-// Collections & Topics for Trainer — read-only Training/Day metadata
+// Collections (Training) & Topics (Days) for Trainer.
+// Read access covers every training; write access is limited to trainings this
+// trainer created — the server answers 403 for admin-owned or shared curriculum.
+// `owned` on each record tells the UI whether it may offer edit/archive actions.
 export const getTrainerCollections = (params) => api.get('/trainer/collections', { params });
+export const getTrainerCollection = (collectionId) => api.get(`/trainer/collections/${collectionId}`);
 export const getTrainerCollectionTopics = (collectionId, params) => api.get(`/trainer/collections/${collectionId}/topics`, { params });
+export const createTrainerCollection = (data) => api.post('/trainer/collections', data);
+export const updateTrainerCollection = (collectionId, data) => api.patch(`/trainer/collections/${collectionId}`, data);
+export const deleteTrainerCollection = (collectionId) => api.delete(`/trainer/collections/${collectionId}`);
+export const createTrainerTopic = (collectionId, data) => api.post(`/trainer/collections/${collectionId}/topics`, data);
+export const updateTrainerTopic = (collectionId, topicId, data) => api.patch(`/trainer/collections/${collectionId}/topics/${topicId}`, data);
+export const deleteTrainerTopic = (collectionId, topicId) => api.delete(`/trainer/collections/${collectionId}/topics/${topicId}`);
 
 // Analytics — authoritative KPIs + leaderboard (solved = ACCEPTED submissions)
 export const getTrainerAnalytics = (params) => api.get('/trainer/analytics', { params });

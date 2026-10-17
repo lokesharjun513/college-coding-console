@@ -1,440 +1,647 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  FileCode2,
+  Layers,
+  RotateCcw,
+  Search,
+  Target,
+  XCircle,
+} from 'lucide-react';
+import { getStudentAssignedProblems } from '../../api/student';
 import './Problems.css';
-import Button from '../../components/ui/Button';
-import Spinner from '../../components/ui/Spinner';
-import { getStudentProblems, getStudentCollections, getStudentCollectionTopics, getStudentTopicProblems } from '../../api/student';
 
-// Helper to deduplicate problem arrays by canonical ID (_id or id)
-const dedupeById = (arr) => {
-  const map = new Map();
-  arr.forEach((item) => {
-    const id = item.id || item._id;
-    if (id && !map.has(id)) {
-      map.set(id, item);
-    }
-  });
-  return Array.from(map.values());
+const PAGE_SIZE = 20;
+
+/**
+ * Status precedence mirrors the backend: one accepted submission makes a
+ * problem Solved regardless of how many failures precede it, and failures never
+ * count as progress towards Solved.
+ */
+const STATUS_META = {
+  SOLVED: { label: 'Solved', className: 'student-status-pill--solved', Icon: CheckCircle2 },
+  ATTEMPTED: { label: 'Attempted', className: 'student-status-pill--attempted', Icon: RotateCcw },
+  NOT_STARTED: { label: 'Not started', className: 'student-status-pill--not-started', Icon: Clock3 },
 };
+
+/** `Solve` / `Continue` / `Review` all point at the one existing solving route. */
+const ACTION_META = {
+  NOT_STARTED: { label: 'Solve', primary: true },
+  ATTEMPTED: { label: 'Continue', primary: true },
+  SOLVED: { label: 'Review', primary: false },
+};
+
+const difficultyClass = (value) => {
+  const key = String(value || '').toUpperCase();
+  if (key === 'EASY') return 'student-difficulty--easy';
+  if (key === 'MEDIUM') return 'student-difficulty--medium';
+  if (key === 'HARD') return 'student-difficulty--hard';
+  return 'student-difficulty--unspecified';
+};
+
+const verdictLabel = (verdict) => {
+  if (!verdict) return '';
+  return verdict.charAt(0) + verdict.slice(1).toLowerCase().replace(/_/g, ' ');
+};
+
+const formatDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+function StateMessage({ tone = 'empty', title, children, action }) {
+  return (
+    <div className={`sp-state sp-state--${tone}`} role={tone === 'error' ? 'alert' : undefined}>
+      <p className="sp-state__title">{title}</p>
+      {children && <p className="sp-state__body">{children}</p>}
+      {action}
+    </div>
+  );
+}
+
+function ProgressBar({ percent, solved, total, label }) {
+  return (
+    <div className="sp-progress">
+      <div className="sp-progress__head">
+        <span className="sp-progress__label">{label}</span>
+        <span className="sp-progress__value">{percent}%</span>
+      </div>
+      <div
+        className="student-progress"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        aria-valuetext={`${solved} of ${total} assigned problems solved`}
+      >
+        <span style={{ width: `${percent}%` }} />
+      </div>
+      <p className="sp-progress__caption">{solved} of {total} solved</p>
+    </div>
+  );
+}
+
+/**
+ * Rows are keyed by problem id.
+ *
+ * The endpoint returns one row per problem, so this is not expected to drop
+ * anything — but the list is rendered with `row.id` as the React key and every
+ * action navigates by that id, so an entry without one (or a second copy of a
+ * problem already on the page) is a broken row and a potential
+ * `/student/problems/undefined`. Uniqueness is therefore enforced at the point
+ * of rendering instead of assumed.
+ */
+function dedupeById(list) {
+  const seen = new Set();
+  return list.filter((row) => {
+    const key = row?.id === undefined || row?.id === null ? null : String(row.id);
+    if (key === null || key === '' || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 export default function Problems() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+
+  const [data, setData] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
-  const [problems, setProblems] = useState([]);
-  const [todayProblems, setTodayProblems] = useState([]);
-  const [enrolled, setEnrolled] = useState(true);
 
-  // Filters & Search
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, SOLVED, ATTEMPTED, NOT_STARTED
-  const [difficultyFilter, setDifficultyFilter] = useState('ALL');
-  const [topicFilter, setTopicFilter] = useState('ALL');
+  const [difficulty, setDifficulty] = useState('ALL');
+  const [progress, setProgress] = useState('ALL');
+  const [topic, setTopic] = useState('ALL');
+  const [page, setPage] = useState(1);
 
-  // Collections / Topics view states
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'collections' | 'topics' | 'topic-problems'
-  const [collections, setCollections] = useState([]);
-  const [topics, setTopics] = useState([]);
-  const [topicProblems, setTopicProblems] = useState([]);
-  const [selectedCollection, setSelectedCollection] = useState(null);
-  const [selectedTopic, setSelectedTopic] = useState(null);
-
+  // Guards against a slow response overwriting a newer one — and against writing
+  // state after the page has gone away.
+  //
+  // The effect BODY must set `mounted.current = true`. React 18 StrictMode
+  // (enabled in main.jsx) mounts, unmounts and remounts every component in
+  // development. A cleanup-only flag is therefore set to false by the simulated
+  // unmount and never restored, so every later response was treated as
+  // "superseded", no state was ever written, and the page stayed on its loading
+  // skeleton forever — a blank screen with a silent, permanently pending request.
+  const requestId = useRef(0);
+  const mounted = useRef(false);
   useEffect(() => {
-    fetchProblems();
+    mounted.current = true;
+    return () => { mounted.current = false; };
   }, []);
 
-  const fetchProblems = async () => {
+  const load = useCallback(async () => {
+    requestId.current += 1;
+    const ticket = requestId.current;
+    setStatus('loading');
+    setError(null);
     try {
-      setLoading(true);
-      const res = await getStudentProblems();
-      // Deduplicate the main problem list by canonical ID.
-      const uniqueData = dedupeById(res.data?.data || []);
-      setProblems(uniqueData);
-      const meta = res.data?.meta || {};
-      setEnrolled(meta.enrolled ?? false);
-      // Deduplicate today problems by canonical ID (backend returns full problem objects).
-      const uniqueToday = dedupeById(meta.today || []);
-      setTodayProblems(uniqueToday);
+      const response = await getStudentAssignedProblems({
+        search: search.trim() || undefined,
+        difficulty: difficulty === 'ALL' ? undefined : difficulty,
+        status: progress === 'ALL' ? undefined : progress,
+        topic: topic === 'ALL' ? undefined : topic,
+        page,
+        pageSize: PAGE_SIZE,
+      });
+      if (!mounted.current || ticket !== requestId.current) return;
+      setData(Array.isArray(response.data?.data) ? response.data.data : []);
+      setMeta(response.data?.meta || null);
+      setStatus('ready');
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to load problems');
-    } finally {
-      setLoading(false);
+      if (!mounted.current || ticket !== requestId.current) return;
+      setError(err?.response?.data?.message || 'Unable to load your assigned problems.');
+      setStatus('error');
     }
-  };
+  }, [search, difficulty, progress, topic, page]);
 
-  const fetchCollectionsList = async () => {
-    try {
-      setLoading(true);
-      const res = await getStudentCollections();
-      setCollections(res.data?.data || []);
-      setViewMode('collections');
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to load collections');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Debounced search so each keystroke does not fire a request.
+  useEffect(() => {
+    const timer = setTimeout(load, search ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [load, search]);
 
-  const fetchTopicsList = async (collection) => {
-    try {
-      setSelectedCollection(collection);
-      setLoading(true);
-      const res = await getStudentCollectionTopics(collection.id);
-      setTopics(res.data?.data || []);
-      setViewMode('topics');
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to load topics');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Any filter change returns to the first page; otherwise a narrowed result set
+  // can land the user on an empty page beyond the new total.
+  const changeFilter = useCallback((setter) => (value) => {
+    setPage(1);
+    setter(value);
+  }, []);
 
-  const fetchTopicProblemsList = async (topic) => {
-    try {
-      setSelectedTopic(topic);
-      setLoading(true);
-      const res = await getStudentTopicProblems(topic.id);
-      setTopicProblems(res.data?.data || []);
-      setViewMode('topic-problems');
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to load topic problems');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const counts = meta?.counts;
+  const batches = meta?.batches || [];
+  const pagination = meta?.pagination;
+  const enrolled = meta?.enrolled !== false;
+  const topics = meta?.topics || [];
+  const difficulties = meta?.difficulties || [];
 
-  if (loading && problems.length === 0 && collections.length === 0) {
-    return <div className="problems-container" style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><Spinner /></div>;
-  }
+  const showMultiBatchLabel = batches.length > 1;
+  const filtersActive = Boolean(search.trim()) || difficulty !== 'ALL' || progress !== 'ALL' || topic !== 'ALL';
 
-  if (error && problems.length === 0) {
-    return <div className="problems-container" style={{ color: 'red', padding: '24px' }}>{error}</div>;
-  }
+  // Overall completion comes from the endpoint's own percentage over the whole
+  // assigned set. It is recomputed from the counts only as a fallback for a
+  // response that omits it, never invented when there is nothing assigned.
+  const completionPercent = counts && counts.total > 0
+    ? (Number.isFinite(meta?.completionPercentage)
+      ? meta.completionPercentage
+      : Math.round((counts.solved / counts.total) * 100))
+    : 0;
 
-  // Not Enrolled Hero
-  if (!loading && !enrolled && !error) {
+  const resetFilters = useCallback(() => {
+    setPage(1);
+    setSearch('');
+    setDifficulty('ALL');
+    setProgress('ALL');
+    setTopic('ALL');
+  }, []);
+
+  const pageNumbers = useMemo(() => {
+    if (!pagination || pagination.totalPages <= 1) return [];
+    const current = pagination.page;
+    const last = pagination.totalPages;
+    const wanted = [1, current - 1, current, current + 1, last]
+      .filter((n, i, arr) => n >= 1 && n <= last && arr.indexOf(n) === i)
+      .sort((a, b) => a - b);
+    return wanted;
+  }, [pagination]);
+
+  // Topic is filtered server-side alongside search, difficulty and status, so the
+  // result and `pagination.total` always describe the same dataset. The rows
+  // still pass through dedupeById because they are the React key and the
+  // navigation target.
+  const visibleRows = useMemo(() => dedupeById(data), [data]);
+
+  // Today's work comes from the endpoint's own `meta.today`, which is resolved
+  // over the whole assigned set. Deriving it from the current page made the
+  // panel disappear whenever today's problems fell on another page or were
+  // filtered out, contradicting the `todayCount` shown next to it. The page-local
+  // `isToday` flags remain the fallback for a response without `meta.today`.
+  const todayRows = useMemo(() => {
+    const fromMeta = Array.isArray(meta?.today) ? meta.today : null;
+    return dedupeById(
+      (fromMeta || data)
+        .filter((row) => (fromMeta ? true : row.isToday))
+        .map((row) => ({
+          ...row,
+          progress: row.progress || 'NOT_STARTED',
+        }))
+    );
+  }, [data, meta]);
+
+  // Every action resolves to the registered solving route with the id the API
+  // actually returned. A row without an id has no destination, so it is never
+  // navigated to.
+  const openProblem = useCallback(
+    (row) => {
+      const id = row?.id;
+      if (id === undefined || id === null || id === '') return;
+      navigate(`/student/problems/${id}`);
+    },
+    [navigate],
+  );
+
+  if (status === 'loading' && !meta) {
     return (
-      <div className="problems-container">
-        <section className="not-enrolled-hero">
-          <div className="hero-content">
-            <h2 className="hero-title">You are not enrolled in a batch</h2>
-            <p className="hero-description">Your batch has not been assigned yet. Once you are enrolled, your trainer&apos;s assigned problems will appear here.</p>
-            <p className="hero-support">Contact your administrator or trainer to get enrolled.</p>
-          </div>
-        </section>
-      </div>
+      <main className="student-problems">
+        <div className="student-problems__inner" aria-busy="true">
+          <p className="student-visually-hidden" role="status">Loading your assigned problems…</p>
+          <div className="sp-skeleton sp-skeleton--title" aria-hidden="true" />
+          <div className="sp-skeleton sp-skeleton--card" aria-hidden="true" />
+          <div className="sp-skeleton sp-skeleton--list" aria-hidden="true" />
+        </div>
+      </main>
     );
   }
 
-  // Filter problems for list view
-  const filteredProblems = problems.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase()) ||
-                          (item.description && item.description.toLowerCase().includes(search.toLowerCase()));
-
-    const matchesStatus = statusFilter === 'ALL' || item.progress === statusFilter;
-    const matchesDiff = difficultyFilter === 'ALL' || item.difficulty === difficultyFilter;
-    const matchesTopic = topicFilter === 'ALL' || item.topic === topicFilter;
-
-    return matchesSearch && matchesStatus && matchesDiff && matchesTopic;
-  });
-
-  const totalCount = problems.length;
-  const solvedCount = problems.filter(p => p.progress === 'SOLVED').length;
-  const attemptedCount = problems.filter(p => p.progress === 'ATTEMPTED').length;
-  const remainingCount = totalCount - solvedCount;
-  const overallProgress = totalCount > 0 ? Math.round((solvedCount / totalCount) * 100) : 0;
-
-  const getStatusClass = (progress) => {
-    if (progress === 'SOLVED') return 'solved';
-    if (progress === 'ATTEMPTED') return 'attempted';
-    return 'not-started';
-  };
-
-  const getStatusLabel = (progress) => {
-    if (progress === 'SOLVED') return 'Solved';
-    if (progress === 'ATTEMPTED') return 'Attempted';
-    return 'Not Started';
-  };
-
-  const getDiffClass = (diff) => {
-    if (!diff) return 'easy';
-    const d = diff.toLowerCase();
-    if (d.includes('easy')) return 'easy';
-    if (d.includes('med')) return 'medium';
-    return 'hard';
-  };
-
   return (
-    <div className="problems-container">
-      {/* Top Header & Navigation Toggle */}
-      <header className="top-header-row">
-        <div className="title-area">
-          <h1>Practice</h1>
-          <p>Build your coding skills one problem at a time.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {viewMode !== 'list' ? (
-            <Button variant="secondary" onClick={() => { setViewMode('list'); setError(null); }}>← Back to All Problems</Button>
-          ) : (
-            <Button variant="secondary" onClick={fetchCollectionsList}>View Collections</Button>
-          )}
-        </div>
-      </header>
+    <main className="student-problems">
+      <div className="student-problems__inner">
+        <div className="sp-top">
+          <nav className="student-breadcrumb" aria-label="Breadcrumb">
+            <Link className="student-breadcrumb__link" to="/student">Student</Link>
+            <span className="student-breadcrumb__separator" aria-hidden="true">/</span>
+            <span className="student-breadcrumb__current" aria-current="page">Problems</span>
+          </nav>
 
-      {viewMode === 'collections' && (
-        <section className="dashboard-section">
-          <h2>Practice Collections</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Explore structured problem collections curated for your learning path.</p>
-          <div className="horizontal-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-            {collections.length > 0 ? collections.map((col) => (
-              <div className="problem-card-item" key={col.id} onClick={() => fetchTopicsList(col)} style={{ cursor: 'pointer' }}>
-                <div className="card-body">
-                  <h4>{col.title}</h4>
-                  <p>{col.description || 'No description provided.'}</p>
-                </div>
-                <button className="card-action-btn solved">Explore Topics →</button>
-              </div>
-            )) : <p>No collections available.</p>}
-          </div>
-        </section>
-      )}
-
-      {viewMode === 'topics' && (
-        <section className="dashboard-section">
-          <h2>Topics in {selectedCollection?.title}</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Select a topic to view associated practice problems.</p>
-          <div className="horizontal-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-            {topics.length > 0 ? topics.map((topic) => (
-              <div className="problem-card-item" key={topic.id} onClick={() => fetchTopicProblemsList(topic)} style={{ cursor: 'pointer' }}>
-                <div className="card-body">
-                  <h4>{topic.title}</h4>
-                  <p>{topic.description || 'Practice core concepts.'}</p>
-                </div>
-                <button className="card-action-btn solved">View Problems →</button>
-              </div>
-            )) : <p>No topics found in this collection.</p>}
-          </div>
-        </section>
-      )}
-
-      {viewMode === 'topic-problems' && (
-        <section className="dashboard-section">
-          <h2>Problems in {selectedTopic?.title}</h2>
-          <div className="table-wrapper" style={{ marginTop: '16px' }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Problem</th>
-                  <th>Difficulty</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topicProblems.length > 0 ? topicProblems.map((item, idx) => (
-                  <tr key={item.id || idx}>
-                    <td>
-                      <span className={`status-badge ${getStatusClass(item.progress)}`}>
-                        {getStatusLabel(item.progress)}
-                      </span>
-                    </td>
-                    <td className="problem-col">
-                      <span className="p-title">{item.title}</span>
-                      <span className="p-desc">{item.description}</span>
-                    </td>
-                    <td><span className={`tag ${getDiffClass(item.difficulty)}`}>{item.difficulty}</span></td>
-                    <td><button className="action-btn" onClick={() => navigate(`/student/problems/${item.id}`)}>Practice →</button></td>
-                  </tr>
-                )) : <tr><td colSpan="4" style={{ textAlign: 'center', padding: '24px' }}>No problems found for this topic.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {viewMode === 'list' && (
-        <>
-          {/* Hero Greeting Card */}
-          <section className="hero-greeting-card">
-            <div className="hero-left">
-              <h2>Keep building your coding skills</h2>
-              <p>Practice daily to maintain your streak and mastery.</p>
+          <header className="sp-header">
+            <div className="sp-header__intro">
+              <h1 className="sp-header__title">Assigned Problems</h1>
+              <p className="sp-header__subtitle">
+                Problems your trainer has assigned to your batch. Solve them to track your progress.
+              </p>
             </div>
-            <div className="hero-banner-group">
-              <div className="banner-illustration-purple">
-                <span className="code-tag">&lt;/&gt;</span>
-              </div>
-              <div className="quote-box">
-                <span className="quote-mark">“</span>
-                <p>Practice today builds the expert you&apos;ll become tomorrow.</p>
-              </div>
+            <div className="sp-header__aside">
+              {counts && counts.total > 0 && (
+                <div className="sp-header__summary">
+                  <span className="sp-summary-pill">
+                    <Layers size={14} aria-hidden="true" />
+                    {counts.total} assigned
+                  </span>
+                  <span className="sp-summary-pill sp-summary-pill--positive">
+                    <CheckCircle2 size={14} aria-hidden="true" />
+                    {counts.solved} solved
+                  </span>
+                  <span className="sp-summary-pill">
+                    <FileCode2 size={14} aria-hidden="true" />
+                    {Math.max(counts.total - counts.solved, 0)} remaining
+                  </span>
+                </div>
+              )}
+              {counts && counts.total > 0 && (
+                <div className="sp-header__progress">
+                  <ProgressBar
+                    percent={completionPercent}
+                    solved={counts.solved}
+                    total={counts.total}
+                    label="Overall completion"
+                  />
+                </div>
+              )}
+            </div>
+          </header>
+        </div>
+
+        {status === 'error' && (
+          <StateMessage
+            tone="error"
+            title="We could not load your assigned problems."
+            action={(
+              <button type="button" className="sp-button sp-button--primary" onClick={load}>
+                <RotateCcw size={14} aria-hidden="true" />
+                Try again
+              </button>
+            )}
+          >
+            {error}
+          </StateMessage>
+        )}
+
+        {status !== 'error' && !enrolled && (
+          <section className="sp-card" aria-labelledby="sp-no-batch-title">
+            <span className="sp-card__icon" aria-hidden="true"><Layers size={17} /></span>
+            <div className="sp-card__heading-text">
+              <h2 id="sp-no-batch-title">No batch assignments yet</h2>
+              <p>You are not currently enrolled in a batch.</p>
+            </div>
+            <StateMessage title="Batch assignments appear here after enrollment.">
+              Once your administrator enrolls you in a batch, the problems your trainer assigns
+              will appear on this page with their difficulty and progress.
+            </StateMessage>
+            <div className="sp-actions">
+              <Link className="sp-button sp-button--primary" to="/student/practice">
+                <Target size={14} aria-hidden="true" />
+                Go to Global Practice
+              </Link>
             </div>
           </section>
+        )}
 
-          {/* Today's Assigned Problems */}
-          {todayProblems.length > 0 && (
-            <section className="dashboard-section">
-              <div className="section-header-flex">
-                <div className="section-title-box">
-                  <div className="sec-icon red">📅</div>
-                  <div>
-                    <h3>Today&apos;s Assigned Problems</h3>
-                    <p>Problems assigned for today by your trainer.</p>
-                  </div>
-                </div>
-              </div>
-              <div className="horizontal-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-                {todayProblems.map((item) => (
-                  <div className="problem-card-item" key={item.id}>
-                    <div className="card-body">
-                      <h4>{item.title}</h4>
+        {status !== 'error' && enrolled && (
+          <>
+            <section className="sp-batch-grid" aria-label="Your batch assignments">
+              {batches.map((batch) => (
+                <article className="sp-card sp-card--batch" key={batch.id}>
+                  <div className="sp-card__header">
+                    <span className="sp-card__icon" aria-hidden="true"><Layers size={17} /></span>
+                    <div className="sp-card__heading-text">
+                      <h2>{batch.name}</h2>
+                      <p>
+                        {[
+                          batch.code,
+                          batch.trainerName ? `Trainer ${batch.trainerName}` : null,
+                          batch.status,
+                        ].filter(Boolean).join(' · ')}
+                      </p>
                     </div>
-                    <button className="card-action-btn solved" onClick={() => navigate(`/student/problems/${item.id}`)}>Start →</button>
                   </div>
-                ))}
-              </div>
+                  {batch.startDate && <p className="sp-card__meta">Started {formatDate(batch.startDate)}</p>}
+                  <ProgressBar
+                    percent={batch.assigned ? Math.round((batch.solved / batch.assigned) * 100) : 0}
+                    solved={batch.solved}
+                    total={batch.assigned}
+                    label={`${batch.name} completion`}
+                  />
+                </article>
+              ))}
             </section>
-          )}
 
-          {/* Your Practice Section / Stats */}
-          <section className="dashboard-section">
-            <div className="section-header-flex">
-              <div className="section-title-box">
-                <div className="sec-icon red">🎯</div>
-                <div>
-                  <h3>Your Practice</h3>
-                  <p>Overall coding practice progress.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="stats-row-4">
-              <div className="stat-card">
-                <div className="icon red">📝</div>
-                <div className="info"><h2>{totalCount}</h2><p>Total Problems</p></div>
-              </div>
-              <div className="stat-card">
-                <div className="icon blue">✔️</div>
-                <div className="info"><h2>{solvedCount}</h2><p>Solved</p></div>
-              </div>
-              <div className="stat-card">
-                <div className="icon purple">🎯</div>
-                <div className="info"><h2>{attemptedCount}</h2><p>Attempted</p></div>
-              </div>
-              <div className="stat-card">
-                <div className="icon orange">⏳</div>
-                <div className="info"><h2>{remainingCount}</h2><p>Remaining</p></div>
-              </div>
-              <div className="stat-card progress-card">
-                <div className="prog-header">
-                  <span>Overall Progress</span>
-                  <strong>{overallProgress}%</strong>
-                </div>
-                <div className="prog-track"><div className="prog-fill" style={{ width: `${overallProgress}%` }}></div></div>
-                <span className="prog-footer">{solvedCount} of {totalCount} problems completed</span>
-              </div>
-            </div>
-          </section>
-
-          {/* More Practice Table Section */}
-          <section className="dashboard-section table-section-box">
-            <div className="section-header-flex">
-              <div className="section-title-box">
-                <div className="sec-icon red">🔥</div>
-                <div>
-                  <h3>All Practice Problems</h3>
-                  <p>Browse and practice available problems.</p>
-                </div>
-              </div>
-              <span className="badge-count">{filteredProblems.length} Problems</span>
-            </div>
-
-            {/* Tab Filters & Toolbar */}
-            <div className="more-practice-toolbar">
-              <div className="status-subtabs">
-                <button className={`subtab ${statusFilter === 'ALL' ? 'active' : ''}`} onClick={() => setStatusFilter('ALL')}>All Problems</button>
-                <button className={`subtab ${statusFilter === 'NOT_STARTED' ? 'active' : ''}`} onClick={() => setStatusFilter('NOT_STARTED')}>Unsolved Problems</button>
-                <button className={`subtab ${statusFilter === 'ATTEMPTED' ? 'active' : ''}`} onClick={() => setStatusFilter('ATTEMPTED')}>Attempted Problems</button>
-                <button className={`subtab ${statusFilter === 'SOLVED' ? 'active' : ''}`} onClick={() => setStatusFilter('SOLVED')}>Solved Problems</button>
-              </div>
-            </div>
-
-            <div className="filter-tools-row">
-              <div className="search-input-wrap">
-                <span className="search-icon">🔍</span>
-                <input
-                  type="text"
-                  placeholder="Search problems..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-
-              <select className="filter-select" value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
-                <option value="ALL">All Topics</option>
-                {Array.from(new Set(problems.map(p => p.topic).filter(Boolean))).map(t => (
-                  <option key={t} value={t}>{t}</option>
+            {counts && (
+              <section className="sp-stat-grid" aria-label="Assigned problem summary">
+                {[
+                  { key: 'total', label: 'Total assigned', value: counts.total, Icon: Layers },
+                  { key: 'solved', label: 'Solved', value: counts.solved, Icon: CheckCircle2, tone: 'positive' },
+                  { key: 'attempted', label: 'Attempted', value: counts.attempted, Icon: RotateCcw },
+                  { key: 'notStarted', label: 'Not started', value: counts.notStarted, Icon: Clock3 },
+                ].map(({ key, label, value, Icon, tone }) => (
+                  <article className="sp-stat" key={key} data-tone={tone || 'default'}>
+                    <span className="sp-stat__label">{label}</span>
+                    <span className="sp-stat__value">{value}</span>
+                    <span className="sp-stat__icon" aria-hidden="true"><Icon size={16} /></span>
+                  </article>
                 ))}
-              </select>
+              </section>
+            )}
 
-              <select className="filter-select" value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value)}>
-                <option value="ALL">All Difficulties</option>
-                <option value="EASY">Easy</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HARD">Hard</option>
-              </select>
-
-              <button className="reset-filters-btn" onClick={() => { setSearch(''); setStatusFilter('ALL'); setDifficultyFilter('ALL'); setTopicFilter('ALL'); }}>Reset Filters</button>
-            </div>
-
-            {/* Table */}
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Status</th>
-                    <th>Problem</th>
-                    <th>Topic</th>
-                    <th>Difficulty</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProblems.length > 0 ? (
-                    filteredProblems.map((item, idx) => (
-                      <tr key={item.id || idx}>
-                        <td className="id-col">{idx + 1}</td>
-                        <td>
-                          <span className={`status-badge ${getStatusClass(item.progress)}`}>
-                            {item.progress === 'SOLVED' && '✔ '}
-                            {item.progress === 'ATTEMPTED' && '⏳ '}
-                            {item.progress === 'NOT_STARTED' && '⏱ '}
-                            {getStatusLabel(item.progress)}
+            {todayRows.length > 0 && (
+              <section className="sp-card sp-card--today" aria-labelledby="sp-today-title">
+                <div className="sp-card__header">
+                  <span className="sp-card__icon" aria-hidden="true"><CalendarDays size={17} /></span>
+                  <div className="sp-card__heading-text">
+                    <h2 id="sp-today-title">Today&apos;s Assigned Problems</h2>
+                    <p>Problems scheduled for today by your trainer.</p>
+                  </div>
+                </div>
+                <ul className="sp-today-list">
+                  {todayRows.map((row) => {
+                    const action = ACTION_META[row.progress] || ACTION_META.NOT_STARTED;
+                    return (
+                      <li className="sp-today-item" key={row.id}>
+                        <div className="sp-today-item__body">
+                          <span className="sp-today-item__title">{row.title}</span>
+                          <span className={`student-difficulty ${difficultyClass(row.difficulty)}`}>
+                            {row.difficulty || 'Unspecified'}
                           </span>
-                        </td>
-                        <td className="problem-col">
-                          <span className="p-title">{item.title}{todayProblems.some(p => p.id === item.id) ? ' (All)' : ''}</span>
-                          <span className="p-desc">{item.description}</span>
-                        </td>
-                        <td><span className={`tag array`}>{item.topic || 'General'}</span></td>
-                        <td><span className={`tag ${getDiffClass(item.difficulty)}`}>{item.difficulty}</span></td>
-                        <td><button className="action-btn" onClick={() => navigate(`/student/problems/${item.id}`)}>Practice →</button></td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
-                        No problems found matching your filters.
-                      </td>
-                    </tr>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sp-button sp-button--compact${action.primary ? ' sp-button--primary' : ''}`}
+                          onClick={() => openProblem(row)}
+                          aria-label={`${action.label} ${row.title}`}
+                        >
+                          {action.label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
+            <section className="sp-card sp-card--list" aria-labelledby="sp-list-title">
+              <div className="sp-card__header sp-card__header--wrap">
+                <span className="sp-card__icon" aria-hidden="true"><FileCode2 size={17} /></span>
+                <div className="sp-card__heading-text">
+                  <h2 id="sp-list-title">Assigned problem library</h2>
+                  <p>{pagination ? `${pagination.total} problem${pagination.total === 1 ? '' : 's'} match your filters` : ''}</p>
+                </div>
+              </div>
+
+              <div className="student-filter-bar">
+                <label className="student-filter-field" htmlFor="sp-search">
+                  <Search size={16} aria-hidden="true" />
+                  <span className="student-visually-hidden">Search assigned problems by title</span>
+                  <input
+                    id="sp-search"
+                    className="student-filter-input"
+                    type="search"
+                    placeholder="Search by title…"
+                    value={search}
+                    onChange={(event) => changeFilter(setSearch)(event.target.value)}
+                  />
+                </label>
+
+                <label className="student-visually-hidden" htmlFor="sp-difficulty">Difficulty</label>
+                <select
+                  id="sp-difficulty"
+                  className="student-filter-select"
+                  value={difficulty}
+                  onChange={(event) => changeFilter(setDifficulty)(event.target.value)}
+                >
+                  <option value="ALL">All difficulties</option>
+                  {difficulties.map((value) => (
+                    <option key={value} value={value}>{value.charAt(0) + value.slice(1).toLowerCase()}</option>
+                  ))}
+                </select>
+
+                <label className="student-visually-hidden" htmlFor="sp-status">Status</label>
+                <select
+                  id="sp-status"
+                  className="student-filter-select"
+                  value={progress}
+                  onChange={(event) => changeFilter(setProgress)(event.target.value)}
+                >
+                  <option value="ALL">All statuses</option>
+                  <option value="NOT_STARTED">Not started</option>
+                  <option value="ATTEMPTED">Attempted</option>
+                  <option value="SOLVED">Solved</option>
+                </select>
+
+                {topics.length > 1 && (
+                  <>
+                    <label className="student-visually-hidden" htmlFor="sp-topic">Topic</label>
+                    <select
+                      id="sp-topic"
+                      className="student-filter-select"
+                      value={topic}
+                      onChange={(event) => changeFilter(setTopic)(event.target.value)}
+                    >
+                      <option value="ALL">All topics</option>
+                      {topics.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  className="student-filter-reset"
+                  onClick={resetFilters}
+                  disabled={!filtersActive}
+                >
+                  Reset filters
+                </button>
+              </div>
+
+              {status === 'loading' && (
+                <ul className="sp-list" aria-hidden="true">
+                  {[1, 2, 3, 4].map((row) => (
+                    <li className="sp-row" key={row}>
+                      <div className="sp-row__main"><div className="sp-skeleton sp-skeleton__line" /><div className="sp-skeleton sp-skeleton__thin" /></div>
+                      <div className="sp-skeleton sp-skeleton__pill" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {status === 'ready' && counts.total === 0 && (
+                <StateMessage title="No problems have been assigned to your batch yet.">
+                  When your trainer assigns problems to {batches.length === 1 ? batches[0].name : 'your batch'},
+                  they will appear here.
+                </StateMessage>
+              )}
+
+              {status === 'ready' && counts.total > 0 && pagination.total === 0 && (
+                <StateMessage
+                  title="No problems match your filters."
+                  action={(
+                    <button type="button" className="sp-button sp-button--quiet" onClick={resetFilters}>
+                      Clear filters
+                    </button>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      )}
-    </div>
+                >
+                  Try a different search term, or reset the filters to see all {counts.total} assigned problems.
+                </StateMessage>
+              )}
+
+              {status === 'ready' && visibleRows.length > 0 && (
+                <>
+                  <ul className="sp-list">
+                    {visibleRows.map((row) => {
+                      const statusMeta = STATUS_META[row.progress] || STATUS_META.NOT_STARTED;
+                      const action = ACTION_META[row.progress] || ACTION_META.NOT_STARTED;
+                      const StatusIcon = statusMeta.Icon;
+                      return (
+                        <li className="sp-row" key={row.id} data-status={row.progress}>
+                          <div className="sp-row__status">
+                            <span className={`student-status-pill ${statusMeta.className}`}>
+                              <StatusIcon size={13} aria-hidden="true" />
+                              {statusMeta.label}
+                            </span>
+                          </div>
+
+                          <div className="sp-row__main">
+                            <span className="sp-row__title">{row.title}</span>
+                            <span className="sp-row__meta">
+                              {row.topic && <span className="sp-row__topic">{row.topic}</span>}
+                              <span className={`student-difficulty ${difficultyClass(row.difficulty)}`}>
+                                {row.difficulty || 'Unspecified'}
+                              </span>
+                              {showMultiBatchLabel && row.batch && (
+                                <span className="sp-row__batch">{row.batch.name}</span>
+                              )}
+                              {row.attempts > 0 && (
+                                <span className="sp-row__attempts">
+                                  {row.attempts} attempt{row.attempts === 1 ? '' : 's'}
+                                </span>
+                              )}
+                              {row.latestVerdict && row.progress !== 'SOLVED' && (
+                                <span className="sp-row__verdict">
+                                  <XCircle size={12} aria-hidden="true" />
+                                  Last: {verdictLabel(row.latestVerdict)}
+                                </span>
+                              )}
+                              {row.lastAttemptAt && <span className="sp-row__date">{formatDate(row.lastAttemptAt)}</span>}
+                            </span>
+                          </div>
+
+                          <div className="sp-row__action">
+                            <button
+                              type="button"
+                              className={`sp-button sp-button--compact${action.primary ? ' sp-button--primary' : ''}`}
+                              onClick={() => openProblem(row)}
+                              aria-label={`${action.label} ${row.title}`}
+                            >
+                              {action.label}
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {pagination.totalPages > 1 && (
+                    <nav className="sp-pagination" aria-label="Assigned problems pagination">
+                      <button
+                        type="button"
+                        className="sp-page-btn"
+                        onClick={() => setPage((current) => Math.max(1, current - 1))}
+                        disabled={pagination.page <= 1}
+                        aria-label="Previous page"
+                      >
+                        <ChevronLeft size={15} aria-hidden="true" />
+                      </button>
+                      {pageNumbers.map((number, index) => {
+                        const previous = pageNumbers[index - 1];
+                        const showGap = previous !== undefined && number - previous > 1;
+                        return (
+                          <React.Fragment key={number}>
+                            {showGap && <span className="sp-page-gap" aria-hidden="true">…</span>}
+                            <button
+                              type="button"
+                              className={`sp-page-btn${number === pagination.page ? ' is-current' : ''}`}
+                              onClick={() => setPage(number)}
+                              aria-current={number === pagination.page ? 'page' : undefined}
+                              aria-label={`Page ${number}`}
+                            >
+                              {number}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        className="sp-page-btn"
+                        onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+                        disabled={pagination.page >= pagination.totalPages}
+                        aria-label="Next page"
+                      >
+                        <ChevronRight size={15} aria-hidden="true" />
+                      </button>
+                    </nav>
+                  )}
+                </>
+              )}
+            </section>
+          </>
+        )}
+
+        {status === 'error' && (
+          <div className="sp-actions sp-actions--centered">
+            <Link className="sp-button sp-button--quiet" to="/student/practice">
+              <Target size={14} aria-hidden="true" />
+              Go to Global Practice
+            </Link>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }

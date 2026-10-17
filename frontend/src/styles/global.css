@@ -6,6 +6,33 @@
   box-sizing: border-box;
 }
 
+/* Scrollbars — keep overflow very thin and unobtrusive so it never crowds the
+   layout (the browser default ~15px gutter is far too heavy for a dense SaaS
+   shell). Firefox gets `scrollbar-width`, WebKit/Blink the pseudo-elements. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 36, 65, 0.22) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(15, 36, 65, 0.18);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 36, 65, 0.32);
+}
+
 html, body {
   margin: 0;
   padding: 0;

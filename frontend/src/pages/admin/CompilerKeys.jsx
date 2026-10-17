@@ -36,7 +36,6 @@ const CompilerKeysPage = () => {
     limit: '',
     adminPassword: ''
   });
-  const [resetKeyPassword, setResetKeyPassword] = useState('');
   const [resetAllConfirm, setResetAllConfirm] = useState(false);
   const [resetAllPassword, setResetAllPassword] = useState('');
   const [resetKeyIndex, setResetKeyIndex] = useState(null);

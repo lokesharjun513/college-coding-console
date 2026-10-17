@@ -5,10 +5,10 @@
 //   - other columns and table alignment are unchanged
 import React from 'react';
 import { vi, beforeEach, test, expect } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Batches from './Batches';
-import { getBatches, getTrainers } from '../../api/admin';
+import { createBatch, getBatches, getTrainers, updateBatch } from '../../api/admin';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -152,4 +152,61 @@ test('the button reuses existing admin design tokens', async () => {
   const body = rule.replace(/\/\*.*?\*\//gs, '');
   expect(body).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   expect(body).not.toMatch(/rgba?\(/);
+});
+// -- Edit modal actually submits ----------------------------------------------
+//
+// Regression: the <form> used to close inside admin-modal__body while the
+// "Save Changes" button lived in admin-modal__footer, outside it. A
+// type="submit" button that is not inside its form submits nothing, so every
+// edit was silently discarded and no PATCH was ever sent.
+
+test('the Save Changes button lives inside the form it submits', async () => {
+  renderPage();
+  fireEvent.click(await screen.findByRole('button', { name: /Edit Batch/i }));
+
+  const save = await screen.findByRole('button', { name: /Save Changes/i });
+  // A submit button must be owned by a form, or clicking it is a no-op.
+  expect(save).toHaveAttribute('type', 'submit');
+  expect(save.closest('form')).not.toBeNull();
+});
+
+test('editing a batch and saving sends the edited values', async () => {
+  updateBatch.mockResolvedValue({ data: { success: true, data: batch() } });
+  renderPage();
+  fireEvent.click(await screen.findByRole('button', { name: /Edit Batch/i }));
+
+  const dialog = await screen.findByRole('dialog');
+  fireEvent.change(within(dialog).getByLabelText(/Batch Name/i), {
+    target: { value: 'Renamed Batch' },
+  });
+  fireEvent.change(within(dialog).getByLabelText(/Status/i), { target: { value: 'INACTIVE' } });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: /Save Changes/i }));
+
+  await waitFor(() => expect(updateBatch).toHaveBeenCalledTimes(1));
+  expect(updateBatch).toHaveBeenCalledWith(
+    'batch-1',
+    expect.objectContaining({ name: 'Renamed Batch', status: 'INACTIVE' })
+  );
+});
+
+test('create uses the same form and sends createBatch', async () => {
+  createBatch.mockResolvedValue({ data: { success: true, data: batch() } });
+  renderPage();
+  // The header action and the modal submit share the "Create Batch" label, so
+  // open with the header one before the modal exists.
+  fireEvent.click((await screen.findAllByRole('button', { name: /Create Batch/i }))[0]);
+
+  const dialog = await screen.findByRole('dialog');
+  fireEvent.change(within(dialog).getByLabelText(/Batch Name/i), {
+    target: { value: 'Brand New Batch' },
+  });
+  fireEvent.change(within(dialog).getByLabelText(/Batch Code/i), { target: { value: 'BN-2026' } });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: /Create Batch/i }));
+
+  await waitFor(() => expect(createBatch).toHaveBeenCalledTimes(1));
+  expect(createBatch).toHaveBeenCalledWith(
+    expect.objectContaining({ name: 'Brand New Batch', code: 'BN-2026' })
+  );
 });

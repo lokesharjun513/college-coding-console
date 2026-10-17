@@ -24,7 +24,7 @@ const ERROR_CODE_MESSAGES = {
 function classifyExecution(result) {
   if (!result) return { type: 'empty', label: 'No output', icon: '◌' };
 
-  const { status, exit_code, error, stdout, errorCode } = result;
+  const { status, exit_code, error, errorCode } = result;
 
   // Backend-classified errors take precedence over generic exit-code guessing
   if (errorCode && ERROR_CODE_MESSAGES[errorCode]) {

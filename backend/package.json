@@ -26,7 +26,11 @@
   "devDependencies": {
     "cross-env": "^10.1.0",
     "jest": "*",
+    "mongodb-memory-server": "*",
     "nodemon": "*",
     "supertest": "*"
+  },
+  "config": {
+    "allowScripts": true
   }
 }

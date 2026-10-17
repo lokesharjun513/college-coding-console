@@ -28,6 +28,19 @@ function visibleProblemQuery(batchIds = [], now = new Date(), options = {}) {
     return { ...baseQuery, scope: 'GLOBAL' };
   }
 
+  // BATCH-only listing: problems a trainer published into one of the student's
+  // own batches. Mirrors the batch arm of the combined query below, including
+  // the same availability rule, so a problem can never be reachable here and
+  // unreachable through the combined listing (or vice versa).
+  if (options.scope === 'BATCH') {
+    return {
+      ...baseQuery,
+      scope: 'BATCH',
+      batch: { $in: batchIds },
+      $or: [{ practiceDate: null }, { practiceDate: { $lt: end } }],
+    };
+  }
+
   return {
     ...baseQuery,
     $or: [

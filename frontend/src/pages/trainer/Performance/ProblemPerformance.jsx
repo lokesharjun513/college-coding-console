@@ -1,74 +1,165 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { getProblemPerformance } from '../../../api/trainer';
-import Spinner from '../../../components/ui/Spinner';
+import PageHeader from '../../../components/ui/PageHeader';
+import TrainerBreadcrumb from '../../../components/trainer/TrainerBreadcrumb';
+import StatusBadge from '../../../components/trainer/StatusBadge';
+import {
+  TrainerEmptyState,
+  TrainerErrorState,
+  TrainerKpiCard,
+  TrainerKpiGrid,
+  TrainerLoadingState,
+  TrainerSectionCard,
+} from '../../../components/trainer';
+import { NOT_AVAILABLE, formatCount } from '../../../utils/trainerDisplay';
 
+/**
+ * Problem performance — /trainer/batches/:batchId/problems/:problemId/performance
+ *
+ * GET /api/trainer/performance/problem/:problemId returns
+ * { problemId, totalSubmissions, solvedCount, solvedStudents, studentCount,
+ *   studentProgress: [{ id, attempts, solved }] }.
+ * `solvedCount` counts accepted submissions; `solvedStudents` counts distinct
+ * students, so a student who retries is never counted twice.
+ * The endpoint 403s unless the problem belongs to a batch this trainer owns.
+ */
 export default function ProblemPerformance() {
-  const { problemId } = useParams();
+  const { batchId, problemId } = useParams();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const res = await getProblemPerformance(problemId);
-        setData(res.data?.data);
-      } catch (err) {
-        setError(err?.response?.data?.message || 'Failed to load problem performance');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getProblemPerformance(problemId);
+      setData(res?.data?.data || null);
+      setError(null);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to load problem performance');
+    } finally {
+      setLoading(false);
+    }
   }, [problemId]);
 
-  if (loading) return <Spinner />;
-  if (error) return <div style={{ color: 'red' }}>{error}</div>;
-  if (!data) return <p>No data.</p>;
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const { totalSubmissions, solvedCount, studentProgress } = data;
+  if (loading) {
+    return (
+      <div className="trainer-page">
+        <TrainerLoadingState label="Loading problem performance…" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="trainer-page">
+        <TrainerErrorState
+          title="Couldn’t load problem performance"
+          message={error || 'No performance data.'}
+          onRetry={load}
+        />
+      </div>
+    );
+  }
+
+  const progress = data.studentProgress || [];
 
   return (
-    <div>
-      <h2>Problem Performance</h2>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ border: '1px solid #ccc', padding: '1rem', flex: '1 1 200px' }}>
-          <h3>Total Submissions</h3>
-          <p>{totalSubmissions}</p>
+    <div className="trainer-page">
+      <TrainerBreadcrumb
+        items={[
+          { label: 'Trainer', to: '/trainer' },
+          { label: 'Problems', to: `/trainer/batches/${batchId}/problems` },
+          { label: 'Problem', to: `/trainer/batches/${batchId}/problems/${problemId}` },
+          { label: 'Performance' },
+        ]}
+      />
+
+      <PageHeader
+        title="Problem Performance"
+        description="Submission activity and solve outcomes for this problem."
+      />
+
+      <TrainerKpiGrid title="Problem metrics">
+        <TrainerKpiCard
+          label="Total Submissions"
+          icon="fileCode"
+          value={formatCount(data.totalSubmissions)}
+          meta="All attempts"
+          tone="red"
+        />
+        <TrainerKpiCard
+          label="Accepted Submissions"
+          icon="checkSquare"
+          value={formatCount(data.solvedCount)}
+          meta="Verdict Accepted"
+          tone="green"
+        />
+        <TrainerKpiCard
+          label="Students Solved"
+          icon="checkCircle2"
+          value={formatCount(
+            typeof data.solvedStudents === 'number'
+              ? data.solvedStudents
+              : progress.filter((p) => p.solved).length
+          )}
+          meta="Distinct students"
+          tone="green"
+        />
+        <TrainerKpiCard
+          label="Students Attempted"
+          icon="users"
+          value={formatCount(progress.length)}
+          meta="Distinct students"
+          tone="blue"
+        />
+      </TrainerKpiGrid>
+
+      <TrainerSectionCard title="Student Progress" headingId="problem-performance-students">
+        <div className="trainer-section-card__body--padded">
+          {progress.length === 0 ? (
+            <TrainerEmptyState
+              icon="inbox"
+              title="No student attempts"
+              description="Nobody has submitted a solution to this problem yet."
+            />
+          ) : (
+            <div className="trainer-table-wrapper">
+              <table className="admin-table">
+                <caption className="trainer-sr-only">Attempts per student for this problem</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Student</th>
+                    <th scope="col">Attempts</th>
+                    <th scope="col">Solved</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {progress.map((row) => (
+                    <tr key={row.id}>
+                      <th scope="row" className="trainer-table__row-head">
+                        {row.name || row.id || NOT_AVAILABLE}
+                      </th>
+                      <td>{formatCount(row.attempts)}</td>
+                      <td>
+                        <StatusBadge tone={row.solved ? 'success' : 'neutral'}>
+                          {row.solved ? 'Solved' : 'Attempted'}
+                        </StatusBadge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        <div style={{ border: '1px solid #ccc', padding: '1rem', flex: '1 1 200px' }}>
-          <h3>Solved Count</h3>
-          <p>{solvedCount}</p>
-        </div>
-      </div>
-      <h3>Student Progress</h3>
-      {studentProgress.length === 0 ? (
-        <p>No student attempts.</p>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Student ID</th>
-              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Attempts</th>
-              <th style={{ border: '1px solid #ccc', padding: '0.5rem' }}>Solved</th>
-            </tr>
-          </thead>
-          <tbody>
-            {studentProgress.map(sp => (
-              <tr key={sp.id}>
-                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{sp.id}</td>
-                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{sp.attempts}</td>
-                <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{sp.solved ? 'Yes' : 'No'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      )}
-      <div style={{ marginTop: '2rem' }}>
-        <Link to="/trainer">Back to Dashboard</Link>
-      </div>
+      </TrainerSectionCard>
     </div>
   );
 }

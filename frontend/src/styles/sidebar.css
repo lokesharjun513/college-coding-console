@@ -31,6 +31,8 @@
   height: 64px;
   box-sizing: border-box;
   position: relative;
+  /* The brand and the account footer stay put while the nav list scrolls. */
+  flex-shrink: 0;
   border-bottom: 1px solid rgba(15, 36, 65, 0.07);
 }
 
@@ -121,10 +123,15 @@
 /* ── Content ─────────────────────────────────────────── */
 .sidebar__content {
   flex: 1;
+  /* Without min-height:0 a flex item defaults to min-height:auto and refuses
+     to shrink below its content height, so this container never scrolls —
+     `.sidebar` is overflow:hidden, which then silently CLIPS every nav item
+     below the fold. min-height:0 lets this element actually scroll. */
+  min-height: 0;
   overflow-y: auto;
-  overflow-x: visible;
+  overflow-x: hidden;
   padding: 12px 12px;
-  scroll-behavior: smooth;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
@@ -327,7 +334,9 @@
   z-index: 1000;
   white-space: nowrap;
   pointer-events: none;
-  animation: tooltipFade 160s cubic-bezier(0.16, 1, 0.3, 1);
+  /* 160ms, not 160s — the previous duration made the tooltip take ~2.7
+     minutes to fade in. */
+  animation: tooltipFade 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes tooltipFade {

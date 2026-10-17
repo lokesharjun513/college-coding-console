@@ -1,380 +1,395 @@
-// Trainer Global Students Page
-// Path: /trainer/students
-// This page lists all students across the trainer's assigned batches and allows adding students.
-
-import React, { useEffect, useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { getTrainerStudents, getTrainerBatches, enrollStudent } from '../../api/trainer';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { enrollStudent, getTrainerBatches, getTrainerStudents } from '../../api/trainer';
 import PageHeader from '../../components/ui/PageHeader';
-import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import DataTable from '../../components/ui/DataTable';
-import Badge from '../../components/ui/Badge';
-import Avatar from '../../components/ui/Avatar';
-import Spinner from '../../components/ui/Spinner';
-import EmptyState from '../../components/ui/EmptyState';
 import Modal from '../../components/ui/Modal';
+import Avatar from '../../components/ui/Avatar';
 import Icon from '../../components/ui/Icon';
+import StatusBadge from '../../components/trainer/StatusBadge';
+import {
+  TrainerEmptyState,
+  TrainerErrorState,
+  TrainerKpiCard,
+  TrainerKpiGrid,
+  TrainerLoadingState,
+} from '../../components/trainer';
+import { NOT_AVAILABLE, formatCount } from '../../utils/trainerDisplay';
+import { uniqueStudents } from '../../utils/trainerAggregates';
+import '../../styles/pages/trainer-students.css';
 
+/**
+ * Trainer students across all assigned batches — /trainer/students
+ *
+ * Enrollments are returned one row per batch, so the totals de-duplicate on
+ * `student.id`. A student enrolled in two batches counts once in "Total
+ * Students" but appears on two rows, matching the API.
+ *
+ * The enroll action adds an EXISTING student to a batch you own. It does not
+ * create user accounts — that is admin-only and has no trainer endpoint.
+ */
 export default function TrainerStudents() {
-  const navigate = useNavigate();
-
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // Add Student modal state
-  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [enrollOpen, setEnrollOpen] = useState(false);
   const [batches, setBatches] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [studentIdInput, setStudentIdInput] = useState('');
-  const [addLoading, setAddLoading] = useState(false);
-  const [addError, setAddError] = useState(null);
+  const [enrollLoading, setEnrollLoading] = useState(false);
+  const [enrollError, setEnrollError] = useState(null);
 
-  // Fetch students & batches
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
       const [studentsRes, batchesRes] = await Promise.all([
         getTrainerStudents(),
         getTrainerBatches(),
       ]);
-      setStudents(studentsRes.data?.data || []);
-      setBatches(batchesRes.data?.data || []);
+      setStudents(studentsRes?.data?.data || []);
+      setBatches(batchesRes?.data?.data || []);
+      setError(null);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load students');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  // Mobile detection
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Filtering
   const filtered = useMemo(() => {
-    if (!search) return students;
-    const lower = search.toLowerCase();
-    return students.filter((e) => {
-      const name = e.student?.name?.toLowerCase() ?? '';
-      const email = e.student?.email?.toLowerCase() ?? '';
-      const sid = e.student?.id?.toString().toLowerCase() ?? '';
-      const batchName = e.batch?.name?.toLowerCase() ?? '';
-      const batchCode = e.batch?.code?.toLowerCase() ?? '';
-      return name.includes(lower) || email.includes(lower) || sid.includes(lower) || batchName.includes(lower) || batchCode.includes(lower);
+    const q = search.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter((row) => {
+      const fields = [
+        row.student?.name,
+        row.student?.email,
+        row.student?.id,
+        row.batch?.name,
+        row.batch?.code,
+      ];
+      return fields.some((f) => String(f ?? '').toLowerCase().includes(q));
     });
   }, [students, search]);
 
-  // Summary metrics
-  const totalStudents = students.length;
-  const statusCounts = useMemo(() => {
-    const map = {};
-    students.forEach((e) => {
-      const s = e.status?.toUpperCase();
-      if (s) map[s] = (map[s] || 0) + 1;
-    });
-    return map;
-  }, [students]);
-  const batchSet = new Set(students.map((e) => e.batch?.id).filter(Boolean));
-  const batchCount = batchSet.size;
+  // De-duplicated so a multi-batch student is counted once.
+  const totalStudents = useMemo(() => uniqueStudents(students), [students]);
 
-  const statusVariant = (status) => {
-    const s = status?.toUpperCase();
-    switch (s) {
-      case 'ACTIVE':
-        return 'success';
-      case 'INACTIVE':
-        return 'danger';
-      case 'PENDING':
-        return 'warning';
-      default:
-        return 'neutral';
+  const summary = useMemo(() => {
+    const activeIds = new Set();
+    const inactiveIds = new Set();
+    const batchIds = new Set();
+    for (const row of students) {
+      const id = row.student?.id;
+      if (id === undefined || id === null) continue;
+      batchIds.add(String(row.batch?.id));
+      if (String(row.status || '').toUpperCase() === 'ACTIVE') activeIds.add(String(id));
+      else inactiveIds.add(String(id));
     }
-  };
+    return {
+      active: activeIds.size,
+      inactive: [...inactiveIds].filter((id) => !activeIds.has(id)).length,
+      batches: batchIds.size,
+    };
+  }, [students]);
 
-  const handleAddStudent = async (e) => {
-    e.preventDefault();
+  const handleEnroll = async (event) => {
+    event.preventDefault();
     if (!selectedBatchId || !studentIdInput.trim()) return;
     try {
-      setAddLoading(true);
-      setAddError(null);
+      setEnrollLoading(true);
+      setEnrollError(null);
       await enrollStudent(selectedBatchId, studentIdInput.trim());
       setStudentIdInput('');
       setSelectedBatchId('');
-      setAddModalOpen(false);
+      setEnrollOpen(false);
       await fetchData();
     } catch (err) {
-      setAddError(err?.response?.data?.message || 'Failed to enroll student');
+      setEnrollError(err?.response?.data?.message || 'Failed to enroll student');
     } finally {
-      setAddLoading(false);
+      setEnrollLoading(false);
     }
   };
 
-  // Loading / error states
   if (loading) {
-    return <Spinner />;
-  }
-
-  if (error) {
     return (
-      <div style={{ padding: 'var(--space-8)' }}>
-        <EmptyState
-          message={error}
-          actionLabel="Retry"
-          onAction={fetchData}
-        />
+      <div className="trainer-page">
+        <PageHeader title="Students" description="Students across your assigned batches." />
+        <TrainerLoadingState label="Loading students…" />
       </div>
     );
   }
 
-  // Table columns for desktop view
-  const columns = [
-    {
-      key: 'student',
-      header: 'Student',
-      formatter: (_, row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <Avatar name={row.student?.name} size={32} />
-          <div>
-            <div>{row.student?.name || '—'}</div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-muted)' }}>{row.student?.email || '—'}</div>
-          </div>
-        </div>
-      ),
-    },
-    { key: 'studentId', header: 'Student ID', formatter: (_, row) => row.student?.id || '—' },
-    { key: 'email', header: 'Email', formatter: (_, row) => row.student?.email || '—' },
-    {
-      key: 'batch',
-      header: 'Batch',
-      formatter: (_, row) => (
-        <div>
-          <div>{row.batch?.name || '—'}</div>
-          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-muted)' }}>{row.batch?.code || '—'}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      formatter: (_, row) => row.status ? <Badge variant={statusVariant(row.status)}>{row.status}</Badge> : '—',
-      align: 'center',
-    },
-    {
-      key: 'actions',
-      header: '',
-      formatter: (_, row) => (
-        <Link
-          to={`/trainer/batches/${row.batch?.id}/students/${row.student?.id}`}
-          className="btn btn-secondary"
-        >
-          View
-        </Link>
-      ),
-      align: 'center',
-    },
-  ];
+  if (error && students.length === 0) {
+    return (
+      <div className="trainer-page">
+        <PageHeader title="Students" description="Students across your assigned batches." />
+        <TrainerErrorState title="Couldn’t load students" message={error} onRetry={fetchData} />
+      </div>
+    );
+  }
 
   return (
-    <div className="trainer-students-page" style={{ padding: 'var(--space-8)' }}>
+    <div className="trainer-page">
       <PageHeader
         title="Students"
-        description="Manage and monitor students across your assigned batches."
+        description="Every student enrolled across the batches assigned to you."
+        breadcrumb={<span className="admin-breadcrumb__current">Students</span>}
         actions={
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-            <Button variant="primary" onClick={() => setAddModalOpen(true)}>
-              + Add Student
-            </Button>
-            <Button variant="secondary" onClick={fetchData}>
-              Refresh
+          <div className="trainer-page__actions">
+            <Button variant="primary" onClick={() => setEnrollOpen(true)}>
+              <Icon name="userPlus" size={14} />
+              Enroll Student
             </Button>
           </div>
         }
       />
 
-      {/* Summary Strip */}
-      <div style={{ display: 'grid', gap: 'var(--space-4)', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: 'var(--space-8)' }}>
-        <Card>
-          <h3 style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', margin: 0 }}>Total Students</h3>
-          <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-semibold)', margin: 'var(--space-1) 0 0' }}>{totalStudents}</p>
-        </Card>
-        <Card>
-          <h3 style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', margin: 0 }}>Active Students</h3>
-          <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-semibold)', margin: 'var(--space-1) 0 0' }}>{statusCounts['ACTIVE'] || 0}</p>
-        </Card>
-        <Card>
-          <h3 style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', margin: 0 }}>Inactive Students</h3>
-          <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-semibold)', margin: 'var(--space-1) 0 0' }}>{statusCounts['INACTIVE'] || 0}</p>
-        </Card>
-        <Card>
-          <h3 style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', margin: 0 }}>Batches Represented</h3>
-          <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-semibold)', margin: 'var(--space-1) 0 0' }}>{batchCount}</p>
-        </Card>
-      </div>
+      {students.length > 0 ? (
+        <TrainerKpiGrid title="Student summary">
+          <TrainerKpiCard
+            label="Total Students"
+            icon="users"
+            value={formatCount(totalStudents)}
+            meta="Unique across your batches"
+            tone="blue"
+          />
+          <TrainerKpiCard
+            label="Active Enrollments"
+            icon="userCheck"
+            value={formatCount(summary.active)}
+            meta="Currently active in at least one batch"
+            tone="green"
+          />
+          <TrainerKpiCard
+            label="Inactive Only"
+            icon="user"
+            value={formatCount(summary.inactive)}
+            meta="No active enrollment"
+            tone="orange"
+          />
+          <TrainerKpiCard
+            label="Batches Represented"
+            icon="layers"
+            value={formatCount(summary.batches)}
+            meta="With at least one enrollment"
+            tone="red"
+          />
+        </TrainerKpiGrid>
+      ) : null}
 
-      {/* Toolbar / Search (only show if students exist or search is active) */}
-      {(students.length > 0 || search) && (
-        <div style={{ display: 'flex', gap: 'var(--space-4)', marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
+      {error ? (
+        <div className="trainer-notice trainer-notice--error" role="alert">
+          <Icon name="alertTriangle" size={16} />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      {students.length > 0 ? (
+        <div className="trainer-filter-bar">
+          <label className="trainer-sr-only" htmlFor="trainer-all-students-search">
+            Search students
+          </label>
           <input
+            id="trainer-all-students-search"
             type="search"
-            placeholder="Search by name, ID, email or batch..."
+            className="trainer-search"
+            placeholder="Search by name, ID, email or batch…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search students"
-            style={{
-              flex: '1 1 250px',
-              padding: 'var(--space-2) var(--space-3)',
-              border: `1px solid var(--border-subtle)`,
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--font-size-body)',
-              backgroundColor: 'var(--color-surface)',
-            }}
           />
-          {search && (
-            <Button variant="secondary" onClick={() => setSearch('')}>Clear</Button>
-          )}
+          {search ? (
+            <Button variant="secondary" onClick={() => setSearch('')}>
+              Clear
+            </Button>
+          ) : null}
         </div>
-      )}
+      ) : null}
 
-      {/* Content Area */}
       {students.length === 0 ? (
-        <Card variant="flat">
-          <div style={{ textAlign: 'center', padding: 'var(--space-12) var(--space-4)' }}>
-            <div style={{ display: 'inline-flex', padding: 'var(--space-4)', borderRadius: '50%', backgroundColor: 'var(--color-surface-hover)', marginBottom: 'var(--space-4)' }}>
-              <Icon name="users" size={32} color="var(--color-text-muted)" ariaLabel="No students" />
-            </div>
-            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>No students yet</h2>
-            <p style={{ color: 'var(--color-text-muted)', maxWidth: '420px', margin: '0 auto var(--space-6)', fontSize: 'var(--font-size-body)' }}>
-              Students enrolled in your batches will appear here. Add your first student to get started.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-              <Button variant="primary" onClick={() => setAddModalOpen(true)}>
-                + Add Student
-              </Button>
-              <Button variant="secondary" onClick={() => navigate('/trainer/batches')}>
-                View Batches
-              </Button>
-            </div>
+        <TrainerEmptyState
+          icon="users"
+          title="No students yet"
+          description="Students enrolled in your batches appear here. Enroll an existing student to get started."
+        >
+          <div className="trainer-page__actions">
+            <Button variant="primary" onClick={() => setEnrollOpen(true)}>
+              <Icon name="userPlus" size={14} />
+              Enroll Student
+            </Button>
+            <Button variant="secondary" onClick={fetchData}>
+              <Icon name="refreshCw" size={14} />
+              Refresh
+            </Button>
           </div>
-        </Card>
+        </TrainerEmptyState>
       ) : filtered.length === 0 ? (
-        <Card variant="flat">
-          <div style={{ textAlign: 'center', padding: 'var(--space-12) var(--space-4)' }}>
-            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>No students found</h2>
-            <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-6)', fontSize: 'var(--font-size-body)' }}>
-              We couldn&apos;t find any students matching your search.
-            </p>
-            <Button variant="secondary" onClick={() => setSearch('')}>Clear Search</Button>
-          </div>
-        </Card>
-      ) : isMobile ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {filtered.map((row) => (
-            <Card key={row.enrollmentId || row.id} variant="interactive">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                <Avatar name={row.student?.name} size={40} />
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: 0, fontSize: 'var(--font-size-md)' }}>{row.student?.name || '—'}</h3>
-                  <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--color-muted)' }}>{row.student?.email || '—'}</p>
-                </div>
-                {row.status && <Badge variant={statusVariant(row.status)}>{row.status}</Badge>}
-              </div>
-              <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--font-size-sm)', color: 'var(--color-muted)' }}>
-                <div>Student ID: {row.student?.id || '—'}</div>
-                <div>Batch: {row.batch?.name || '—'} ({row.batch?.code || '—'})</div>
-              </div>
-              <div style={{ marginTop: 'var(--space-4)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-                <Link to={`/trainer/batches/${row.batch?.id}/students/${row.student?.id}`} className="btn btn-secondary">
-                  View →
-                </Link>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <TrainerEmptyState
+          icon="users"
+          title="No matching students"
+          description="No students match your current search."
+        >
+          <Button variant="secondary" onClick={() => setSearch('')}>
+            Clear search
+          </Button>
+        </TrainerEmptyState>
       ) : (
-        <DataTable
-          columns={columns}
-          data={filtered}
-          loading={loading}
-          emptyMessage="No students"
-        />
+        <>
+          {/* Desktop: real table. Mobile: the card list below. Both are in the
+              DOM and the stylesheet switches between them, so no JS resize
+              listener is needed and both are testable. */}
+          <div className="trainer-table-wrapper trainer-hide-mobile">
+            <table className="admin-table">
+              <caption className="trainer-sr-only">
+                Students enrolled across your batches
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Student</th>
+                  <th scope="col">Batch</th>
+                  <th scope="col">Student ID</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row) => (
+                  <tr key={row.id}>
+                    <th scope="row" className="trainer-table__row-head">
+                      <span className="trainer-table__identity">
+                        <Avatar name={row.student?.name || ''} size={28} />
+                        <span>{row.student?.name || NOT_AVAILABLE}</span>
+                      </span>
+                    </th>
+                    <td>
+                      <span className="trainer-table__stack">
+                        <span>{row.batch?.name || NOT_AVAILABLE}</span>
+                        <span className="trainer-table__muted">{row.batch?.code}</span>
+                      </span>
+                    </td>
+                    <td className="trainer-table__muted">
+                      {row.student?.id || NOT_AVAILABLE}
+                    </td>
+                    <td>
+                      <StatusBadge status={row.status} />
+                    </td>
+                    <td>
+                      <span className="trainer-table__actions">
+                        <Link
+                          to={`/trainer/batches/${row.batch?.id}/students/${row.student?.id}`}
+                          className="btn btn-secondary"
+                        >
+                          View
+                          <Icon name="chevronRight" size={14} />
+                        </Link>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <ul className="trainer-enrollment-cards trainer-hide-desktop">
+            {filtered.map((row) => (
+              <li key={row.id} className="trainer-enrollment-card">
+                <div className="trainer-enrollment-card__head">
+                  <Avatar name={row.student?.name || ''} size={36} />
+                  <span className="trainer-enrollment-card__identity">
+                    <p className="trainer-enrollment-card__name">
+                      {row.student?.name || NOT_AVAILABLE}
+                    </p>
+                    <p className="trainer-enrollment-card__email">
+                      {row.student?.email || NOT_AVAILABLE}
+                    </p>
+                  </span>
+                  <StatusBadge status={row.status} />
+                </div>
+                <div className="trainer-enrollment-card__meta">
+                  <span>Student ID: {row.student?.id || NOT_AVAILABLE}</span>
+                  <span>
+                    Batch: {row.batch?.name || NOT_AVAILABLE} ({row.batch?.code || NOT_AVAILABLE})
+                  </span>
+                </div>
+                <div className="trainer-enrollment-card__actions">
+                  <Link
+                    to={`/trainer/batches/${row.batch?.id}/students/${row.student?.id}`}
+                    className="btn btn-secondary"
+                  >
+                    View enrollment
+                    <Icon name="chevronRight" size={14} />
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
-      {/* Add Student Modal */}
-      <Modal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)} title="Add Student">
-        <form onSubmit={handleAddStudent}>
-          <div style={{ marginBottom: 'var(--space-4)' }}>
-            <label htmlFor="batchSelect" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>
+      <Modal isOpen={enrollOpen} onClose={() => setEnrollOpen(false)} title="Enroll Student">
+        <form className="trainer-form" onSubmit={handleEnroll}>
+          <p className="trainer-form__hint">
+            Enrolls an existing student into one of your batches. Student accounts are created by an
+            administrator.
+          </p>
+
+          <div className="trainer-form__field">
+            <label className="trainer-form__label" htmlFor="trainer-enroll-batch">
               Batch
             </label>
             <select
-              id="batchSelect"
+              id="trainer-enroll-batch"
+              className="trainer-select"
               value={selectedBatchId}
               onChange={(e) => setSelectedBatchId(e.target.value)}
               required
-              style={{
-                width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-surface)',
-                fontSize: 'var(--font-size-body)',
-              }}
             >
-              <option value="">Select a batch</option>
-              {batches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.code})
+              <option value="">Select a batch…</option>
+              {batches.map((batch) => (
+                <option key={batch.id} value={batch.id}>
+                  {batch.name} ({batch.code || 'no code'})
                 </option>
               ))}
             </select>
           </div>
 
-          <div style={{ marginBottom: 'var(--space-4)' }}>
-            <label htmlFor="studentIdInput" style={{ display: 'block', marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>
+          <div className="trainer-form__field">
+            <label className="trainer-form__label" htmlFor="trainer-enroll-student-id">
               Student ID
             </label>
             <input
-              id="studentIdInput"
+              id="trainer-enroll-student-id"
               type="text"
-              placeholder="Enter existing student ID"
+              className="trainer-form__input"
+              placeholder="Existing student ID"
               value={studentIdInput}
               onChange={(e) => setStudentIdInput(e.target.value)}
               required
-              style={{
-                width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-surface)',
-                fontSize: 'var(--font-size-body)',
-              }}
             />
           </div>
 
-          {addError && (
-            <p style={{ color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
-              {addError}
-            </p>
-          )}
+          {enrollError ? (
+            <div className="trainer-form__error" role="alert">
+              {enrollError}
+            </div>
+          ) : null}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-            <Button variant="secondary" onClick={() => setAddModalOpen(false)} disabled={addLoading} type="button">
+          <div className="trainer-form__actions">
+            <Button variant="secondary" type="button" onClick={() => setEnrollOpen(false)} disabled={enrollLoading}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" loading={addLoading} disabled={addLoading}>
-              Add Student
+            <Button
+              variant="primary"
+              type="submit"
+              loading={enrollLoading}
+              disabled={!selectedBatchId || !studentIdInput.trim()}
+            >
+              Enroll Student
             </Button>
           </div>
         </form>

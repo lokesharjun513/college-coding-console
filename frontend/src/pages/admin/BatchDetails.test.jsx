@@ -7,7 +7,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import AdminBatchDetails from './BatchDetails';
 import {
-  getBatch, getTrainers, updateBatch, deleteBatch,
+  getBatch, getTrainers, updateBatch,
   getBatchStudents, getStudents, enrollStudent,
   deleteStudentEnrollment, updateStudentEnrollment,
 } from '../../api/admin';
@@ -654,7 +654,7 @@ test('department segments stay in sync with the department select', async () => 
   expect(cse).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('avatar initials and academic columns render from real data', async () => {
+test('avatar initials and academic data render from real data', async () => {
   useMultiDepartmentRoster();
   renderPage();
   const dialog = await openEnrollment();
@@ -664,10 +664,30 @@ test('avatar initials and academic columns render from real data', async () => {
   expect(within(row).getByText('AR')).toBeInTheDocument();
   expect(within(row).getByText('R-001')).toBeInTheDocument();
   expect(within(row).getByText('asha@example.com')).toBeInTheDocument();
-  expect(within(row).getByText('2023–2027')).toBeInTheDocument();
-  expect(within(row).getByText('A')).toBeInTheDocument();
+  expect(within(row).getByText(/active/i)).toBeInTheDocument();
   // The internal Student document id is never shown as identity.
   expect(within(row).queryByText(/doc-a/)).not.toBeInTheDocument();
+
+  // The roster table is Student / Roll Number / Email / Status, so a student's
+  // academic standing surfaces through the filters that scope the roster rather
+  // than as its own columns. They must still be derived from the real roster.
+  const deptFilter = within(dialog).getByLabelText('Department');
+  const batchFilter = within(dialog).getByLabelText('Academic Batch');
+  const sectionFilter = within(dialog).getByLabelText('Section');
+  expect(deptFilter).toHaveValue('ALL');
+  expect(within(deptFilter).getByRole('option', { name: 'CSE' })).toBeInTheDocument();
+  expect(within(deptFilter).getByRole('option', { name: 'ECE' })).toBeInTheDocument();
+  // Dash-agnostic: the option label and the filter value format the range
+  // differently, and this asserts the range, not the glyph.
+  expect(within(batchFilter).getByRole('option', { name: /2023.2027/ })).toBeInTheDocument();
+  expect(within(batchFilter).getByRole('option', { name: /2024.2028/ })).toBeInTheDocument();
+  expect(within(sectionFilter).getByRole('option', { name: 'A' })).toBeInTheDocument();
+  expect(within(sectionFilter).getByRole('option', { name: 'B' })).toBeInTheDocument();
+
+  // And those values really filter the table they scope.
+  fireEvent.change(batchFilter, { target: { value: '2024-2028' } });
+  await waitFor(() => expect(within(dialog).queryByText('Asha Rao')).not.toBeInTheDocument());
+  expect(within(dialog).getByText('Chitra Iyer')).toBeInTheDocument();
 });
 
 test('legacy students without year fields render a neutral placeholder', async () => {
@@ -689,9 +709,21 @@ test('legacy students without year fields render a neutral placeholder', async (
   await within(dialog).findByText('Legacy Person');
 
   const row = within(dialog).getByText('Legacy Person').closest('tr');
-  expect(within(row).getAllByText('—').length).toBeGreaterThanOrEqual(3);
-  // No academic-batch option can be derived, so the filter stays at its default.
+  // A missing roll number gets the neutral em-dash placeholder, not "null".
+  expect(within(row).getByText('—')).toBeInTheDocument();
+  // The fields that are present still render normally.
+  expect(within(row).getByText('legacy@example.com')).toBeInTheDocument();
+  expect(within(row).getByText(/active/i)).toBeInTheDocument();
+
+  // No academic-batch or section option can be derived from null fields, so
+  // both filters stay at their default and offer nothing to narrow by.
   expect(within(dialog).getByLabelText('Academic Batch')).toHaveValue('ALL');
+  expect(within(dialog).getByLabelText('Section')).toHaveValue('ALL');
+  expect(within(dialog).getByLabelText('Academic Batch').querySelectorAll('option').length).toBe(1);
+  expect(within(dialog).getByLabelText('Section').querySelectorAll('option').length).toBe(1);
+
+  // The student stays visible and selectable rather than disappearing.
+  expect(within(dialog).getByRole('checkbox', { name: /Select Legacy Person/i })).toBeInTheDocument();
 });
 
 test('header checkbox reports an indeterminate state for a partial selection', async () => {

@@ -1,121 +1,580 @@
-:root {
-  --console-bg: #f9f9f9;
-  --console-surface: #ffffff;
-  --console-surface-elevated: #ffffff;
-  --console-border: #d1d1d6;
-  --console-text: #1d1d1f;
-  --console-text-secondary: #86868b;
-  --console-editor-bg: #1e1e1e;
-  --console-editor-border: #333;
-  --console-accent: #0071e3;
-  --console-success: #34c759;
-  --console-error: #ff3b30;
-  --console-radius-md: 12px;
-  --console-radius-lg: 16px;
-  --console-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-  --console-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
+/* =================================================================
+   Student - Free Console (/student/freeconsole).
 
-.free-console-container {
-  height: 100%;
-  min-height: 0;
-  background: var(--console-bg);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
+   Page-specific rules only. Reusable primitives (breadcrumb, focus rings and the
+   `--student-*` tokens) come from `styles/student.css`, which every Student page
+   loads. Nothing here is a bare element or a global class, so nothing can reach
+   the Admin or Trainer modules.
 
-.console-header {
-  padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--console-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
+   The `fc-*` prefix replaces the old unprefixed `free-console-*` names.
 
-.console-title-area h1 { font-size: 1.1rem; font-weight: 600; margin: 0; }
-.console-status { font-size: 0.85rem; color: var(--console-text-secondary); display: flex; align-items: center; gap: 6px; }
+   Layout notes:
+     - One spacing and border system, declared once:
+         `--fc-control-h`  every select, button and textarea is this tall, so the
+                          toolbar, the pane headers and the dialogs line up.
+         `--fc-gap-*`      the only vertical rhythm inside the workspace.
+         `--fc-border`     #C6D1D7 for panel boundaries.
+         `--fc-border-input` a slightly stronger edge for interactive controls,
+                          so an input does not read as the same weight as a panel.
+     - No nested content wrapper and no max-width: the workspace uses the width
+       the shell gives it, because the editor is the point of the page.
+     - The workspace has a minimum height and the output scrolls *inside* it, so
+       a long program grows nothing but the scrollbar.
+   ================================================================= */
 
-.workspace {
-  flex: 1;
-  padding: 24px;
-  max-width: 1440px;
-  margin: 0 auto;
+.fc-page {
+  --fc-control-h: 40px;
+  --fc-gap-1: 8px;
+  --fc-gap-2: 10px;
+  --fc-gap-3: 14px;
+  --fc-gap-4: 16px;
+  --fc-border: var(--student-border, #CDD6DD);
+  --fc-border-w: var(--student-border-width, 1px);
+  --fc-border-input: rgba(159, 160, 181, 0.62);
+  --fc-editor-h: 260px;
+
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  min-width: 0;
+  /* Backstop for long unbroken strings; every child also declares min-width: 0. */
+  overflow-x: clip;
+  box-sizing: border-box;
+  background: var(--student-canvas, #FCFDFD);
+  color: var(--student-text-primary, #0F2441);
 }
 
-.editor-area {
-  background: var(--console-editor-bg);
-  border-radius: var(--console-radius-lg);
+.fc-page *,
+.fc-page *::before,
+.fc-page *::after {
+  box-sizing: border-box;
+}
+
+/* One inset for the whole page. There is no wrapper div inside it, and in
+   fullscreen mode `.app-content` adds no padding of its own, so this is the
+   only gutter - nothing stacks on top of it. */
+.fc-inner {
+  width: 100%;
+  min-width: 0;
+  padding: var(--student-page-padding, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fc-gap-4);
+}
+
+.fc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- toolbar --------------------------------------------------------- */
+
+/* One row, one control height. Reset and Run sit on the same baseline as the
+   language select instead of being pulled down by a stacked field label. */
+.fc-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--fc-gap-1);
+  min-width: 0;
+}
+
+.fc-toolbar__spacer {
+  flex: 1 1 auto;
+  min-width: var(--fc-gap-1);
+}
+
+.fc-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fc-gap-1);
+  min-width: 0;
+}
+
+.fc-field__label {
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--student-text-muted, #9FA0B5);
+  white-space: nowrap;
+}
+
+.fc-select {
+  min-width: 148px;
+  height: var(--fc-control-h);
+  padding: 0 var(--space-3, 12px);
+  border: var(--fc-border-w) solid var(--fc-border-input);
+  border-radius: var(--radius-md, 12px);
+  background: var(--student-surface, #FFFFFF);
+  color: var(--student-text-primary, #0F2441);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color var(--student-transition), box-shadow var(--student-transition);
+}
+
+.fc-select:hover {
+  border-color: var(--student-text-muted, #9FA0B5);
+}
+
+.fc-notice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--student-accent-border);
+  border-radius: var(--radius-md, 12px);
+  background: var(--student-accent-soft);
+  color: var(--student-text-secondary, #39516B);
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.5;
+}
+
+/* -- buttons --------------------------------------------------------- */
+
+.fc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: var(--fc-control-h);
+  padding: 0 var(--space-5, 20px);
+  border-radius: var(--radius-md, 12px);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  /* `global.css` paints EVERY bare <button> with a filled dark background, so
+     every variant declares its own fill. */
+  background: var(--student-surface, #FFFFFF);
+  border: var(--fc-border-w) solid var(--fc-border-input);
+  color: var(--student-text-secondary, #39516B);
+  transition: background-color var(--student-transition),
+              border-color var(--student-transition),
+              color var(--student-transition),
+              box-shadow var(--student-transition);
+}
+
+.fc-button:hover:not(:disabled) {
+  border-color: var(--student-accent, #216E4E);
+  color: var(--student-accent, #216E4E);
+  background: var(--student-accent-soft);
+}
+
+.fc-button--primary {
+  background: var(--student-accent, #216E4E);
+  border-color: var(--student-accent, #216E4E);
+  color: #FFFFFF;
+}
+
+.fc-button--primary:hover:not(:disabled) {
+  background: var(--student-accent-hover);
+  border-color: var(--student-accent-hover);
+  color: #FFFFFF;
+}
+
+.fc-button--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.fc-button--ghost:hover:not(:disabled) {
+  border-color: var(--fc-border-input);
+}
+
+.fc-button--small {
+  height: 30px;
+  padding: 0 var(--space-3, 12px);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.fc-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Focus is a restrained accent border plus the shared Student ring, on every
+   control type. */
+.fc-page .fc-button:focus-visible,
+.fc-page .fc-select:focus-visible,
+.fc-page .fc-stdin:focus-visible {
+  outline: none;
+  border-color: var(--student-accent, #216E4E);
+  box-shadow: var(--student-focus-ring);
+}
+
+/* -- workspace ------------------------------------------------------- */
+
+.fc-workspace {
+  display: grid;
+  /* Editor first; the output column takes the rest. minmax(0, …) keeps a long
+     line in the editor from forcing the grid wider than the viewport. */
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: var(--fc-gap-4);
+  align-items: stretch;
+  min-width: 0;
+  /* A floor for the whole workspace, so Monaco always has a box to measure
+     against even when the output column is nearly empty. */
+  min-height: clamp(400px, 56vh, 680px);
+}
+
+/* Both columns are bounded tracks: the output scrolls inside its pane instead
+   of stretching the page when a program prints a lot. */
+.fc-column {
+  display: grid;
+  grid-template-rows: minmax(200px, 1fr) minmax(130px, 200px);
+  gap: var(--fc-gap-4);
+  min-width: 0;
+  min-height: 0;
+}
+
+.fc-pane {
   display: flex;
   flex-direction: column;
+  gap: var(--fc-gap-2);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-3, 12px);
+  border: var(--fc-border-w) solid var(--fc-border);
+  border-radius: var(--student-card-radius, 12px);
+  background: var(--student-surface, #FFFFFF);
+  box-shadow: var(--student-shadow-sm);
 }
 
-.toolbar {
-  padding: 10px 16px;
-  background: #2d2d2d;
+/* Every pane header is the same strip: label on the left, affordance on the
+   right, both on one baseline. */
+.fc-pane__bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  color: #fff;
-  font-size: 0.85rem;
+  justify-content: space-between;
+  gap: var(--fc-gap-1);
+  min-height: 22px;
+  min-width: 0;
+  padding-bottom: var(--fc-gap-2);
+  border-bottom: var(--fc-border-w) solid var(--fc-border);
 }
 
-.editor-textarea {
+.fc-pane__title {
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  color: var(--student-text-secondary, #39516B);
+}
+
+.fc-pane__filename {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--student-text-secondary, #39516B);
+  overflow-wrap: anywhere;
+}
+
+.fc-pane__badge {
+  padding: 2px 8px;
+  border: var(--fc-border-w) solid var(--fc-border-input);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--student-surface-muted, #F8FAFB);
+  color: var(--student-text-muted, #9FA0B5);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* -- editor ---------------------------------------------------------- */
+
+/* flex: 1 fills the stretched pane, and min-height guarantees Monaco a
+   measurable box even if the pane is squeezed on a short screen. The Editor
+   itself runs with automaticLayout, so it follows resizes. */
+.fc-editor {
+  flex: 1 1 auto;
   width: 100%;
-  min-height: 450px;
-  background: transparent;
-  color: #d4d4d4;
-  padding: 16px;
-  font-family: 'Fira Code', monospace;
-  border: none;
-  resize: vertical;
-  outline: none;
+  min-width: 0;
+  min-height: var(--fc-editor-h);
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
 }
 
-.panels-grid {
+/* -- output ---------------------------------------------------------- */
+
+/* Nested surface: its own border and fill so it is clearly a surface inside the
+   panel rather than panel-coloured emptiness. */
+.fc-output {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3, 12px);
+  border: 1px solid #2C3545;
+  border-radius: var(--radius-sm, 8px);
+  background: #151A23;
+  color: #CCD0D5;
+  /* Long unbroken output wraps instead of widening the page. */
+  overflow-wrap: anywhere;
+}
+
+.fc-output__stdout,
+.fc-output__stderr {
+  margin: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.fc-output__stdout {
+  color: #E4E7EC;
+}
+
+.fc-output__stderr {
+  margin-top: var(--fc-gap-1);
+  padding-top: var(--fc-gap-1);
+  border-top: 1px solid #2C3545;
+  color: #F2A1A8;
+}
+
+.fc-output__empty {
+  margin: 0;
+  font-size: var(--font-size-xs, 12px);
+  color: #8D97A8;
+}
+
+.fc-report__title {
+  margin: 0 0 4px;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  color: #F2A1A8;
+}
+
+.fc-report__message {
+  margin: 0 0 var(--fc-gap-1);
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.6;
+  color: #CCD0D5;
+  overflow-wrap: anywhere;
+}
+
+.fc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--student-surface-muted, #F8FAFB);
+  color: var(--student-text-muted, #9FA0B5);
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fc-status--success {
+  background: rgba(33, 110, 78, 0.1);
+  color: #216e4e;
+}
+
+.fc-status--compile,
+.fc-status--runtime,
+.fc-status--timeout,
+.fc-status--invalid,
+.fc-status--unavailable,
+.fc-status--unknown {
+  background: rgba(180, 35, 24, 0.08);
+  color: #b42318;
+}
+
+/* Throttling is a property of the service, not of the student's program, so it
+   is deliberately kept out of the red failure group above. */
+.fc-status--rate_limited {
+  background: rgba(181, 71, 8, 0.1);
+  color: #b54708;
+}
+
+.fc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fc-gap-3);
+  padding-top: var(--fc-gap-2);
+  border-top: var(--fc-border-w) solid var(--fc-border);
+  font-size: var(--font-size-2xs, 11px);
+  color: var(--student-text-muted, #9FA0B5);
+}
+
+/* -- stdin ----------------------------------------------------------- */
+
+.fc-stdin {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 72px;
+  padding: var(--space-3, 12px);
+  border: var(--fc-border-w) solid var(--fc-border-input);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--student-surface-muted, #F8FAFB);
+  color: var(--student-text-primary, #0F2441);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  transition: border-color var(--student-transition), box-shadow var(--student-transition);
+}
+
+.fc-stdin:hover {
+  border-color: var(--student-text-muted, #9FA0B5);
+}
+
+.fc-stdin::placeholder {
+  color: var(--student-text-muted, #9FA0B5);
+}
+
+/* -- language confirmation ------------------------------------------- */
+
+.fc-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay, 300);
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 20px;
+  place-items: center;
+  padding: var(--space-4, 16px);
+  background: rgba(15, 36, 65, 0.32);
+  backdrop-filter: blur(6px);
 }
 
-.panel {
-  background: var(--console-surface);
-  border-radius: var(--console-radius-md);
-  padding: 16px;
-  border: 1px solid var(--console-border);
+.fc-confirm__card {
+  width: min(100%, 420px);
+  padding: var(--space-6, 24px);
+  border: var(--fc-border-w) solid var(--fc-border);
+  border-radius: var(--radius-lg, 16px);
+  background: var(--student-surface, #FFFFFF);
+  box-shadow: var(--shadow-lg, 0 16px 40px rgba(15, 36, 65, 0.12));
 }
 
-.panel textarea, .panel pre {
-  width: 100%;
-  min-height: 120px;
-  background: #f5f5f7;
-  border-radius: 8px;
-  padding: 12px;
-  font-family: monospace;
-  font-size: 0.9rem;
-  border: 1px solid var(--console-border);
+.fc-confirm__title {
+  margin: 0 0 8px;
+  font-size: var(--font-size-lg, 16px);
+  font-weight: 700;
+  color: var(--student-text-primary, #0F2441);
 }
 
-.btn {
-  padding: 6px 16px;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: var(--console-transition);
+.fc-confirm__body {
+  margin: 0 0 var(--space-5, 20px);
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1.6;
+  color: var(--student-text-secondary, #39516B);
 }
 
-.btn-primary { background: var(--console-accent); color: #fff; }
-.btn-primary:hover { opacity: 0.9; }
+/* Same control height as the toolbar, so the dialog matches the page. */
+.fc-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--fc-gap-1);
+}
 
-/* bottom-nav and more-sheet removed: shell now owns navigation */
+/* =================================================================
+   Responsive
+
+   Four breakpoints, each doing one job:
+     1199  one column - there is no width for a usable side-by-side editor
+     768   mobile spacing and the fixed bottom-navigation clearance
+     480   tighten the control row for the narrowest phones
+     360   last-resort editor height
+   ================================================================= */
+
+@media (max-width: 1199px) {
+  /* Stacked, the editor and the output are peers rather than one outgrowing
+     the other, so neither is allowed to set the page height. */
+  .fc-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .fc-column {
+    grid-template-rows: minmax(180px, 260px) minmax(130px, 180px);
+  }
+}
+
+@media (max-width: 768px) {
+  .fc-page {
+    --fc-editor-h: 240px;
+    /* Clears the fixed 64px bottom navigation plus its safe-area inset, so the
+       last row of the workspace is never obscured. */
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* StudentLayout mounts with layoutMode="fullscreen", and
+     `.app-shell[data-layout='fullscreen'] .app-content { padding: 0 }` outranks
+     the shell's own `@media (max-width: 767px)` padding. So `.app-content`
+     contributes NO gutter here and this page owns it - one step tighter than
+     desktop rather than doubled. */
+  .fc-inner {
+    padding: var(--space-3, 12px);
+    gap: var(--fc-gap-3);
+  }
+
+  /* The select keeps its own row; Reset and Run split the one below it. */
+  .fc-toolbar__spacer {
+    display: none;
+  }
+
+  .fc-field {
+    flex: 1 1 100%;
+  }
+
+  .fc-select {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .fc-toolbar .fc-button {
+    flex: 1 1 0;
+  }
+
+  .fc-column {
+    grid-template-rows: minmax(160px, 220px) minmax(120px, 150px);
+  }
+}
+
+@media (max-width: 480px) {
+  .fc-page {
+    --fc-editor-h: 220px;
+  }
+
+  /* The label rides above the select when the row is too narrow to hold both. */
+  .fc-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .fc-select {
+    width: 100%;
+  }
+
+  .fc-pane {
+    padding: var(--space-2, 8px);
+  }
+}
+
+@media (max-width: 360px) {
+  .fc-page {
+    --fc-editor-h: 200px;
+  }
+
+  .fc-button {
+    padding: 0 var(--space-3, 12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-page .fc-button,
+  .fc-page .fc-select,
+  .fc-page .fc-stdin {
+    transition: none;
+  }
+}

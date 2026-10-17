@@ -1,7 +1,20 @@
 const mongoose = require('mongoose');
 const logger = require('./logger');
 
-async function connectDB() {
+/**
+ * Connect Mongoose to `process.env.MONGO_URI`.
+ *
+ * @param {object} [extraOptions] Additional driver options merged last, so a
+ *   caller can override anything above. Used by the test setup to inject
+ *   `runtimeAdapters.os`: the MongoDB driver resolves its `os` adapter through a
+ *   dynamic `import()`, which Jest's CommonJS sandbox refuses without
+ *   `--experimental-vm-modules`. When that import rejects, the driver silently
+ *   squashes the failure and sends `"client": {}` in its handshake, and mongod
+ *   refuses the connection with "Missing required sub-document 'driver' in the
+ *   client metadata document". Passing the adapter explicitly avoids depending on
+ *   a node flag. Production passes nothing and behaves exactly as before.
+ */
+async function connectDB(extraOptions = {}) {
   const mongoUri = process.env.MONGO_URI;
 
   if (!mongoUri) {
@@ -28,6 +41,9 @@ async function connectDB() {
     maxIdleTimeMS: isTest ? 1000 : 300000,
 
     retryWrites: true,
+
+    // Merged last so a caller-provided adapter wins over anything above.
+    ...extraOptions,
   };
 
   try {

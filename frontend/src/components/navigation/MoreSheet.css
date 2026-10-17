@@ -20,6 +20,15 @@
   overflow-y: auto;
 }
 
+/* The bottom bar sits above this sheet (nav z-index 200 vs overlay 100), so the
+   sheet has to reserve its height or the last destination is crowded against
+   the bar. Matches the bar's 64px height plus its safe-area inset. */
+@media (max-width: 767px) {
+  .more-sheet__content {
+    padding-bottom: calc(24px + 64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .more-sheet__header {
   display: flex;
   justify-content: space-between;
@@ -68,6 +77,27 @@
 
 .more-sheet__item:hover {
   background: #f1f1f3;
+}
+
+/* Active route. Indicated by the tinted surface, the accent colour AND the
+   weight change, so it is never communicated by colour alone. */
+.more-sheet__item--active {
+  background: rgba(47, 126, 218, 0.09);
+  color: #2F7EDA;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(47, 126, 218, 0.25);
+}
+
+.more-sheet__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.more-sheet__item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 126, 218, 0.16);
 }
 
 @keyframes fadeIn {

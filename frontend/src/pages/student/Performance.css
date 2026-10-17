@@ -1,1 +1,678 @@
-.performance-page{min-height:100%;padding:clamp(24px,4vw,56px) clamp(16px,4vw,64px);background:linear-gradient(145deg,#fcfdfd,#edeff3);color:#0f2441}.performance-header{margin-bottom:24px}.performance-eyebrow{color:#2f7eda;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.performance-header h1{font-size:clamp(32px,5vw,56px);letter-spacing:-.05em;margin:8px 0}.performance-header p,.performance-context p,.performance-progress-card p{color:#555663;margin:0;line-height:1.6}.performance-switcher{display:inline-flex;gap:4px;padding:4px;margin-bottom:20px;border:1px solid rgba(198,209,215,.7);border-radius:14px;background:rgba(252,253,253,.8);backdrop-filter:blur(16px)}.performance-switcher button{min-width:100px;border:0;background:transparent;color:#555663}.performance-switcher button.is-active{background:#2f7eda;color:#fcfdfd}.performance-batch-select{display:flex;align-items:center;gap:10px;margin:0 0 20px;color:#555663;font-size:13px}.performance-batch-select select{min-height:42px;border:1px solid #c6d1d7;border-radius:10px;background:#fcfdfd;padding:0 12px;color:#0f2441}.performance-context,.performance-card,.performance-empty,.performance-error{border:1px solid rgba(198,209,215,.7);border-radius:20px;background:rgba(252,253,253,.82);box-shadow:0 12px 30px rgba(15,36,65,.07);backdrop-filter:blur(20px) saturate(130%)}.performance-context{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:24px;margin-bottom:20px}.performance-context h2{margin:7px 0 4px;font-size:24px}.performance-scope-pill{padding:7px 11px;border-radius:999px;background:rgba(47,126,218,.1);color:#2f7eda;font-size:11px;font-weight:700}.performance-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}.performance-kpi{padding:20px;border:1px solid rgba(198,209,215,.7);border-radius:18px;background:rgba(252,253,253,.76);box-shadow:0 8px 22px rgba(15,36,65,.05)}.performance-kpi span,.performance-kpi small{display:block;color:#555663;font-size:13px}.performance-kpi strong{display:block;margin:10px 0 4px;font-size:30px;letter-spacing:-.04em;color:#0f2441}.performance-kpi small{color:#9fa0b5}.performance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.performance-card{padding:24px}.performance-card__heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}.performance-card h2{margin:6px 0 0;font-size:22px}.performance-card__heading>strong{font-size:30px;color:#2f7eda}.performance-progress{height:12px;border-radius:99px;background:#edeff3;overflow:hidden}.performance-progress span{display:block;height:100%;border-radius:inherit;background:#2f7eda}.performance-progress-card p{margin-top:12px;font-size:14px}.performance-breakdown{display:grid;gap:18px}.performance-breakdown__row{display:grid;grid-template-columns:minmax(130px,1fr) 48px;gap:8px;align-items:center}.performance-breakdown__row strong,.performance-breakdown__row small{display:block}.performance-breakdown__row small{margin-top:4px;color:#9fa0b5;font-size:12px}.performance-breakdown__row>span{text-align:right;color:#2f7eda;font-weight:700}.performance-breakdown__track{grid-column:1/-1;height:7px;border-radius:99px;background:#edeff3;overflow:hidden}.performance-breakdown__track i{display:block;height:100%;background:#2f7eda}.performance-activity{display:grid}.performance-activity a{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(198,209,215,.55);color:#0f2441}.performance-activity a:last-child{border-bottom:0}.performance-activity a>span{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:rgba(47,126,218,.1);color:#2f7eda}.performance-activity a>span.is-solved{color:#2f7eda}.performance-activity div{min-width:0;flex:1}.performance-activity strong,.performance-activity small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.performance-activity small{margin-top:4px;color:#9fa0b5;font-size:12px}.performance-activity b{color:#2f7eda}.performance-empty,.performance-error,.performance-loading{padding:52px 24px;text-align:center}.performance-empty h2{margin:0 0 8px}.performance-empty p,.performance-error p{color:#555663}.performance-empty a{display:inline-flex;margin-top:12px;padding:12px 16px;border-radius:12px;background:#2f7eda;color:#fcfdfd;font-weight:600}.performance-error{margin-top:20px}.performance-error button{margin-top:8px}@media(max-width:760px){.performance-grid{grid-template-columns:1fr}.performance-context{align-items:flex-start;flex-direction:column}.performance-switcher{display:flex;width:100%}.performance-switcher button{flex:1}.performance-batch-select{align-items:stretch;flex-direction:column}.performance-batch-select select{width:100%}}@media(max-width:380px){.performance-page{padding-inline:12px}.performance-card,.performance-context{padding:18px}.performance-kpi{padding:16px}}
+/* =================================================================
+   Student - Stats (Performance), /student/performance.
+
+   Page-specific rules only. Reusable primitives (breadcrumb, focus rings and the
+   `--student-*` tokens) come from `styles/student.css`, which every Student page
+   loads. Nothing here is a bare element or a global class, so nothing can reach
+   the Admin or Trainer modules.
+
+   The `pf-*` prefix replaces the old unprefixed `performance-*` names so this
+   page cannot collide with the Trainer's own Performance pages.
+   ================================================================= */
+
+.pf-page {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--student-canvas, #FCFDFD);
+  color: var(--student-text-primary, #0F2441);
+}
+
+.pf-page *,
+.pf-page *::before,
+.pf-page *::after {
+  box-sizing: border-box;
+}
+
+.pf-inner {
+  width: 100%;
+  min-width: 0;
+  max-width: 1360px;
+  margin-inline: auto;
+  padding: var(--student-page-padding, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 20px);
+}
+
+/* -- header ---------------------------------------------------------- */
+
+/* Title + description on the left, the scope control on the right, sharing one
+   horizontal band. It wraps to a stack once the two can no longer sit side by
+   side, so nothing overflows on narrow screens. */
+.pf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4, 16px) var(--space-5, 20px);
+  min-width: 0;
+}
+
+.pf-header__intro {
+  flex: 1 1 340px;
+  min-width: 0;
+}
+
+.pf-header__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-flow: row wrap;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+}
+
+.pf-eyebrow {
+  display: block;
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--student-accent);
+}
+
+.pf-header__title {
+  margin: 6px 0 0;
+  font-size: clamp(28px, 3.6vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pf-header__subtitle {
+  margin: 6px 0 0;
+  max-width: 64ch;
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1.6;
+  color: var(--student-text-secondary);
+}
+
+/* -- scope switcher -------------------------------------------------- */
+
+.pf-switcher {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--student-border);
+  border-radius: var(--radius-md, 12px);
+  background: var(--student-surface);
+  box-shadow: var(--student-shadow-sm);
+}
+
+.pf-switcher button {
+  min-width: 104px;
+  min-height: 40px;
+  padding: 0 var(--space-4, 16px);
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--student-text-secondary);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--student-transition),
+              color var(--student-transition);
+}
+
+.pf-switcher button:hover {
+  color: var(--student-accent);
+}
+
+.pf-switcher button.is-active {
+  background: var(--student-accent);
+  color: #FFFFFF;
+}
+
+.pf-page .pf-switcher button:focus-visible {
+  outline: none;
+  box-shadow: var(--student-focus-ring);
+}
+
+.pf-batch-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+  font-size: var(--font-size-sm, 13px);
+  color: var(--student-text-secondary);
+}
+
+.pf-batch-select select {
+  min-height: 42px;
+  min-width: 0;
+  padding: 0 var(--space-3, 12px);
+  border: 1px solid var(--student-border);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--student-surface);
+  color: var(--student-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 13px);
+  cursor: pointer;
+}
+
+/* -- context card ---------------------------------------------------- */
+
+.pf-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4, 16px);
+  min-width: 0;
+  padding: var(--space-5, 20px);
+  border: 1px solid var(--student-border, #CDD6DD);
+  border-radius: var(--student-card-radius, 12px);
+  background: var(--student-surface);
+  box-shadow: var(--student-shadow-sm);
+}
+
+.pf-context h2 {
+  margin: 5px 0 3px;
+  font-size: var(--font-size-xl, 18px);
+  font-weight: 700;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pf-context p {
+  margin: 0;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.6;
+  color: var(--student-text-secondary);
+}
+
+.pf-scope-pill {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--student-accent-soft);
+  color: var(--student-accent);
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* -- KPIs ------------------------------------------------------------ */
+
+.pf-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3, 12px);
+  min-width: 0;
+}
+
+.pf-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: var(--space-4, 16px);
+  border: 1px solid var(--student-border, #CDD6DD);
+  border-radius: var(--student-card-radius, 12px);
+  background: var(--student-surface);
+  box-shadow: var(--student-shadow-sm);
+}
+
+.pf-kpi__label {
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--student-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.pf-kpi__value {
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--student-text-primary);
+}
+
+.pf-kpi__detail {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--student-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* -- card shell ------------------------------------------------------ */
+
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--space-3, 12px);
+  align-items: start;
+  min-width: 0;
+}
+
+.pf-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+  padding: var(--space-5, 20px);
+  border: 1px solid var(--student-border, #CDD6DD);
+  border-radius: var(--student-card-radius, 12px);
+  background: var(--student-surface);
+  box-shadow: var(--student-shadow-sm);
+}
+
+.pf-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+}
+
+.pf-card__heading h2 {
+  margin: 4px 0 0;
+  font-size: var(--font-size-lg, 16px);
+  font-weight: 700;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pf-card__caption {
+  margin: 0;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--student-text-secondary);
+}
+
+/* -- progress -------------------------------------------------------- */
+
+.pf-progress {
+  position: relative;
+  height: 10px;
+  width: 100%;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--student-border-subtle);
+  overflow: hidden;
+}
+
+.pf-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--student-accent);
+  transition: width var(--student-transition);
+}
+
+.pf-progress__value {
+  flex-shrink: 0;
+  font-size: var(--font-size-2xl, 20px);
+  font-weight: 700;
+  color: var(--student-accent);
+}
+
+/* -- difficulty breakdown -------------------------------------------- */
+
+.pf-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+}
+
+.pf-breakdown__row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.pf-breakdown__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+}
+
+.pf-breakdown__head strong {
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pf-breakdown__head span {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  color: var(--student-accent);
+}
+
+.pf-breakdown__meta {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--student-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.pf-breakdown__track {
+  height: 6px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--student-border-subtle);
+  overflow: hidden;
+}
+
+.pf-breakdown__track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--student-accent);
+}
+
+/* -- recent activity ------------------------------------------------- */
+
+.pf-activity {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pf-activity__item + .pf-activity__item {
+  border-top: 1px solid var(--student-border);
+}
+
+.pf-activity__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+  padding: var(--space-3, 12px) var(--space-2, 8px);
+  border-radius: var(--radius-sm, 8px);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--student-transition);
+}
+
+.pf-activity__link:hover {
+  background: var(--student-surface-muted);
+  color: inherit;
+}
+
+.pf-page .pf-activity__link:focus-visible {
+  outline: none;
+  box-shadow: var(--student-focus-ring);
+}
+
+.pf-activity__mark {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pf-activity__mark.is-solved {
+  background: rgba(33, 110, 78, 0.1);
+  color: #216e4e;
+}
+
+.pf-activity__mark.is-attempted {
+  background: rgba(232, 158, 35, 0.12);
+  color: #a86f12;
+}
+
+.pf-activity__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pf-activity__body strong {
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pf-activity__body small {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--student-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* -- buttons --------------------------------------------------------- */
+
+.pf-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 var(--space-5, 20px);
+  border-radius: var(--radius-md, 12px);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  /* `global.css` paints EVERY bare <button> with a filled dark background, so
+     the base variant must declare its own fill. */
+  background: var(--student-surface);
+  border: 1px solid var(--student-border);
+  color: var(--student-text-secondary);
+  transition: background-color var(--student-transition),
+              border-color var(--student-transition),
+              color var(--student-transition),
+              box-shadow var(--student-transition);
+}
+
+.pf-button:hover {
+  border-color: var(--student-accent);
+  color: var(--student-accent);
+  background: var(--student-accent-soft);
+}
+
+.pf-button--primary {
+  background: var(--student-accent);
+  border-color: var(--student-accent);
+  color: #FFFFFF;
+}
+
+.pf-button--primary:hover {
+  background: var(--student-accent-hover);
+  border-color: var(--student-accent-hover);
+  color: #FFFFFF;
+}
+
+.pf-page .pf-button:focus-visible {
+  outline: none;
+  box-shadow: var(--student-focus-ring);
+}
+
+/* -- states ---------------------------------------------------------- */
+
+.pf-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  text-align: center;
+  padding: var(--space-6, 24px) var(--space-4, 16px);
+  border: 1px dashed var(--student-border);
+  border-radius: var(--student-card-radius, 12px);
+  background: var(--student-surface-muted);
+}
+
+.pf-state--error {
+  border-style: solid;
+  border-color: rgba(180, 35, 24, 0.22);
+  background: rgba(180, 35, 24, 0.04);
+}
+
+.pf-state__title {
+  margin: 0;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pf-state--error .pf-state__title {
+  color: #b42318;
+}
+
+.pf-state__body {
+  margin: 0;
+  max-width: 52ch;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.6;
+  color: var(--student-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* -- skeletons ------------------------------------------------------- */
+
+.pf-skeleton {
+  display: block;
+  border-radius: var(--radius-sm, 8px);
+  background: linear-gradient(
+    90deg,
+    var(--student-border-subtle) 0%,
+    var(--student-bg-subtle) 50%,
+    var(--student-border-subtle) 100%
+  );
+  background-size: 200% 100%;
+  animation: pf-shimmer 1.5s linear infinite;
+}
+
+.pf-skeleton--title { width: min(320px, 70%); height: 40px; }
+.pf-skeleton--kpi { width: 100%; height: 96px; }
+.pf-skeleton--card { width: 100%; height: 220px; }
+
+@keyframes pf-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* =================================================================
+   Responsive
+
+   The cut-points are chosen to include the exact widths the design is verified
+   at: 1440 and 1280 use the base layout, 1024 gets the tablet rules, 768 and
+   below get the stacked layout, 480 tightens the KPI grid and 360 tightens the
+   spacing.
+   ================================================================= */
+
+@media (max-width: 1199px) {
+  .pf-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .pf-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .pf-inner {
+    gap: var(--space-4, 16px);
+  }
+
+  /* Clears the 64px bottom navigation plus its safe-area inset, so the last
+     card is never obscured. */
+  .pf-page {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The control drops below the intro and takes the full width. */
+  .pf-header__intro,
+  .pf-header__controls {
+    flex: 1 1 100%;
+  }
+
+  .pf-header__controls {
+    justify-content: flex-start;
+  }
+
+  .pf-switcher {
+    width: 100%;
+  }
+
+  .pf-switcher button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .pf-batch-select {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2, 8px);
+  }
+
+  .pf-batch-select select {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .pf-context {
+    align-items: flex-start;
+  }
+
+  .pf-card {
+    padding: var(--space-4, 16px);
+  }
+}
+
+@media (max-width: 480px) {
+  .pf-kpis {
+    gap: var(--space-2, 8px);
+  }
+
+  .pf-kpi {
+    padding: var(--space-3, 12px);
+  }
+
+  .pf-kpi__label {
+    font-size: 10px;
+  }
+
+  .pf-scope-pill {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 360px) {
+  .pf-kpi__value {
+    font-size: var(--font-size-xl, 18px);
+  }
+
+  .pf-card {
+    padding: var(--space-3, 12px);
+  }
+
+  .pf-activity__link {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-page .pf-switcher button,
+  .pf-page .pf-progress > span,
+  .pf-page .pf-button,
+  .pf-page .pf-activity__link,
+  .pf-page .pf-skeleton {
+    transition: none;
+    animation: none;
+  }
+}

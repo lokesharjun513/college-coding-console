@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../middleware/auth');
 const { requireRole } = require('../../middleware/role');
+const { GLOBAL_MATCH } = require('./scope');
 const mongoose = require('mongoose');
 const Batch = require('../../models/Batch');
 const Problem = require('../../models/Problem');
@@ -112,6 +113,12 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       const collection = await Collection.findById(collectionId);
       if (!collection) {
         return res.status(404).json({ success: false, message: 'Collection not found' });
+      }
+      // Admin may only link problems into GLOBAL curriculum. Linking into a
+      // trainer's BATCH collection would inject platform content into another
+      // owner's batch curriculum.
+      if (collection.scope && collection.scope !== 'GLOBAL') {
+        return res.status(403).json({ success: false, message: 'Access denied' });
       }
     } else if (collectionId || topicId) {
       return res.status(400).json({ success: false, message: 'Both collectionId and topicId must be provided together' });
@@ -448,6 +455,12 @@ router.patch('/:problemId', requireAuth, requireRole('ADMIN'), async (req, res) 
             if (!collection) {
               throw new Error('Collection not found');
             }
+            // Same rule as create: no linking into a trainer's BATCH curriculum.
+            if (collection.scope && collection.scope !== 'GLOBAL') {
+              const denied = new Error('Access denied');
+              denied.status = 403;
+              throw denied;
+            }
           } else if ((collectionId === undefined && topicId !== undefined) || (collectionId !== undefined && topicId === undefined)) {
             throw new Error('Both collectionId and topicId must be provided together');
           }
@@ -615,6 +628,10 @@ router.patch('/:problemId', requireAuth, requireRole('ADMIN'), async (req, res) 
         const collection = await Collection.findById(collectionId);
         if (!collection) {
           return res.status(404).json({ success: false, message: 'Collection not found' });
+        }
+        // Same rule as create: no linking into a trainer's BATCH curriculum.
+        if (collection.scope && collection.scope !== 'GLOBAL') {
+          return res.status(403).json({ success: false, message: 'Access denied' });
         }
       } else if ((collectionId === undefined && topicId !== undefined) || (collectionId !== undefined && topicId === undefined)) {
         return res.status(400).json({ success: false, message: 'Both collectionId and topicId must be provided together' });
@@ -1167,17 +1184,38 @@ const validProblems = [];
     for (let i = 0; i < validProblems.length; i++) {
       const v = validProblems[i];
       if (v.__collectionName && v.__topicName) {
-        // Find or create collection (reuse by slug or name)
+        // Find or create collection by slug/name — but ONLY among GLOBAL
+        // curriculum. Without the scope in the query an admin import would
+        // silently adopt a trainer's BATCH collection that happened to share the
+        // name, writing platform problems into another team's curriculum.
         const colSlug = slugify(v.__collectionName);
-        let collection = await Collection.findOne({ slug: colSlug });
+        let collection = await Collection.findOne({ slug: colSlug, ...GLOBAL_MATCH });
         if (!collection) {
-          // Fallback to name match (case-sensitive)
-          collection = await Collection.findOne({ name: v.__collectionName.trim() });
+          // Fallback to name match (case-sensitive), still GLOBAL only.
+          collection = await Collection.findOne({ name: v.__collectionName.trim(), ...GLOBAL_MATCH });
         }
         if (!collection) {
+          // A trainer owns this name but the collection is not ours to touch.
+          const trainerOwned = await Collection.findOne({
+            $or: [{ slug: colSlug }, { name: v.__collectionName.trim() }],
+            scope: 'BATCH',
+          });
+          if (trainerOwned) {
+            // Roll the problem back so the row is a clean rejection rather than a
+            // created-but-unlinked problem that the summary counts twice.
+            await Problem.findByIdAndDelete(created[i]._id);
+            errors.push({
+              row: i + 1,
+              field: '__collectionName',
+              message: `"${v.__collectionName}" belongs to a trainer's batch curriculum and cannot be reused`,
+            });
+            continue;
+          }
           collection = await Collection.create({
             name: v.__collectionName.trim(),
             slug: colSlug,
+            scope: 'GLOBAL',
+            batch: null,
             createdBy: req.user.id,
           });
         }

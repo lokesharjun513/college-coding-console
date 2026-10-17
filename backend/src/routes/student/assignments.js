@@ -14,6 +14,11 @@
 //   - completion status comes from AssignmentCompletion for THIS student and
 //     THIS assignment, and is deliberately kept separate from global problem
 //     submission history
+//   - one card per (batch, problem). A problem may hold several Assignment rows
+//     because `availableFrom` is part of its identity, but that is scheduling,
+//     not extra work: the student sees it once. Collapsing happens at read time
+//     and never touches a stored record. See services/assignmentCompletion.js
+//     collapseByProblem.
 
 const express = require('express');
 const router = express.Router();
@@ -22,7 +27,12 @@ const mongoose = require('mongoose');
 const requireAuth = require('../../middleware/auth');
 const { requireAnyRole } = require('../../middleware/role');
 const Assignment = require('../../models/Assignment');
-const { getActiveEnrolledBatchIds, getCompletionMap } = require('../../services/assignmentCompletion');
+const {
+  collapseByProblem,
+  findCompletionsForAssignments,
+  getActiveEnrolledBatchIds,
+  getCompletionMap,
+} = require('../../services/assignmentCompletion');
 
 // Explicit allow-list. `examples` is the authored sample data on the Problem
 // document, NOT TestCase data, so hidden expected outputs are never included.
@@ -109,12 +119,16 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
       .sort({ availableFrom: 1, createdAt: 1 })
       .lean();
 
-    const completionMap = await getCompletionMap(studentId, assignments.map((a) => a._id));
-    const data = assignments.map((assignment) =>
-      assignmentPayload(assignment, completionMap.get(assignment._id.toString()))
+    // visibleFilter has already dropped future-dated rows, so scheduling in
+    // advance can never reveal a problem early.
+    const completions = await findCompletionsForAssignments(assignments.map((a) => a._id));
+    const collapsed = collapseByProblem(assignments, completions);
+
+    const data = collapsed.map(({ assignment, completion }) =>
+      assignmentPayload(assignment, completion)
     );
 
-    const completed = data.filter((item) => item.completed).length;
+    const completed = collapsed.filter((item) => Boolean(item.completion)).length;
 
     return res.json({
       success: true,
@@ -164,11 +178,27 @@ router.get('/:assignmentId', requireAuth, requireAnyRole('STUDENT'), async (req,
       return res.status(404).json({ success: false, message: 'Assignment not found' });
     }
 
-    const completionMap = await getCompletionMap(studentId, [assignment._id]);
+    // Report the PROBLEM's state, not just this row's. A student who bookmarks
+    // a non-canonical duplicate must not see "not completed" while the feed
+    // shows the same problem as completed. Any eligible sibling row counts.
+    const siblings = await Assignment.find({
+      batch: assignment.batch._id,
+      problem: assignment.problem._id,
+      status: 'ACTIVE',
+      deleted: false,
+      $or: [{ availableFrom: null }, { availableFrom: { $lte: new Date() } }],
+    })
+      .select('_id')
+      .lean();
+
+    const completionMap = await getCompletionMap(studentId, siblings.map((s) => s._id));
+    const completion = siblings.length > 0
+      ? completionMap.values().next().value ?? null
+      : null;
 
     return res.json({
       success: true,
-      data: assignmentPayload(assignment, completionMap.get(assignment._id.toString())),
+      data: assignmentPayload(assignment, completion),
     });
   } catch (error) {
     console.error('Error fetching student assignment:', error);

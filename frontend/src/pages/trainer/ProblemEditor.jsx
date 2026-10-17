@@ -1,100 +1,138 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { createProblem, getProblem, updateProblem, getTrainerCollections, getTrainerCollectionTopics } from '../../api/trainer';
-import Spinner from '../../components/ui/Spinner';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  createProblem,
+  getProblem,
+  getTrainerCollectionTopics,
+  getTrainerCollections,
+  updateProblem,
+} from '../../api/trainer';
+import PageHeader from '../../components/ui/PageHeader';
+import Button from '../../components/ui/Button';
+import Icon from '../../components/ui/Icon';
+import TrainerBreadcrumb from '../../components/trainer/TrainerBreadcrumb';
+import {
+  TrainerErrorState,
+  TrainerLoadingState,
+  TrainerSectionCard,
+} from '../../components/trainer';
 
+/**
+ * Create / edit a batch problem — /trainer/batches/:batchId/problems/create|edit
+ *
+ * Problems are always BATCH scoped: the backend pins `scope: 'BATCH'` and
+ * derives `createdBy` from the token, so this form cannot move a problem to
+ * another batch or to the global catalogue.
+ *
+ * The Training (collection) and Day (topic) selectors are read-only metadata:
+ * `GET /trainer/collections` and `GET /trainer/collections/:id/topics`.
+ */
 export default function ProblemEditor() {
   const { batchId, problemId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isEdit = !!problemId;
+  const isEdit = Boolean(problemId);
+
   const [loading, setLoading] = useState(isEdit);
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // Problem fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState('EASY');
   const [status, setStatus] = useState('DRAFT');
-  const [saving, setSaving] = useState(false);
 
-  // Collection / Topic state (Daily Training cascading selectors)
   const [collections, setCollections] = useState([]);
-  const [collectionsLoading, setCollectionsLoading] = useState(false);
   const [collectionsError, setCollectionsError] = useState(null);
-  const [selectedCollectionId, setSelectedCollectionId] = useState('');
-  const [topics, setTopics] = useState([]);
-  const [topicsLoading, setTopicsLoading] = useState(false);
-  const [topicsError, setTopicsError] = useState(null);
-  const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [collectionId, setCollectionId] = useState('');
 
-  // Load collections on mount
+  const [topics, setTopics] = useState([]);
+  const [topicsError, setTopicsError] = useState(null);
+  const [topicId, setTopicId] = useState('');
+
+  // Collections are shared read-only metadata.
   useEffect(() => {
-    setCollectionsLoading(true);
+    let active = true;
     getTrainerCollections()
-      .then(res => setCollections(res.data?.data || []))
-      .catch(() => setCollectionsError('Unable to load collections'))
-      .finally(() => setCollectionsLoading(false));
+      .then((res) => {
+        if (active) setCollections(res?.data?.data || []);
+      })
+      .catch(() => {
+        if (active) setCollectionsError('Unable to load training collections.');
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Load topics when collection changes
+  // Cascading topics for the selected training.
   useEffect(() => {
-    if (!selectedCollectionId) {
+    if (!collectionId) {
       setTopics([]);
-      setSelectedTopicId('');
-      return;
+      return undefined;
     }
-    setTopicsLoading(true);
+    let active = true;
     setTopicsError(null);
-    getTrainerCollectionTopics(selectedCollectionId)
-      .then(res => setTopics(res.data?.data || []))
-      .catch(() => setTopicsError('Unable to load topics'))
-      .finally(() => setTopicsLoading(false));
-  }, [selectedCollectionId]);
+    getTrainerCollectionTopics(collectionId)
+      .then((res) => {
+        if (active) setTopics(res?.data?.data || []);
+      })
+      .catch(() => {
+        if (active) setTopicsError('Unable to load training days.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [collectionId]);
 
+  // Load the existing problem, or pre-seed from the Training page query string.
   useEffect(() => {
     if (isEdit) {
-      const fetchData = async () => {
-        try {
-          const res = await getProblem(batchId, problemId);
-          const p = res.data?.data;
-          setTitle(p.title);
-          setDescription(p.description);
-          setDifficulty(p.difficulty);
-          setStatus(p.status);
-          // Preselect existing Training/Day association when the backend exposes it
-          if (p.collectionId) setSelectedCollectionId(p.collectionId);
-          if (p.topicId) setSelectedTopicId(p.topicId);
-        } catch (err) {
-          setError(err?.response?.data?.message || 'Failed to load problem');
-        } finally {
-          setLoading(false);
-        }
+      let active = true;
+      getProblem(batchId, problemId)
+        .then((res) => {
+          if (!active) return;
+          const problem = res?.data?.data;
+          if (!problem) {
+            setError('Problem not found.');
+            return;
+          }
+          setTitle(problem.title || '');
+          setDescription(problem.description || '');
+          setDifficulty(problem.difficulty || 'EASY');
+          setStatus(problem.status || 'DRAFT');
+          if (problem.collectionId) setCollectionId(problem.collectionId);
+          if (problem.topicId) setTopicId(problem.topicId);
+        })
+        .catch((err) => {
+          if (active) {
+            setError(err?.response?.data?.message || 'Failed to load problem.');
+          }
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+      return () => {
+        active = false;
       };
-      fetchData();
-    } else {
-      // Create flow: preselect Training/Day from query params (Training management page)
-      const qc = searchParams.get('collectionId');
-      const qt = searchParams.get('topicId');
-      if (qc) setSelectedCollectionId(qc);
-      if (qt) setSelectedTopicId(qt);
     }
+
+    const queryCollection = searchParams.get('collectionId');
+    const queryTopic = searchParams.get('topicId');
+    if (queryCollection) setCollectionId(queryCollection);
+    if (queryTopic) setTopicId(queryTopic);
+    return undefined;
   }, [batchId, problemId, isEdit, searchParams]);
 
-  const handleCollectionChange = (e) => {
-    const val = e.target.value;
-    setSelectedCollectionId(val);
-    setSelectedTopicId(''); // reset topic when collection changes
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setSaving(true);
+    setError(null);
     try {
       const payload = { title, description, difficulty, status };
-      if (selectedCollectionId && selectedTopicId) {
-        payload.collectionId = selectedCollectionId;
-        payload.topicId = selectedTopicId;
+      if (collectionId && topicId) {
+        payload.collectionId = collectionId;
+        payload.topicId = topicId;
       }
       if (isEdit) {
         await updateProblem(batchId, problemId, payload);
@@ -103,133 +141,205 @@ export default function ProblemEditor() {
       }
       navigate(`/trainer/batches/${batchId}/problems`);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to save problem');
+      setError(err?.response?.data?.message || 'Failed to save problem.');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <Spinner />;
+  if (loading) {
+    return (
+      <div className="trainer-page">
+        <TrainerLoadingState label="Loading problem…" />
+      </div>
+    );
+  }
+
+  if (error && isEdit && !title) {
+    return (
+      <div className="trainer-page">
+        <TrainerErrorState
+          title="Couldn’t load this problem"
+          message={error}
+          onRetry={() => navigate(`/trainer/batches/${batchId}/problems`)}
+          retryLabel="Back to problems"
+        />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2>{isEdit ? 'Edit Problem' : 'Create Problem'}</h2>
-      {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
-      <form onSubmit={handleSubmit}>
-        {/* Daily Training selectors */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Collection (Training)</label>
-          {collectionsLoading ? (
-            <Spinner />
-          ) : collectionsError ? (
-            <span style={{ color: 'red' }}>{collectionsError}</span>
-          ) : (
-            <select
-              value={selectedCollectionId}
-              onChange={handleCollectionChange}
-              style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value="">— None —</option>
-              {collections.map(c => (
-                <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
+    <div className="trainer-page">
+      <TrainerBreadcrumb
+        items={[
+          { label: 'Trainer', to: '/trainer' },
+          { label: 'Batches', to: '/trainer/batches' },
+          { label: 'Problems', to: `/trainer/batches/${batchId}/problems` },
+          { label: isEdit ? 'Edit problem' : 'Create problem' },
+        ]}
+      />
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-            Topic (Day)
-            {!selectedCollectionId && <span style={{ fontWeight: 'normal', color: '#888', marginLeft: '0.5rem' }}>(select a collection first)</span>}
-          </label>
-          {topicsLoading ? (
-            <Spinner />
-          ) : topicsError ? (
-            <span style={{ color: 'red' }}>{topicsError}</span>
-          ) : (
-            <select
-              value={selectedTopicId}
-              onChange={e => setSelectedTopicId(e.target.value)}
-              disabled={!selectedCollectionId}
-              style={{
-                width: '100%',
-                padding: '0.4rem',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                opacity: selectedCollectionId ? 1 : 0.5,
-              }}
-            >
-              <option value="">— None —</option>
-              {topics.map(t => (
-                <option key={t.id || t._id} value={t.id || t._id}>{t.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
+      <PageHeader
+        title={isEdit ? 'Edit Problem' : 'Create Problem'}
+        description="Problems created here belong to this batch and this trainer."
+      />
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Title *</label>
-          <input
-            type="text"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            required
-            style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }}
-          />
-        </div>
+      <form className="trainer-form" onSubmit={handleSubmit}>
+        {error ? (
+          <div className="trainer-form__error" role="alert">
+            {error}
+          </div>
+        ) : null}
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Description *</label>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            rows={5}
-            required
-            style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }}
-          />
-        </div>
+        <TrainerSectionCard title="Problem" headingId="trainer-problem-editor-fields">
+          <div className="trainer-section-card__body--padded">
+            <div className="trainer-form">
+              <div className="trainer-form__field">
+                <label className="trainer-form__label" htmlFor="trainer-problem-title">
+                  Title
+                </label>
+                <input
+                  id="trainer-problem-title"
+                  type="text"
+                  className="trainer-form__input"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Difficulty</label>
-          <select
-            value={difficulty}
-            onChange={e => setDifficulty(e.target.value)}
-            style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }}
-          >
-            <option value="EASY">Easy</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HARD">Hard</option>
-          </select>
-        </div>
+              <div className="trainer-form__field">
+                <label className="trainer-form__label" htmlFor="trainer-problem-description">
+                  Description
+                </label>
+                <textarea
+                  id="trainer-problem-description"
+                  className="trainer-form__textarea"
+                  rows={8}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                />
+              </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Status</label>
-          <select
-            value={status}
-            onChange={e => setStatus(e.target.value)}
-            style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }}
-          >
-            <option value="DRAFT">Draft</option>
-            <option value="PUBLISHED">Published</option>
-            <option value="ARCHIVED">Archived</option>
-          </select>
-        </div>
+              <div className="trainer-form">
+                <div className="trainer-form__field">
+                  <label className="trainer-form__label" htmlFor="trainer-problem-difficulty">
+                    Difficulty
+                  </label>
+                  <select
+                    id="trainer-problem-difficulty"
+                    className="trainer-select"
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value)}
+                  >
+                    <option value="EASY">Easy</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HARD">Hard</option>
+                  </select>
+                </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: '0.5rem 1rem',
-            borderRadius: '4px',
-            border: 'none',
-            background: '#007bff',
-            color: '#fff',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            opacity: saving ? 0.7 : 1,
-          }}
+                <div className="trainer-form__field">
+                  <label className="trainer-form__label" htmlFor="trainer-problem-status">
+                    Status
+                  </label>
+                  <select
+                    id="trainer-problem-status"
+                    className="trainer-select"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                  >
+                    <option value="DRAFT">Draft</option>
+                    <option value="PUBLISHED">Published</option>
+                    <option value="ARCHIVED">Archived</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TrainerSectionCard>
+
+        <TrainerSectionCard
+          title="Daily Training"
+          subtitle="Optionally link this problem to a training programme and day"
+          headingId="trainer-problem-editor-training"
         >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
+          <div className="trainer-section-card__body--padded">
+            <div className="trainer-form">
+              <div className="trainer-form__field">
+                <label className="trainer-form__label" htmlFor="trainer-problem-collection">
+                  Training
+                </label>
+                {collectionsError ? (
+                  <p className="trainer-form__error" role="alert">
+                    {collectionsError}
+                  </p>
+                ) : (
+                  <select
+                    id="trainer-problem-collection"
+                    className="trainer-select"
+                    value={collectionId}
+                    onChange={(e) => {
+                      setCollectionId(e.target.value);
+                      setTopicId('');
+                    }}
+                  >
+                    <option value="">— None —</option>
+                    {collections.map((collection) => (
+                      <option key={collection.id || collection._id} value={collection.id || collection._id}>
+                        {collection.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="trainer-form__field">
+                <label className="trainer-form__label" htmlFor="trainer-problem-topic">
+                  Day
+                </label>
+                {topicsError ? (
+                  <p className="trainer-form__error" role="alert">
+                    {topicsError}
+                  </p>
+                ) : (
+                  <select
+                    id="trainer-problem-topic"
+                    className="trainer-select"
+                    value={topicId}
+                    disabled={!collectionId}
+                    onChange={(e) => setTopicId(e.target.value)}
+                  >
+                    <option value="">— None —</option>
+                    {topics.map((topic) => (
+                      <option key={topic.id || topic._id} value={topic.id || topic._id}>
+                        {topic.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="trainer-form__hint">
+                  Select a training programme first to unlock its days.
+                </p>
+              </div>
+            </div>
+          </div>
+        </TrainerSectionCard>
+
+        <div className="trainer-form__actions">
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={() => navigate(`/trainer/batches/${batchId}/problems`)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" loading={saving}>
+            <Icon name="checkSquare" size={14} />
+            {isEdit ? 'Save changes' : 'Create problem'}
+          </Button>
+        </div>
       </form>
     </div>
   );

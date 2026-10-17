@@ -1,147 +1,769 @@
-/**
- * Practice Page - View-specific layout styles
- * All design tokens and shared component styles are in student.css
- */
+/* =================================================================
+   Student — Practice (global curriculum: Collection > Topic > Problem).
 
-/* Summary Bar - view-specific adjustments */
-.practice-summary {
-  background: var(--student-surface);
-  border: var(--student-border-width) solid var(--student-border);
-  border-radius: 16px;
-  padding: 18px 20px;
-  margin-bottom: 28px;
-  max-width: 900px;
-  box-shadow: var(--student-shadow-sm);
+   Page-specific rules only. Reusable primitives (breadcrumb, filter controls,
+   focus rings, the `--student-*` tokens) come from `styles/student.css`, which
+   every Student page loads. Nothing here is a bare element or a global class,
+   so nothing can reach the Admin or Trainer modules.
+
+   The `pr-*` prefix is used rather than the older `practice-*` names: `student.css`
+   still carries those for DailyTraining, and Practice owns a distinct,
+   self-contained library layout.
+   ================================================================= */
+
+.pr-container {
+  background: var(--student-canvas, #FCFDFD);
+  color: var(--student-text-primary, #0F2441);
 }
 
-.practice-summary strong {
-  font-size: 18px;
+.pr-container *,
+.pr-container *::before,
+.pr-container *::after {
+  box-sizing: border-box;
+}
+
+.pr-inner {
+  width: 100%;
+  min-width: 0;
+  max-width: 1360px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 20px);
+}
+
+/* -- header ---------------------------------------------------------- */
+
+.pr-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4, 16px);
+  min-width: 0;
+}
+
+.pr-header__intro {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.pr-header__title {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 34px);
   font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
 }
 
-.practice-summary span {
+.pr-header__subtitle {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1.6;
   color: var(--student-text-secondary);
 }
 
-.practice-summary .practice-progress {
-  grid-column: 1 / -1;
-  margin: 8px 0;
+/* -- overview summary ------------------------------------------------ */
+
+.pr-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2, 8px);
+  flex: 1 1 420px;
+  min-width: 0;
 }
 
-.practice-summary b {
-  font-size: 12px;
-  color: var(--student-text-muted);
-}
-
-/* Problem List - view-specific adjustments */
-.practice-problem-list {
+.pr-summary__item {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.practice-problem {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-  border: var(--student-border-width) solid var(--student-border);
-  border-radius: var(--radius-md);
-  padding: 16px 18px;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 16px;
   background: var(--student-surface);
-  cursor: pointer;
-  color: inherit;
-  transition: all var(--student-transition);
-}
-
-.practice-problem:hover {
-  border-color: var(--student-accent);
+  border: 1px solid var(--student-border);
+  border-radius: var(--radius-md, 12px);
   box-shadow: var(--student-shadow-sm);
-  transform: translateX(4px);
 }
 
-.practice-problem-number {
-  color: var(--student-text-muted);
-  font-family: var(--font-mono, monospace);
-  font-size: 13px;
+.pr-summary__icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--student-accent-soft);
+  color: var(--student-accent);
+}
+
+.pr-summary__label {
+  padding-right: 30px;
+  font-size: var(--font-size-2xs, 11px);
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--student-text-muted);
+  overflow-wrap: anywhere;
 }
 
-.practice-problem-main {
+.pr-summary__value {
+  font-size: var(--font-size-2xl, 20px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--student-text-primary);
+}
+
+/* -- library card ---------------------------------------------------- */
+
+.pr-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  min-width: 0;
+  padding: var(--space-5, 20px);
+  background: var(--student-surface);
+  border: 1px solid var(--student-border);
+  border-radius: var(--student-card-radius, 12px);
+  box-shadow: var(--student-shadow-sm);
+}
+
+.pr-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+}
+
+.pr-card__heading-text {
+  min-width: 0;
+}
+
+.pr-card__heading-text h2 {
+  margin: 0;
+  font-size: var(--font-size-lg, 16px);
+  font-weight: 700;
+  color: var(--student-text-primary);
+}
+
+.pr-card__heading-text p {
+  margin: 2px 0 0;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--student-text-muted);
+}
+
+/* -- the tree: collection > topic > problem -------------------------- */
+
+.pr-tree,
+.pr-topics,
+.pr-problems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.pr-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+}
+
+.pr-collection {
+  min-width: 0;
+  border: 1px solid var(--student-border);
+  border-radius: 16px;
+  background: var(--student-surface);
+  box-shadow: var(--student-shadow-sm);
+  overflow: hidden;
+  transition: border-color var(--student-transition),
+              box-shadow var(--student-transition);
+}
+
+/* Hovering the header row (not the expanded body) lifts the whole card so the
+   collection reads as one interactive surface. */
+.pr-collection:has(> .pr-collection__row:hover) {
+  border-color: var(--student-accent-border);
+  box-shadow: var(--student-shadow-md);
+}
+
+.pr-collection:has(> .pr-collection__row > .pr-collection__toggle[aria-expanded='true']) {
+  border-color: var(--student-accent-border);
+}
+
+.pr-collection__row {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background: var(--student-surface);
+  border-bottom: 1px solid transparent;
+  transition: background-color var(--student-transition);
 }
 
-.practice-problem-main strong {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--student-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Very light blue tint on hover — replaces the old dark fill. */
+.pr-collection__row:hover {
+  background: var(--student-accent-soft);
 }
 
-.practice-problem-main small {
-  font-size: 12px;
+.pr-collection:has(> .pr-collection__row > .pr-collection__toggle[aria-expanded='true']) .pr-collection__row {
+  background: var(--student-accent-soft);
+  border-bottom-color: var(--student-border);
 }
 
-.practice-problem-meta {
+/* One control per row: chevron, name and counts are all inside it, so clicking
+   any part of the row does the same thing and assistive technology sees a
+   single disclosure control. */
+.pr-collection__toggle,
+.pr-topic__toggle {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3, 12px);
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* `global.css` fills every bare <button> with a dark background on hover and
+   the toggle spans the row, so neutralise that fill at equal-or-higher
+   specificity and let the row tint drive the hover feedback instead. */
+.pr-container .pr-collection__toggle:hover,
+.pr-container .pr-collection__toggle:focus-visible,
+.pr-container .pr-topic__toggle:hover,
+.pr-container .pr-topic__toggle:focus-visible {
+  background: transparent;
+}
+
+.pr-toggle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--student-surface);
+  border: 1px solid var(--student-border);
+  color: var(--student-accent);
+  transition: color var(--student-transition),
+              border-color var(--student-transition),
+              background-color var(--student-transition);
+}
+
+.pr-collection__toggle:hover .pr-toggle,
+.pr-topic__toggle:hover .pr-toggle {
+  color: var(--student-accent);
+  border-color: var(--student-accent-border);
+}
+
+.pr-collection__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-md, 15px);
+  font-weight: 700;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pr-collection__counts {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--student-border);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--student-surface-muted);
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  color: var(--student-text-secondary);
   white-space: nowrap;
 }
 
-.practice-problem-action {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--student-accent);
+.pr-collection__description {
+  padding-left: 38px;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.5;
+  color: var(--student-text-secondary);
+  overflow-wrap: anywhere;
 }
 
-.practice-problem-action b {
-  font-weight: 700;
+/* Topics sit one step in; the rule makes the nesting legible without a big
+   indent that would squeeze a problem title at 360px. */
+.pr-topics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  margin-left: var(--space-5, 20px);
+  padding: var(--space-3, 12px) var(--space-3, 12px) var(--space-4, 16px) var(--space-4, 16px);
+  border-left: 2px solid var(--student-accent-soft);
 }
 
-/* Difficulty badges */
-.difficulty {
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-size: 10px;
-}
-
-.difficulty--easy {
-  color: #216e4e;
-  background: rgba(33, 110, 78, 0.1);
-}
-
-.difficulty--medium {
-  color: #e89e23;
-  background: rgba(232, 158, 35, 0.1);
-}
-
-.difficulty--hard {
-  color: #c34954;
-  background: rgba(195, 73, 84, 0.1);
-}
-
-/* Problem states */
-.problem-state {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.problem-state--solved {
-  color: #216e4e;
-}
-
-.problem-state--attempted {
-  color: #e89e23;
-}
-
-.problem-state--not_started {
+.pr-topics__empty {
+  padding: var(--space-2, 8px) 0;
+  font-size: var(--font-size-xs, 12px);
   color: var(--student-text-muted);
+}
+
+.pr-topic {
+  min-width: 0;
+  border: 1px solid var(--student-border);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--student-surface);
+}
+
+.pr-topic__row {
+  min-width: 0;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+}
+
+.pr-topic__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pr-topic__counts {
+  flex-shrink: 0;
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  color: var(--student-text-muted);
+  white-space: nowrap;
+}
+
+.pr-topic__empty {
+  margin: 0;
+  padding: 0 var(--space-3, 12px) var(--space-3, 12px) 46px;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--student-text-muted);
+}
+
+/* Problems sit two steps in. */
+.pr-problems {
+  display: flex;
+  flex-direction: column;
+}
+
+.pr-problem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3, 12px);
+  min-width: 0;
+  padding: var(--space-3, 12px) var(--space-3, 12px) var(--space-3, 12px) 46px;
+  border-top: 1px solid var(--student-border);
+  transition: background-color var(--student-transition);
+}
+
+.pr-problem:hover {
+  background: var(--student-surface-muted);
+}
+
+.pr-problem[data-status='SOLVED'] {
+  background: linear-gradient(90deg, rgba(33, 110, 78, 0.05) 0%, transparent 60%);
+}
+
+.pr-problem__main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.pr-problem__title {
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pr-problem__description {
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.5;
+  color: var(--student-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.pr-problem__side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.pr-container .pr-collection__toggle:focus-visible,
+.pr-container .pr-topic__toggle:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm, 8px);
+  box-shadow: var(--student-focus-ring);
+}
+
+/* -- badges ---------------------------------------------------------- */
+
+.pr-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pr-status--solved {
+  background: rgba(33, 110, 78, 0.1);
+  color: #216e4e;
+}
+
+.pr-status--attempted {
+  background: rgba(232, 158, 35, 0.12);
+  color: #a86f12;
+}
+
+.pr-status--not-started {
+  background: var(--student-surface-muted);
+  color: var(--student-text-muted);
+}
+
+.pr-difficulty {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pr-difficulty--easy {
+  background: rgba(33, 110, 78, 0.1);
+  color: #216e4e;
+}
+
+.pr-difficulty--medium {
+  background: rgba(232, 158, 35, 0.12);
+  color: #a86f12;
+}
+
+.pr-difficulty--hard {
+  background: rgba(195, 73, 84, 0.1);
+  color: #c34954;
+}
+
+.pr-difficulty--unspecified {
+  background: var(--student-surface-muted);
+  color: var(--student-text-muted);
+}
+
+/* -- buttons --------------------------------------------------------- */
+
+.pr-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 var(--space-5, 20px);
+  border-radius: var(--radius-md, 12px);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  /* `global.css` paints EVERY bare <button> with a filled dark background, so
+     the base variant must declare its own fill. */
+  background: var(--student-surface);
+  border: 1px solid var(--student-border);
+  color: var(--student-text-secondary);
+  transition: background-color var(--student-transition),
+              border-color var(--student-transition),
+              color var(--student-transition),
+              box-shadow var(--student-transition);
+}
+
+.pr-button:hover {
+  border-color: var(--student-accent);
+  color: var(--student-accent);
+  background: var(--student-accent-soft);
+}
+
+.pr-button svg {
+  flex-shrink: 0;
+}
+
+.pr-button--primary {
+  background: var(--student-accent);
+  border-color: var(--student-accent);
+  color: #FFFFFF;
+}
+
+.pr-button--primary:hover {
+  background: var(--student-accent-hover);
+  border-color: var(--student-accent-hover);
+  color: #FFFFFF;
+}
+
+.pr-button--compact {
+  min-height: 36px;
+  padding: 0 var(--space-4, 16px);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.pr-container .pr-button:focus-visible {
+  outline: none;
+  box-shadow: var(--student-focus-ring);
+}
+
+.pr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+}
+
+.pr-actions--centered {
+  justify-content: center;
+}
+
+/* -- states ---------------------------------------------------------- */
+
+.pr-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  text-align: center;
+  padding: var(--space-6, 24px) var(--space-4, 16px);
+  border: 1px dashed var(--student-border);
+  border-radius: var(--radius-md, 12px);
+  background: var(--student-surface-muted);
+}
+
+.pr-state--error {
+  border-style: solid;
+  border-color: rgba(180, 35, 24, 0.22);
+  background: rgba(180, 35, 24, 0.04);
+}
+
+.pr-state__title {
+  margin: 0;
+  font-size: var(--font-size-sm, 13px);
+  font-weight: 600;
+  color: var(--student-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pr-state--error .pr-state__title {
+  color: #b42318;
+}
+
+.pr-state__body {
+  margin: 0;
+  max-width: 52ch;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.6;
+  color: var(--student-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* -- skeletons ------------------------------------------------------- */
+
+.pr-skeleton {
+  display: block;
+  border-radius: var(--radius-sm, 8px);
+  background: linear-gradient(
+    90deg,
+    var(--student-border-subtle) 0%,
+    var(--student-bg-subtle) 50%,
+    var(--student-border-subtle) 100%
+  );
+  background-size: 200% 100%;
+  animation: pr-shimmer 1.5s linear infinite;
+}
+
+.pr-skeleton--title { width: min(320px, 70%); height: 34px; }
+.pr-skeleton--summary { width: 100%; height: 74px; }
+.pr-skeleton--card { width: 100%; height: 320px; }
+
+@keyframes pr-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* =================================================================
+   Responsive
+
+   The cut-points are chosen to include the exact widths the design is verified
+   at: 1440 and 1280 use the base layout, 1024 gets the tablet rules, 768 and
+   below get the stacked layout, 480 tightens the summary and 360 tightens the
+   nesting. Each width therefore lands in a deliberate band rather than one
+   pixel off a boundary.
+   ================================================================= */
+
+@media (max-width: 1199px) {
+  .pr-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .pr-header__intro {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .pr-inner {
+    gap: var(--space-4, 16px);
+  }
+
+  /* Clears the 64px bottom navigation plus its safe-area inset, so the last
+     problem in the tree is never obscured. */
+  .pr-container {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .pr-card {
+    padding: var(--space-4, 16px);
+  }
+
+  /* A long name wraps onto its own line instead of colliding with the counts,
+     which stay on the right. */
+  .pr-collection__toggle,
+  .pr-topic__toggle {
+    flex-wrap: wrap;
+    row-gap: var(--space-1, 4px);
+  }
+
+  .pr-collection__name,
+  .pr-topic__name {
+    flex: 1 1 100%;
+    order: 1;
+  }
+
+  .pr-collection__counts,
+  .pr-topic__counts {
+    order: 2;
+  }
+
+  /* The toggle precedes the name, so it keeps the first slot. */
+  .pr-toggle {
+    order: 0;
+    margin-right: calc(-1 * (100% - 26px));
+  }
+
+  .pr-topics {
+    margin-left: var(--space-3, 12px);
+    padding: var(--space-3, 12px) var(--space-2, 8px) var(--space-3, 12px) var(--space-3, 12px);
+  }
+
+  /* Two indent steps plus 46px of padding leaves too little width at 360px, so
+     problems drop back to a single level of indent. */
+  .pr-problem {
+    padding-left: var(--space-3, 12px);
+  }
+
+  .pr-problem__side {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pr-problem__side .pr-button {
+    min-height: 44px;
+  }
+
+  .pr-collection__description,
+  .pr-topic__empty {
+    padding-left: 0;
+  }
+
+  /* `student-filter-field` and the selects already wrap; make each a full-width
+     row so nothing is squeezed at 360px. */
+  .pr-container .student-filter-field,
+  .pr-container .student-filter-select,
+  .pr-container .student-filter-reset {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .pr-summary {
+    gap: var(--space-1, 4px);
+  }
+
+  .pr-summary__item {
+    padding: 12px;
+  }
+
+  .pr-summary__label {
+    font-size: 10px;
+    padding-right: 0;
+  }
+
+  .pr-summary__icon {
+    display: none;
+  }
+
+  .pr-collection__row {
+    padding: var(--space-3, 12px);
+  }
+
+  .pr-topic__row {
+    padding: var(--space-2, 8px) var(--space-2, 8px);
+  }
+}
+
+@media (max-width: 360px) {
+  .pr-summary__value {
+    font-size: var(--font-size-lg, 16px);
+  }
+
+  .pr-card {
+    padding: var(--space-3, 12px);
+  }
+
+  .pr-topics {
+    margin-left: var(--space-2, 8px);
+    padding-left: var(--space-2, 8px);
+  }
+
+  .pr-toggle {
+    width: 24px;
+    height: 24px;
+    margin-right: calc(-1 * (100% - 24px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-container .pr-collection,
+  .pr-container .pr-collection__toggle,
+  .pr-container .pr-topic__toggle,
+  .pr-container .pr-toggle,
+  .pr-container .pr-problem,
+  .pr-container .pr-button,
+  .pr-container .pr-skeleton {
+    transition: none;
+    animation: none;
+  }
 }

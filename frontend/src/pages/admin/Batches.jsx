@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Users, Award, BookOpen, AlertCircle, Search, UserCheck, UserMinus, UserCog } from 'lucide-react';
+import { Pencil, Trash2, Plus, Users, BookOpen, AlertCircle, Search, UserCheck, UserMinus, UserCog } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
 import TableActions from '../../components/ui/table/TableActions';
@@ -479,8 +479,12 @@ export default function Batches() {
           onClose={() => setModalOpen(false)}
           title={editing ? 'Edit Batch' : 'Create New Batch'}
         >
-          <div className="admin-modal__body">
-            <form onSubmit={handleSubmit}>
+          {/* The form must wrap the footer too: a `type="submit"` button that
+              sits outside its <form> submits nothing, so Save Changes (and
+              Create Batch, which share this modal) silently did nothing. The
+              Assign Trainer modal below already wraps both correctly. */}
+          <form onSubmit={handleSubmit}>
+            <div className="admin-modal__body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
                   <label htmlFor="name" className="admin-form-label">
@@ -596,16 +600,16 @@ export default function Batches() {
                   style={{ resize: 'vertical', minHeight: '80px' }}
                 />
               </div>
-            </form>
-          </div>
-          <div className="admin-modal__footer">
-            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Saving...' : editing ? 'Save Changes' : 'Create Batch'}
-            </Button>
-          </div>
+            </div>
+            <div className="admin-modal__footer">
+              <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Saving...' : editing ? 'Save Changes' : 'Create Batch'}
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
 

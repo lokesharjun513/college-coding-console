@@ -5,8 +5,6 @@ const apiBaseURL =
   import.meta.env.PUBLIC_API_URL ||
   'http://localhost:3000/api';
 
-console.log('API BASE URL:', apiBaseURL);
-
 const api = axios.create({
   baseURL: apiBaseURL,
 });

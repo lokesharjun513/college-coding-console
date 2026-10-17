@@ -448,6 +448,37 @@
   border-radius: var(--admin-radius-md);
 }
 
+/* Empty state in collections panel — centered content */
+.admin-problems__panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  flex: 1;
+  min-height: 120px;
+}
+
+.admin-problems__panel-empty-icon {
+  color: var(--admin-text-muted);
+  margin-bottom: 12px;
+}
+
+.admin-problems__panel-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0 0 8px;
+}
+
+.admin-problems__panel-empty-description {
+  font-size: 13px;
+  color: var(--admin-text-muted);
+  margin: 0;
+  max-width: 280px;
+}
+
 .admin-problems__collection-item {
   display: flex;
   align-items: center;

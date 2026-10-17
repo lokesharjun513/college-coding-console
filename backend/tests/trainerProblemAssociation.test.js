@@ -44,21 +44,32 @@ describe('Trainer Phase 1: ProblemTopic Association', () => {
     batchId = batchRes.body.data.id;
   });
 
+  // A trainer links only into a Training it owns. Collections are private to
+  // their creator, so these are created through the trainer route rather than
+  // the admin one; linking into an admin's Training is refused (see the last
+  // test in this file).
+  const createTrainerOwnedCollection = async (name) => {
+    const res = await request(app)
+      .post('/api/trainer/collections')
+      .set('Authorization', 'Bearer ' + trainerToken)
+      .send({ name, batchId });
+    expect(res.status).toBe(201);
+    return res.body.data._id;
+  };
+
+  const createTrainerOwnedTopic = async (collectionId, name) => {
+    const res = await request(app)
+      .post(`/api/trainer/collections/${collectionId}/topics`)
+      .set('Authorization', 'Bearer ' + trainerToken)
+      .send({ name });
+    expect(res.status).toBe(201);
+    return res.body.data._id;
+  };
+
   test('trainer can associate a problem with a collection and topic', async () => {
     const suffix = uniqueSuffix();
-    const colRes = await request(app)
-      .post('/api/admin/collections')
-      .set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'Collection ' + suffix, slug: 'col-' + suffix });
-    expect(colRes.status).toBe(201);
-    const collectionId = colRes.body.data._id;
-
-    const topicRes = await request(app)
-      .post('/api/admin/collections/' + collectionId + '/topics')
-      .set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'Intro ' + suffix, slug: 'topic-' + suffix });
-    expect(topicRes.status).toBe(201);
-    const topicId = topicRes.body.data._id;
+    const collectionId = await createTrainerOwnedCollection('Collection ' + suffix);
+    const topicId = await createTrainerOwnedTopic(collectionId, 'Intro ' + suffix);
 
     const res = await request(app)
       .post('/api/trainer/batches/' + batchId + '/problems')
@@ -85,16 +96,8 @@ describe('Trainer Phase 1: ProblemTopic Association', () => {
   // trainer Training management UI can assemble a Day's problem list.
   test('batch problem list exposes collectionId/topicId per problem', async () => {
     const suffix = uniqueSuffix();
-    const colRes = await request(app)
-      .post('/api/admin/collections')
-      .set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'List Collection ' + suffix, slug: 'list-col-' + suffix });
-    const collectionId = colRes.body.data._id;
-    const topicRes = await request(app)
-      .post('/api/admin/collections/' + collectionId + '/topics')
-      .set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'List Topic ' + suffix, slug: 'list-topic-' + suffix });
-    const topicId = topicRes.body.data._id;
+    const collectionId = await createTrainerOwnedCollection('List Collection ' + suffix);
+    const topicId = await createTrainerOwnedTopic(collectionId, 'List Topic ' + suffix);
 
     const createRes = await request(app)
       .post('/api/trainer/batches/' + batchId + '/problems')
@@ -118,5 +121,39 @@ describe('Trainer Phase 1: ProblemTopic Association', () => {
     expect(singleRes.status).toBe(200);
     expect(singleRes.body.data.collectionId).toBe(collectionId);
     expect(singleRes.body.data.topicId).toBe(topicId);
+  });
+
+  test('a trainer cannot link a problem into an admin-owned training', async () => {
+    const suffix = uniqueSuffix();
+    const colRes = await request(app)
+      .post('/api/admin/collections')
+      .set('Authorization', 'Bearer ' + adminToken)
+      .send({ name: 'Admin Training ' + suffix });
+    expect(colRes.status).toBe(201);
+    const collectionId = colRes.body.data._id;
+
+    const topicRes = await request(app)
+      .post('/api/admin/collections/' + collectionId + '/topics')
+      .set('Authorization', 'Bearer ' + adminToken)
+      .send({ name: 'Admin Topic ' + suffix });
+    const topicId = topicRes.body.data._id;
+
+    const res = await request(app)
+      .post('/api/trainer/batches/' + batchId + '/problems')
+      .set('Authorization', 'Bearer ' + trainerToken)
+      .send({
+        title: 'Foreign Link ' + suffix,
+        description: 'Desc',
+        difficulty: 'EASY',
+        collectionId,
+        topicId
+      });
+
+    expect(res.status).toBe(403);
+    // The link must not exist: no ProblemTopic row points into that training.
+    const created = await Problem.findOne({ title: 'Foreign Link ' + suffix });
+    if (created) {
+      expect(await ProblemTopic.findOne({ problem: created._id, collection: collectionId })).toBeNull();
+    }
   });
 });

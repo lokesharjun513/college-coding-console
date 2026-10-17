@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../middleware/auth');
 const { requireRole } = require('../../middleware/role');
+const { GLOBAL_MATCH } = require('./scope');
 const mongoose = require('mongoose');
 const Collection = require('../../models/Collection');
 const Topic = require('../../models/Topic');
@@ -39,6 +40,11 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
       slug,
       description: description?.trim(),
       status: status || 'ACTIVE',
+      // Admin creates GLOBAL curriculum only. scope/batch are never taken from
+      // the request body, so this endpoint cannot be used to forge a BATCH
+      // collection.
+      scope: 'GLOBAL',
+      batch: null,
       createdBy: req.user.id,
     });
     return res.status(201).json({ success: true, data: collection });
@@ -55,7 +61,10 @@ router.post('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
 router.get('/', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '', status } = req.query;
-    const filter = {};
+    // Admin lists GLOBAL curriculum only. A trainer's BATCH collection belongs to
+    // the trainer assigned to that batch and is not admin-manageable, so it is
+    // excluded here rather than merely hidden by the UI.
+    const filter = { ...GLOBAL_MATCH };
     if (search) {
       filter.name = { $regex: search, $options: 'i' };
     }
@@ -134,6 +143,9 @@ router.get('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
     }
+    if (collection.scope && collection.scope !== 'GLOBAL') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     // topics count
     const topics = await Topic.find({ collection: id }).lean();
     const topicCount = topics.length;
@@ -172,6 +184,9 @@ router.patch('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     const oldCollection = await Collection.findById(id).session(session);
     if (!oldCollection) {
       throw new Error('Collection not found');
+    }
+    if (oldCollection.scope && oldCollection.scope !== 'GLOBAL') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     const oldStatus = oldCollection.status;
 
@@ -249,6 +264,9 @@ router.delete('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
     const collection = await Collection.findById(id);
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
+    }
+    if (collection.scope && collection.scope !== 'GLOBAL') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     if (collection.status === 'ARCHIVED') {
       // Hard delete permanently with transaction if supported
@@ -347,6 +365,9 @@ router.post('/:collectionId/topics', requireAuth, requireRole('ADMIN'), async (r
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
     }
+    if (collection.scope && collection.scope !== 'GLOBAL') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     const { name, description } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, message: 'Name is required' });
@@ -387,6 +408,9 @@ router.get('/:collectionId/topics', requireAuth, requireRole('ADMIN'), async (re
     const collection = await Collection.findById(collectionId);
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
+    }
+    if (collection.scope && collection.scope !== 'GLOBAL') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     const topics = await Topic.find({ collection: collectionId }).sort({ order: 1, createdAt: 1 }).lean();
     const topicCounts = await Promise.all(topics.map(async (topic) => {

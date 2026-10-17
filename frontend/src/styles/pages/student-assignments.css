@@ -64,7 +64,7 @@
   padding: var(--space-4);
   border-radius: var(--student-card-radius, var(--radius-md));
   background: var(--student-surface, #FFFFFF);
-  border: var(--student-border-width, 1px) solid var(--student-border, #C6D1D7);
+  border: var(--student-border-width, 1px) solid var(--student-border, #CDD6DD);
   box-shadow: var(--student-shadow-sm, 0 2px 8px rgba(15, 36, 65, 0.06));
   transition: var(--student-transition, box-shadow 150ms ease);
 }
@@ -130,7 +130,7 @@
   font-size: var(--font-size-xs);
   padding: 2px 8px;
   border-radius: var(--radius-full, 9999px);
-  border: 1px solid var(--student-border, #C6D1D7);
+  border: 1px solid var(--student-border, #CDD6DD);
   background: var(--student-surface-muted, #F8FAFB);
   color: var(--student-text-secondary, #555663);
 }
@@ -144,7 +144,7 @@
   flex-shrink: 0;
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md, 12px);
-  border: 1px solid var(--student-border, #C6D1D7);
+  border: 1px solid var(--student-border, #CDD6DD);
   background: transparent;
   color: var(--student-accent, #2F7EDA);
   font-size: var(--font-size-sm);
@@ -180,7 +180,7 @@
   text-align: center;
   color: var(--student-text-secondary, #555663);
   font-size: var(--font-size-sm);
-  border: 1px dashed var(--student-border, #C6D1D7);
+  border: 1px dashed var(--student-border, #CDD6DD);
   border-radius: var(--student-card-radius, var(--radius-md));
   background: var(--student-surface-muted, #F8FAFB);
 }
@@ -198,7 +198,7 @@
   margin-top: var(--space-3);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md, 12px);
-  border: 1px solid var(--student-border, #C6D1D7);
+  border: 1px solid var(--student-border, #CDD6DD);
   background: var(--student-surface, #FFFFFF);
   color: var(--student-accent, #2F7EDA);
   font-family: inherit;

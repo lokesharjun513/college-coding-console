@@ -251,3 +251,10 @@
     transition-duration: 0.01ms !important;
   }
 }
+/* ── Admin Token Overrides (to resolve theme.css tokens.css conflict) ── */
+:root {
+  --color-ink: #253237;
+  --color-muted: #9db4c0;
+  --color-success: #5c6b73;
+  --color-border: rgba(37, 50, 55, 0.14);
+}

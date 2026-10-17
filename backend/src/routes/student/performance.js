@@ -30,7 +30,10 @@ function metrics(problems, submissions) {
 }
 
 function difficultyBreakdown(problems, submissions) {
-  const progress = progressMap(submissions);
+  const ids = new Set(problems.map(problem => toId(problem._id)));
+  // Scoped to this response's problems: a global report must not be influenced
+  // by submissions to problems outside the scope.
+  const progress = progressMap(submissions.filter(submission => ids.has(toId(submission.problem))));
   const groups = new Map();
   problems.forEach((problem) => {
     const label = problem.difficulty || 'Unspecified';
@@ -49,7 +52,13 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
   try {
     const scope = String(req.query.scope || 'GLOBAL').toUpperCase();
     if (!['GLOBAL', 'BATCH'].includes(scope)) return res.status(400).json({ success: false, message: 'Scope must be GLOBAL or BATCH' });
-    const enrollments = await BatchStudent.find({ student: req.user.id, status: 'ACTIVE' }).populate('batch', 'name code status trainer').lean();
+    const enrollments = await BatchStudent.find({ student: req.user.id, status: 'ACTIVE' })
+      // The trainer is projected to `name` only. Selecting the `trainer` field
+      // without a sub-select populates the WHOLE user document, which would hand
+      // a student the trainer's email and passwordHash. Every other student
+      // route that names a trainer projects it the same way.
+      .populate({ path: 'batch', select: 'name code status trainer', populate: { path: 'trainer', select: 'name' } })
+      .lean();
     const activeBatches = enrollments.filter(item => item.batch).map(item => ({ id: item.batch._id, name: item.batch.name, code: item.batch.code, status: item.batch.status, trainer: item.batch.trainer || null }));
     let batch = null;
     if (scope === 'BATCH') {
@@ -63,7 +72,20 @@ router.get('/', requireAuth, requireAnyRole('STUDENT'), async (req, res) => {
     const problems = await Problem.find(query).select('_id title difficulty').lean();
     const submissions = problems.length ? await Submission.find({ student: req.user.id, problem: { $in: problems.map(problem => problem._id) } }).select('problem verdict createdAt').sort({ createdAt: -1 }).lean() : [];
     const problemMap = new Map(problems.map(problem => [toId(problem._id), problem]));
-    const recentActivity = submissions.slice(0, 8).map(submission => ({ id: submission._id, problemId: submission.problem, title: problemMap.get(toId(submission.problem))?.title || 'Problem', verdict: submission.verdict, createdAt: submission.createdAt }));
+    const recentActivity = submissions.slice(0, 8).map(submission => {
+      // A submission whose problem document is gone still belongs in the history,
+      // but `problemId` is nulled: a client building `/student/problems/<id>`
+      // from it would produce a link to a document that cannot be opened.
+      const known = problemMap.get(toId(submission.problem));
+      return {
+        id: submission._id,
+        problemId: known ? toId(known._id) : null,
+        title: known ? known.title : 'Deleted problem',
+        difficulty: known ? known.difficulty || null : null,
+        verdict: submission.verdict || null,
+        createdAt: submission.createdAt,
+      };
+    });
     return res.json({ success: true, data: { scope, batch, activeBatches, metrics: metrics(problems, submissions), breakdowns: { difficulty: difficultyBreakdown(problems, submissions) }, recentActivity } });
   } catch (error) {
     console.error('Error fetching student performance:', error);

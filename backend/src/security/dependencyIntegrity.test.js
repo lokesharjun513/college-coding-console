@@ -55,7 +55,31 @@ describe('jsonwebtoken module integrity', () => {
     expect(Math.abs(decoded.exp - thirtySeconds)).toBeLessThanOrEqual(5);
   });
 
-  test('sign rejects a negative TTL instead of silently issuing a live token', () => {
-    expect(() => jwt.sign({ sub: 'abc' }, SECRET, { expiresIn: '-1s' })).toThrow();
+  test('a negative TTL can never mint a live token', () => {
+    // Correct behavior for jsonwebtoken 9.x: `expiresIn` is validated only as a
+    // non-empty string or an integer, so '-1s' is accepted and produces a token
+    // whose `exp` is already in the past. sign() therefore does NOT throw — the
+    // safety property is that verify() then rejects the token as expired.
+    //
+    // The stub that previously shadowed this package collapsed every
+    // unrecognised TTL (including '30s' and '-1s') to 0 seconds, which produced
+    // a token that verified successfully. Asserting the security property
+    // rather than a specific failure mode keeps that detection intact: under
+    // the stub this still fails, because verify() would not throw.
+    let token = null;
+    let signError = null;
+    try {
+      token = jwt.sign({ sub: 'abc' }, SECRET, { expiresIn: '-1s' });
+    } catch (err) {
+      signError = err;
+    }
+
+    // Rejecting at sign time is acceptable; silently issuing a verifiable
+    // token is not.
+    if (signError) return;
+
+    expect(typeof token).toBe('string');
+    expect(jwt.decode(token).exp).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+    expect(() => jwt.verify(token, SECRET)).toThrow(/expired/i);
   });
 });

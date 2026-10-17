@@ -2,90 +2,35 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getTrainerBatches } from '../../api/trainer';
 import Icon from '../../components/ui/Icon';
-import Button from '../../components/ui/Button';
+import {
+  TrainerEmptyState,
+  TrainerErrorState,
+  TrainerKpiCard,
+  TrainerKpiGrid,
+  TrainerLoadingState,
+} from '../../components/trainer';
+import StatusBadge from '../../components/trainer/StatusBadge';
+import TrainerBreadcrumb from '../../components/trainer/TrainerBreadcrumb';
+import { NOT_AVAILABLE, formatCount, formatDate } from '../../utils/trainerDisplay';
+import '../../styles/trainer.css';
 import '../../styles/pages/trainer-batches.css';
 
-// Map canonical backend status -> BEM modifier. StdLib status labels + CSS dots.
-function statusClass(status) {
-  const s = (status || '').toUpperCase();
-  if (s === 'ACTIVE') return 'active';
-  if (s === 'COMPLETED') return 'completed';
-  return 'neutral';
-}
+/**
+ * One breadcrumb definition for all three render states.
+ *
+ * This page previously hand-rolled the markup three times and the copies had
+ * drifted apart: the loading and error states used `trainer-breadcrumb` with
+ * "Trainer / Batch", while the loaded state used `admin-breadcrumb` with
+ * uppercase "TRAINER / BATCH". TrainerBreadcrumb is the shared component every
+ * other Trainer page uses, so the wording and styling no longer depend on which
+ * state happens to be showing.
+ */
+const BREADCRUMB_ITEMS = [
+  { label: 'Trainer', to: '/trainer' },
+  { label: 'Batches' },
+];
 
-function BatchSkeletonCard() {
-  return (
-    <div className="trainer-batches__skeleton" aria-hidden="true">
-      <div className="trainer-batches__skeleton-line trainer-batches__skeleton-line--lg" />
-      <div className="trainer-batches__skeleton-line trainer-batches__skeleton-line--sm" />
-      <div className="trainer-batches__skeleton-line trainer-batches__skeleton-line--full" />
-      <div className="trainer-batches__skeleton-line trainer-batches__skeleton-line--full" />
-      <div className="trainer-batches__skeleton-line trainer-batches__skeleton-line--row" />
-    </div>
-  );
-}
-
-function BatchCard({ batch }) {
-  const dates = [];
-  if (batch.startDate) dates.push(new Date(batch.startDate).toLocaleDateString());
-  if (batch.endDate) dates.push(new Date(batch.endDate).toLocaleDateString());
-  const term = dates.length ? dates.join(' – ') : '—';
-
-  return (
-    <article className="trainer-batch-card">
-      <div className="trainer-batch-card__header">
-        <div className="trainer-batch-card__heading">
-          <h3 className="trainer-batch-card__name">{batch.name}</h3>
-          {batch.code && <div className="trainer-batch-card__code">{batch.code}</div>}
-        </div>
-        {batch.status && (
-          <span className={`trainer-batch-card__status trainer-batch-card__status--${statusClass(batch.status)}`}>
-            {batch.status}
-          </span>
-        )}
-      </div>
-
-      {batch.description && (
-        <p className="trainer-batch-card__description">{batch.description}</p>
-      )}
-
-      <div className="trainer-batch-card__meta">
-        <div className="trainer-batch-card__meta-row">
-          <span className="trainer-batch-card__meta-label">
-            <Icon name="users" size={14} /> Students
-          </span>
-          <span className="trainer-batch-card__meta-value">{batch.studentCount ?? 0}</span>
-        </div>
-
-        {dates.length > 0 && (
-          <div className="trainer-batch-card__meta-row">
-            <span className="trainer-batch-card__meta-label">
-              <Icon name="calendar" size={14} /> Term
-            </span>
-            <span className="trainer-batch-card__meta-value">{term}</span>
-          </div>
-        )}
-
-        {batch.trainer?.name && (
-          <div className="trainer-batch-card__meta-row">
-            <span className="trainer-batch-card__meta-label">
-              <Icon name="userCheck" size={14} /> Trainer
-            </span>
-            <span className="trainer-batch-card__meta-value">{batch.trainer.name}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="trainer-batch-card__actions">
-        <Link to={`/trainer/batches/${batch.id}`} className="trainer-batch-card__link" aria-label={`View batch ${batch.name}`}>
-          <Icon name="chevronRight" size={16} />
-          View Batch
-        </Link>
-      </div>
-    </article>
-  );
-}
-
+/** Trainer "My Batches" — /trainer/batches. Read-only; batch creation is admin-only. */
 export default function BatchesList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -97,7 +42,7 @@ export default function BatchesList() {
     setError(null);
     try {
       const res = await getTrainerBatches();
-      setBatches(res.data?.data || []);
+      setBatches(res?.data?.data || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load batches');
     } finally {
@@ -119,94 +64,214 @@ export default function BatchesList() {
     );
   }, [batches, search]);
 
+  // Trainer-wide aggregates, all summed from the real batches payload.
   const summary = useMemo(() => {
-    const total = batches.length;
-    const students = batches.reduce((sum, b) => sum + (b.studentCount || 0), 0);
-    const active = batches.filter((b) => (b.status || '').toUpperCase() === 'ACTIVE').length;
-    return { total, students, active };
+    const students = batches.reduce((sum, b) => sum + (Number(b.studentCount) || 0), 0);
+    const active = batches.filter(
+      (b) => String(b.status || '').toUpperCase() === 'ACTIVE'
+    ).length;
+    return { total: batches.length, students, active };
   }, [batches]);
 
   if (loading) {
     return (
-      <div className="trainer-batches">
-        <div className="trainer-batches__skeleton-grid" role="status" aria-label="Loading batches">
-          <BatchSkeletonCard />
-          <BatchSkeletonCard />
-          <BatchSkeletonCard />
-        </div>
+      <div className="trainer-page">
+        <header className="trainer-page-header">
+          <TrainerBreadcrumb items={BREADCRUMB_ITEMS} />
+          <div className="trainer-page-header-content">
+            <div className="trainer-page-header-text">
+              <h1 className="trainer-page-title">Your Batches</h1>
+              <p className="trainer-page-description">Batches assigned to you by an administrator.</p>
+            </div>
+          </div>
+        </header>
+        <TrainerLoadingState label="Loading your batches…" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="trainer-batches">
-        <div className="trainer-batches__error" role="alert">
-          <span className="trainer-batches__error-icon">
-            <Icon name="barChart" size={22} />
-          </span>
-          <h2>Couldn&apos;t load your batches</h2>
-          <p>{error}</p>
-          <Button variant="primary" onClick={fetchData}>Retry</Button>
-        </div>
+      <div className="trainer-page">
+        <header className="trainer-page-header">
+          <TrainerBreadcrumb items={BREADCRUMB_ITEMS} />
+          <div className="trainer-page-header-content">
+            <div className="trainer-page-header-text">
+              <h1 className="trainer-page-title">Your Batches</h1>
+              <p className="trainer-page-description">Batches assigned to you by an administrator.</p>
+            </div>
+          </div>
+        </header>
+        <TrainerErrorState title="Couldn’t load your batches" message={error} onRetry={fetchData} />
       </div>
     );
   }
 
   return (
-    <div className="trainer-batches">
-      <header className="trainer-batches__header">
-        <p className="trainer-batches__eyebrow">Trainer Management</p>
-        <h1 className="trainer-batches__title">Your Batches</h1>
-        <p className="trainer-batches__description">Manage the batches assigned to you.</p>
+    <div className="admin-dashboard trainer-page">
+      <header className="trainer-page-header">
+        <TrainerBreadcrumb items={BREADCRUMB_ITEMS} />
+        <div className="trainer-page-header-content">
+          <div className="trainer-page-header-text">
+            <h1 className="admin-dashboard__title">Your Batches</h1>
+            <p className="admin-dashboard__description">Batches assigned to you by an administrator.</p>
+          </div>
+        </div>
       </header>
 
-      <section className="trainer-batches__summary" aria-label="Batch summary">
-        <div className="trainer-batches__summary-card">
-          <p className="trainer-batches__summary-label">Batches</p>
-          <p className="trainer-batches__summary-value">{summary.total}</p>
-        </div>
-        <div className="trainer-batches__summary-card">
-          <p className="trainer-batches__summary-label">Active</p>
-          <p className="trainer-batches__summary-value">{summary.active}</p>
-        </div>
-        <div className="trainer-batches__summary-card">
-          <p className="trainer-batches__summary-label">Students</p>
-          <p className="trainer-batches__summary-value">{summary.students}</p>
-        </div>
-      </section>
+      {batches.length > 0 ? (
+        <TrainerKpiGrid title="Batch summary">
+          <TrainerKpiCard
+            label="Total Batches"
+            icon="layers"
+            value={formatCount(summary.total)}
+            meta="Assigned to you"
+            tone="red"
+          />
+          <TrainerKpiCard
+            label="Active"
+            icon="checkSquare"
+            value={formatCount(summary.active)}
+            meta="Currently running"
+            tone="green"
+          />
+          <TrainerKpiCard
+            label="Enrolled Students"
+            icon="users"
+            value={formatCount(summary.students)}
+            meta="Summed across your batches"
+            tone="blue"
+          />
+        </TrainerKpiGrid>
+      ) : null}
 
-      <div className="trainer-batches__toolbar">
-        <input
-          type="search"
-          className="trainer-batches__search"
-          placeholder="Search batches..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search batches"
-        />
-      </div>
+      {batches.length > 0 ? (
+        <section className="trainer-filter-bar">
+          <label className="trainer-sr-only" htmlFor="trainer-batch-search">
+            Search batches
+          </label>
+          <div className="trainer-search-wrapper">
+            <Icon name="search" className="trainer-filter-icon" size={16} ariaLabel="Search" />
+            <input
+              id="trainer-batch-search"
+              type="search"
+              className="trainer-search"
+              placeholder="Search by batch name or code…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {search ? (
+            <button
+              className="trainer-filter-clear"
+              onClick={() => setSearch('')}
+              type="button"
+            >
+              Clear
+            </button>
+          ) : null}
+        </section>
+      ) : null}
 
       {filtered.length === 0 ? (
-        <div className="trainer-batches__empty">
-          <span className="trainer-batches__empty-icon">
-            <Icon name="layers" size={22} />
-          </span>
-          <h2>{batches.length === 0 ? 'No batches assigned' : 'No matches'}</h2>
-          <p>
-            {batches.length === 0
-              ? "You don&apos;t have any batches assigned yet."
-              : 'No batches match your search. Try a different name or code.'}
-          </p>
-          {batches.length === 0 && (
-            <Button variant="secondary" onClick={fetchData}>Refresh</Button>
+        <TrainerEmptyState
+          icon="layers"
+          title={batches.length === 0 ? 'No batches assigned yet' : 'No matches'}
+          description={
+            batches.length === 0
+              ? 'Once an administrator assigns you a batch it will appear here, together with its students, problems and progress.'
+              : 'No batches match your search. Try a different name or code.'
+          }
+        >
+          {batches.length === 0 ? (
+            <button
+              className="trainer-filter-clear"
+              onClick={fetchData}
+              type="button"
+            >
+              <Icon name="refreshCw" size={14} />
+              Refresh
+            </button>
+          ) : (
+            <button
+              className="trainer-filter-clear"
+              onClick={() => setSearch('')}
+              type="button"
+            >
+              Clear search
+            </button>
           )}
-        </div>
+        </TrainerEmptyState>
       ) : (
-        <section className="trainer-batches__grid" aria-label="Your batches">
-          {filtered.map((batch) => (
-            <BatchCard key={batch.id} batch={batch} />
-          ))}
+        <section className="trainer-card-grid" aria-label="Your batches">
+          {filtered.map((batch) => {
+            const term = [batch.startDate, batch.endDate]
+              .filter(Boolean)
+              .map((d) => formatDate(d))
+              .join(' – ');
+            const studentCount = formatCount(Number(batch.studentCount) || 0);
+            const trainerName = batch.trainer?.name || NOT_AVAILABLE;
+            return (
+              <article key={batch.id} className="trainer-batch-card">
+                <header className="trainer-batch-card__header">
+                  <div className="trainer-batch-card__identity">
+                    <span className="trainer-batch-card__icon" aria-hidden="true">
+                      <Icon name="layers" size={18} />
+                    </span>
+                    <div className="trainer-batch-card__content">
+                      <h2 className="trainer-batch-card__title">
+                        <Link to={`/trainer/batches/${batch.id}`}>
+                          {batch.name || NOT_AVAILABLE}
+                        </Link>
+                      </h2>
+                      {batch.description ? (
+                        <p className="trainer-batch-card__description">
+                          {batch.description}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <StatusBadge status={batch.status} />
+                </header>
+                <hr className="trainer-batch-card__divider" />
+                <div className="trainer-batch-card__metadata">
+                  <div className="trainer-batch-card__metadata-row">
+                    <span className="trainer-batch-card__metadata-icon" aria-hidden="true">
+                      <Icon name="users" size={16} />
+                    </span>
+                    <span className="trainer-batch-card__metadata-label">Students</span>
+                    <span className="trainer-batch-card__metadata-value">{studentCount}</span>
+                  </div>
+                  {term ? (
+                    <div className="trainer-batch-card__metadata-row">
+                      <span className="trainer-batch-card__metadata-icon" aria-hidden="true">
+                        <Icon name="calendar" size={16} />
+                      </span>
+                      <span className="trainer-batch-card__metadata-label">Term</span>
+                      <span className="trainer-batch-card__metadata-value">{term}</span>
+                    </div>
+                  ) : null}
+                  <div className="trainer-batch-card__metadata-row">
+                    <span className="trainer-batch-card__metadata-icon" aria-hidden="true">
+                      <Icon name="user" size={16} />
+                    </span>
+                    <span className="trainer-batch-card__metadata-label">Trainer</span>
+                    <span className="trainer-batch-card__metadata-value">{trainerName}</span>
+                  </div>
+                </div>
+                <footer className="trainer-batch-card__footer">
+                  <Link
+                    to={`/trainer/batches/${batch.id}`}
+                    className="trainer-batch-card__action"
+                    aria-label={`View batch ${batch.name}`}
+                  >
+                    View batch
+                    <Icon name="chevronRight" size={16} />
+                  </Link>
+                </footer>
+              </article>
+            );
+          })}
         </section>
       )}
     </div>

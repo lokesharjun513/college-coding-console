@@ -121,9 +121,13 @@ export default function Sidebar({ collapsed: collapsedProp, onToggle: onTogglePr
       </SidebarHeader>
 
       {/* ── Scrollable nav content ───────────────── */}
-      <SidebarContent>
-        {sections.map((section, sIdx) => (
-          <SidebarGroup key={sIdx}>
+<SidebarContent>
+        {sections
+          // Skip sections with no items — an empty group otherwise renders a
+          // stray heading with nothing under it.
+          .filter((section) => Array.isArray(section.items) && section.items.length > 0)
+          .map((section, sIdx) => (
+            <SidebarGroup key={sIdx}>
             {!collapsed && <SidebarGroupLabel>{section.label}</SidebarGroupLabel>}
             <SidebarMenu>
               {section.items.map((item) => (
@@ -140,7 +144,7 @@ export default function Sidebar({ collapsed: collapsedProp, onToggle: onTogglePr
               ))}
             </SidebarMenu>
           </SidebarGroup>
-        ))}
+          ))}
       </SidebarContent>
 
       {/* ── Account Footer ────────────────────────────────── */}

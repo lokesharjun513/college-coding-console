@@ -89,21 +89,32 @@ describe('End-to-end: Trainer Daily Training → Student Practice → Analytics'
     await BatchStudent.create({ batch: batchAId, student: studentC._id, status: 'ACTIVE' });
     await BatchStudent.create({ batch: batchBId, student: studentB._id, status: 'ACTIVE' });
 
-    // Training (Collection) with Day 01 + Day 02, plus a second Training with one Day
-    const col = await request(app).post('/api/admin/collections').set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'Python Training', slug: 'e2e-py-' + uniqueSuffix() });
+    // Trainer curriculum is BATCH scope and must be created through the TRAINER
+    // endpoints. This used to be provisioned through /api/admin/collections,
+    // which by design only ever produces GLOBAL curriculum owned by the admin
+    // (it hard-codes `scope: 'GLOBAL', batch: null, createdBy: <admin>` and
+    // refuses to forge a BATCH collection).
+    //
+    // POST /api/trainer/batches/:batchId/problems therefore refused every
+    // problem in this file with 403 "Access denied": a problem may only join a
+    // Training that the same trainer created and that belongs to the same batch.
+    // The admin fixture could not satisfy that by construction, so this was never
+    // an application defect - the fixture was building trainer curriculum through
+    // the admin API. `scope` and `batch` are asserted at lines 169-177.
+    const col = await request(app).post('/api/trainer/collections').set('Authorization', 'Bearer ' + trainerAToken)
+      .send({ name: 'Python Training', batchId: batchAId });
     trainingId = col.body.data._id;
-    const d1 = await request(app).post(`/api/admin/collections/${trainingId}/topics`).set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'Day 01', slug: 'e2e-d1-' + uniqueSuffix() });
+    const d1 = await request(app).post(`/api/trainer/collections/${trainingId}/topics`).set('Authorization', 'Bearer ' + trainerAToken)
+      .send({ name: 'Day 01', order: 1 });
     day1Id = d1.body.data._id;
-    const d2 = await request(app).post(`/api/admin/collections/${trainingId}/topics`).set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'Day 02', slug: 'e2e-d2-' + uniqueSuffix() });
+    const d2 = await request(app).post(`/api/trainer/collections/${trainingId}/topics`).set('Authorization', 'Bearer ' + trainerAToken)
+      .send({ name: 'Day 02', order: 2 });
     day2Id = d2.body.data._id;
-    const col2 = await request(app).post('/api/admin/collections').set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'Java Training', slug: 'e2e-java-' + uniqueSuffix() });
+    const col2 = await request(app).post('/api/trainer/collections').set('Authorization', 'Bearer ' + trainerAToken)
+      .send({ name: 'Java Training', batchId: batchAId });
     training2Id = col2.body.data._id;
-    const d2t2 = await request(app).post(`/api/admin/collections/${training2Id}/topics`).set('Authorization', 'Bearer ' + adminToken)
-      .send({ name: 'Java Day', slug: 'e2e-jd-' + uniqueSuffix() });
+    const d2t2 = await request(app).post(`/api/trainer/collections/${training2Id}/topics`).set('Authorization', 'Bearer ' + trainerAToken)
+      .send({ name: 'Java Day', order: 1 });
     day2T2Id = d2t2.body.data._id;
 
     const createProblem = async (token, batchId, title, collectionId, topicId) => {

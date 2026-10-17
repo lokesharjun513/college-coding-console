@@ -1,415 +1,323 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
-import { getTrainerBatches, getTrainerAnalytics } from '../../api/trainer';
-import { getTrainerCollections } from '../../api/trainer';
 import Icon from '../../components/ui/Icon';
-import Spinner from '../../components/ui/Spinner';
-import '../../styles/pages/trainer.css';
+import {
+  TrainerSectionCard,
+  TrainerKpiGrid,
+  TrainerKpiCard,
+  TrainerQuickActions,
+  TrainerLoadingState,
+  TrainerErrorState,
+  TrainerEmptyState,
+} from '../../components/trainer';
+import { NOT_AVAILABLE, formatCount, formatPercent, statusBadgeVariant, statusLabel } from '../../utils/trainerDisplay';
+import { getTrainerAnalytics, getTrainerBatches } from '../../api/trainer';
 import '../../styles/pages/trainer-dashboard.css';
 
+/**
+ * Trainer Dashboard – full rebuild from scratch.
+ *
+ * This file renders only the dashboard page content. The surrounding layout
+ * (sidebar, header) is provided by TrainerLayout via the route configuration.
+ *
+ * KPI Note: The analytics API is batch-scoped. The dashboard displays metrics
+ * for the first available batch and clearly labels them as batch-specific.
+ * Trainer-wide aggregation requires backend API support.
+ */
 export default function TrainerDashboard() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [batches, setBatches] = useState([]);
-  const [selectedBatchId, setSelectedBatchId] = useState(null);
-  const [analytics, setAnalytics] = useState(null);
-  const [collections, setCollections] = useState([]);
-  const [recentSubmissions, setRecentSubmissions] = useState([]);
-  const [topStudents, setTopStudents] = useState([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [batchesRes, collectionsRes] = await Promise.all([
-          getTrainerBatches(),
-          getTrainerCollections({ limit: 5 })
-        ]);
-        const batchList = batchesRes.data?.data || [];
-        const collectionList = collectionsRes.data?.data || [];
-        setBatches(batchList);
-        setCollections(collectionList);
-        
-        if (batchList.length > 0) {
-          const initialBatchId = batchList[0].id;
-          setSelectedBatchId(initialBatchId);
-          await loadDashboardData(initialBatchId, collectionList);
-        }
-      } catch (err) {
-        setError('Failed to load dashboard data.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+  const firstName = useMemo(() => {
+    const name = user?.name?.trim() ?? '';
+    return name.split(/\s+/)[0] ?? '';
+  }, [user]);
+
+  const today = useMemo(
+    () =>
+      new Date().toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+    []
+  );
+
+  const ids = {
+    kpis: 'kpis-heading',
+    batches: 'batches-heading',
+    leaderboard: 'leaderboard-heading',
+  };
+
+  // Batches state
+  const [batches, setBatches] = useState([]);
+  const [batchesLoading, setBatchesLoading] = useState(true);
+  const [batchesError, setBatchesError] = useState(null);
+
+  const loadBatches = useCallback(async () => {
+    setBatchesLoading(true);
+    setBatchesError(null);
+    try {
+      const res = await getTrainerBatches();
+      setBatches(res?.data?.data || []);
+    } catch (err) {
+      setBatchesError(err?.response?.data?.message || 'Failed to load batches.');
+    } finally {
+      setBatchesLoading(false);
+    }
   }, []);
 
-  const loadDashboardData = async (batchId, collectionList) => {
-    try {
-      const [analyticsRes] = await Promise.all([
-        getTrainerAnalytics({ batchId })
-      ]);
-      setAnalytics(analyticsRes.data?.data);
-      
-      // Simulate recent submissions from analytics
-      if (analyticsRes.data?.data?.recentSubmissions) {
-        setRecentSubmissions(analyticsRes.data.data.recentSubmissions.slice(0, 5));
-      }
-      
-      // Simulate top students from analytics
-      if (analyticsRes.data?.data?.leaderboard) {
-        setTopStudents(analyticsRes.data.data.leaderboard.slice(0, 5));
-      }
-    } catch (err) {
-      console.error('Failed to load analytics:', err);
+  useEffect(() => {
+    loadBatches();
+  }, [loadBatches]);
+
+  // Analytics state (batch-scoped, uses first batch)
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsError, setAnalyticsError] = useState(null);
+  const analyticsRunRef = useRef(0);
+
+  const loadAnalytics = useCallback(async (batchId) => {
+    if (!batchId) {
+      setAnalytics(null);
+      return;
     }
-  };
+    const run = analyticsRunRef.current + 1;
+    analyticsRunRef.current = run;
+    setAnalyticsError(null);
+    try {
+      const res = await getTrainerAnalytics({ batchId });
+      if (analyticsRunRef.current !== run) return;
+      setAnalytics(res?.data?.data || null);
+    } catch (err) {
+      if (analyticsRunRef.current !== run) return;
+      setAnalytics(null);
+      setAnalyticsError(err?.response?.data?.message || 'Failed to load analytics.');
+    }
+  }, []);
 
-  const handleBatchChange = async (e) => {
-    const newBatchId = e.target.value;
-    setSelectedBatchId(newBatchId);
-    await loadDashboardData(newBatchId, collections);
-  };
+  const selectedBatch = useMemo(() => {
+    if (batches.length === 0) return null;
+    return batches[0];
+  }, [batches]);
 
-  const formatNumber = (num) => {
-    if (num === null || num === undefined) return '—';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num;
-  };
+  useEffect(() => {
+    loadAnalytics(selectedBatch?.id || '');
+  }, [selectedBatch?.id, loadAnalytics]);
 
-  if (loading) return <Spinner />;
-  if (error) return <div className="trainer-error"><h2>Error</h2><p>{error}</p></div>;
-
-  const selectedBatch = batches.find(b => b.id === selectedBatchId);
+  const kpis = analytics?.kpis || {};
+  const leaderboard = analytics?.leaderboard || [];
 
   return (
-    <div className="trainer-dashboard">
-      {/* Header */}
-      <header className="trainer-dashboard__header">
-        <div className="trainer-dashboard__header-content">
-          <div className="trainer-dashboard__header-text">
-            <p className="trainer-dashboard__eyebrow">Overview</p>
-            <h1 className="trainer-dashboard__title">Trainer Dashboard</h1>
-            <p className="trainer-dashboard__description">
-              Manage your batches, training, problems, and student progress.
-            </p>
-            {selectedBatch && (
-              <div className="trainer-dashboard__context">
-                <span className="trainer-eyebrow">Current Batch:</span>
-                {batches.length > 1 ? (
-                  <select value={selectedBatchId} onChange={handleBatchChange}>
-                    {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                ) : (
-                  <span>{selectedBatch.name}</span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="trainer-dashboard__header-actions">
-            <Link to="/trainer/training" className="trainer-btn trainer-btn--secondary">
-              <Icon name="play" size={14} />
-              Training
-            </Link>
-            <Link to="/trainer/analytics" className="trainer-btn trainer-btn--secondary">
-              <Icon name="barChart" size={14} />
-              Analytics
-            </Link>
-          </div>
+    <div className="trainer-page">
+      {/* Welcome Header */}
+      <header className="trainer-dashboard__greeting">
+        <div className="trainer-dashboard__greeting-text">
+          <h1 className="trainer-dashboard__greeting-name">
+            {firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
+          </h1>
+          <p className="trainer-dashboard__greeting-meta">
+            <span>{today}</span>
+            <span className="trainer-dashboard__greeting-divider" aria-hidden="true">·</span>
+            <span>Trainer dashboard</span>
+          </p>
+        </div>
+        <div className="trainer-page__actions">
+          <Link className="btn btn-primary" to="/trainer/batches">
+            <Icon name="layers" size={14} />
+            View Batches
+          </Link>
         </div>
       </header>
 
-      {/* KPI Grid */}
-      {analytics && (
-        <div className="trainer-dashboard__kpi-grid">
-          <div className="trainer-dashboard__stat-card">
-            <div className="trainer-dashboard__stat-header">
-              <p className="trainer-dashboard__stat-label">My Batches</p>
-              <Icon name="layers" size={16} />
-            </div>
-            <p className="trainer-dashboard__stat-value">{formatNumber(batches.length)}</p>
-            <p className="trainer-dashboard__stat-meta">Total batches assigned</p>
-          </div>
-          <div className="trainer-dashboard__stat-card">
-            <div className="trainer-dashboard__stat-header">
-              <p className="trainer-dashboard__stat-label">Total Students</p>
-              <Icon name="users" size={16} />
-            </div>
-            <p className="trainer-dashboard__stat-value">{formatNumber(analytics.kpis?.totalStudents || 0)}</p>
-            <p className="trainer-dashboard__stat-meta">Across all batches</p>
-          </div>
-          <div className="trainer-dashboard__stat-card">
-            <div className="trainer-dashboard__stat-header">
-              <p className="trainer-dashboard__stat-label">Problems Assigned</p>
-              <Icon name="fileCode" size={16} />
-            </div>
-            <p className="trainer-dashboard__stat-value">{formatNumber(analytics.kpis?.assignedProblems || 0)}</p>
-            <p className="trainer-dashboard__stat-meta">Across all batches</p>
-          </div>
-          <div className="trainer-dashboard__stat-card">
-            <div className="trainer-dashboard__stat-header">
-              <p className="trainer-dashboard__stat-label">Completion Rate</p>
-              <Icon name="barChart" size={16} />
-            </div>
-            <p className="trainer-dashboard__stat-value">{analytics.kpis?.completionRate?.toFixed(1) || '—'}%</p>
-            <p className="trainer-dashboard__stat-meta">Average across all problems</p>
-          </div>
-        </div>
-      )}
+      {/* Quick Actions */}
+      <TrainerQuickActions
+        title="Quick Actions"
+        subtitle="Common tasks for trainers"
+        actions={[
+          { key: 'batches', label: 'My Batches', icon: 'layers', to: '/trainer/batches' },
+          { key: 'problems', label: 'Problems', icon: 'fileCode', to: '/trainer/problems' },
+          { key: 'assignments', label: 'Assignments', icon: 'checkSquare', to: '/trainer/assignments' },
+        ]}
+      />
 
-      {/* Quick Actions Card */}
-      <div className="trainer-dashboard__qa-card">
-        <div className="trainer-dashboard__qa-header">
-          <h2 className="trainer-dashboard__qa-title">Quick Actions</h2>
-          <p className="trainer-dashboard__qa-subtitle">Common tasks for trainers</p>
-        </div>
-        <div className="trainer-dashboard__qa-grid">
-          <button
-            type="button"
-            className="trainer-dashboard__qa-btn trainer-dashboard__qa-btn--primary"
-            onClick={() => navigate('/trainer/problems/create')}
-          >
-            <span className="trainer-dashboard__qa-icon">
-              <Icon name="plus" size={16} />
-            </span>
-            <span className="trainer-dashboard__qa-label">Create Problem</span>
-            <span className="trainer-dashboard__qa-arrow">
-              <Icon name="arrowRight" size={14} />
-            </span>
-          </button>
-          <button
-            type="button"
-            className="trainer-dashboard__qa-btn"
-            onClick={() => navigate('/trainer/training')}
-          >
-            <span className="trainer-dashboard__qa-icon">
-              <Icon name="upload" size={16} />
-            </span>
-            <span className="trainer-dashboard__qa-label">Upload Problems</span>
-            <span className="trainer-dashboard__qa-arrow">
-              <Icon name="arrowRight" size={14} />
-            </span>
-          </button>
-          <button
-            type="button"
-            className="trainer-dashboard__qa-btn"
-            onClick={() => navigate('/trainer/batches')}
-          >
-            <span className="trainer-dashboard__qa-icon">
-              <Icon name="layers" size={16} />
-            </span>
-            <span className="trainer-dashboard__qa-label">View My Batches</span>
-            <span className="trainer-dashboard__qa-arrow">
-              <Icon name="arrowRight" size={14} />
-            </span>
-          </button>
-          <button
-            type="button"
-            className="trainer-dashboard__qa-btn"
-            onClick={() => navigate('/trainer/analytics')}
-          >
-            <span className="trainer-dashboard__qa-icon">
-              <Icon name="trophy" size={16} />
-            </span>
-            <span className="trainer-dashboard__qa-label">View Leaderboard</span>
-            <span className="trainer-dashboard__qa-arrow">
-              <Icon name="arrowRight" size={14} />
-            </span>
-          </button>
-        </div>
-      </div>
+      {/* KPI Cards - Batch-specific metrics */}
+      <TrainerSectionCard
+        icon="barChart"
+        title="Key Metrics"
+        subtitle={selectedBatch ? `Metrics for ${selectedBatch.name}` : 'Batch-specific performance'}
+        headingId={ids.kpis}
+      >
+        {batchesLoading ? (
+          <TrainerLoadingState label="Loading metrics…" />
+        ) : analyticsError ? (
+          <TrainerErrorState
+            title="Couldn't load analytics"
+            message={analyticsError}
+            onRetry={() => loadAnalytics(selectedBatch?.id || '')}
+          />
+        ) : batches.length === 0 ? (
+          <TrainerEmptyState
+            title="No batches available"
+            description="Assign a batch to view performance metrics."
+            icon="layers"
+          />
+        ) : (
+          <TrainerKpiGrid title="Key Metrics">
+            <TrainerKpiCard
+              label="Active Students"
+              value={formatCount(kpis.activeStudents)}
+              meta="In this batch"
+              icon="users"
+              tone="blue"
+            />
+            <TrainerKpiCard
+              label="Assigned Problems"
+              value={formatCount(kpis.assignedProblems)}
+              meta="Published"
+              icon="fileCode"
+              tone="red"
+            />
+            <TrainerKpiCard
+              label="Solved Assignments"
+              value={formatCount(kpis.solvedAssignments)}
+              meta="Completed"
+              icon="checkSquare"
+              tone="green"
+            />
+            <TrainerKpiCard
+              label="Completion Rate"
+              value={kpis.completionRate != null ? formatPercent(kpis.completionRate) : NOT_AVAILABLE}
+              meta="Overall"
+              icon="percent"
+              tone="orange"
+            />
+          </TrainerKpiGrid>
+        )}
+      </TrainerSectionCard>
 
-      {/* Data Grid - My Batches & Recent Submissions */}
-      <div className="trainer-dashboard__grid-2col">
-        {/* My Batches */}
-        <section className="trainer-submissions-card">
-          <div className="trainer-submissions-header">
-            <div className="trainer-submissions-heading">
-              <div className="trainer-submissions-icon">
-                <Icon name="layers" size={17} />
-              </div>
-              <div>
-                <h2>My Batches</h2>
-                <p>Your active and archived batches</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="trainer-view-all-btn"
-              onClick={() => navigate('/trainer/batches')}
-            >
-              <span>View All</span>
-              <Icon name="arrowRight" size={12} />
-            </button>
-          </div>
+      {/* Batch Overview */}
+      <TrainerSectionCard
+        icon="layers"
+        title="My Batches"
+        subtitle="Overview of assigned batches"
+        actionLabel="View all"
+        actionTo="/trainer/batches"
+        headingId={ids.batches}
+      >
+        {batchesLoading ? (
+          <TrainerLoadingState label="Loading batches…" />
+        ) : batchesError ? (
+          <TrainerErrorState
+            title="Couldn't load batches"
+            message={batchesError}
+            onRetry={loadBatches}
+          />
+        ) : batches.length === 0 ? (
+          <TrainerEmptyState
+            title="No batches assigned"
+            description="Batches assigned to you will appear here."
+            icon="layers"
+          />
+        ) : (
           <div className="trainer-table-wrapper">
-            {batches.length > 0 ? (
-              <table className="trainer-table">
-                <thead>
-                  <tr>
-                    <th>Batch Name</th>
-                    <th>Status</th>
-                    <th>Students</th>
-                    <th>Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {batches.slice(0, 5).map((batch) => (
-                    <tr key={batch.id}>
-                      <td>
-                        <Link
-                          to={`/trainer/batches/${batch.id}`}
-                          style={{ color: 'var(--trainer-text-primary)', textDecoration: 'none', fontWeight: '500' }}
-                        >
-                          {batch.name}
-                        </Link>
-                      </td>
-                      <td>
-                        <span className={`trainer-badge trainer-badge--${String(batch.status || '').toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
-                          {batch.status || '—'}
-                        </span>
-                      </td>
-                      <td>{batch.studentCount || 0}</td>
-                      <td>
-                        {batch.createdAt ? new Date(batch.createdAt).toLocaleDateString() : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="trainer-empty">
-                <h2>No batches yet</h2>
-                <p>Create your first batch to get started</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Recent Submissions */}
-        <section className="trainer-submissions-card">
-          <div className="trainer-submissions-header">
-            <div className="trainer-submissions-heading">
-              <div className="trainer-submissions-icon">
-                <Icon name="fileCode" size={17} />
-              </div>
-              <div>
-                <h2>Recent Submissions</h2>
-                <p>Latest student activity</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="trainer-view-all-btn"
-              onClick={() => navigate('/trainer/monitoring')}
-            >
-              <span>View All</span>
-              <Icon name="arrowRight" size={12} />
-            </button>
-          </div>
-          <div className="trainer-table-wrapper">
-            {recentSubmissions.length > 0 ? (
-              <table className="trainer-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Problem</th>
-                    <th>Status</th>
-                    <th>Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentSubmissions.map((sub) => (
-                    <tr key={sub.id}>
-                      <td>
-                        <span className="trainer-avatar trainer-avatar--student">
-                          {sub.studentName?.charAt(0) || 'S'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'left' }}>{sub.problemName || '—'}</td>
-                      <td>
-                        <span className={`trainer-badge trainer-badge--${sub.status === 'ACCEPTED' ? 'active' : 'inactive'}`}>
-                          {sub.status || '—'}
-                        </span>
-                      </td>
-                      <td>{sub.timeAgo || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="trainer-empty">
-                <h2>No submissions yet</h2>
-                <p>Student activity will appear here</p>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-
-      {/* Top Performing Students / Leaderboard */}
-      <section className="trainer-leaderboard-card">
-        <div className="trainer-leaderboard-header">
-          <div className="trainer-leaderboard-heading">
-            <div className="trainer-leaderboard-icon">
-              <Icon name="trophy" size={17} />
-            </div>
-            <div>
-              <h2>Top Performing Students</h2>
-              <p>Leaderboard preview</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="trainer-view-all-btn"
-            onClick={() => navigate('/trainer/analytics')}
-          >
-            <span>View All</span>
-            <Icon name="arrowRight" size={12} />
-          </button>
-        </div>
-        <div className="trainer-table-wrapper">
-          {topStudents.length > 0 ? (
-            <table className="trainer-leaderboard-table">
+            <table className="admin-table">
+              <caption className="trainer-sr-only">
+                Batches assigned to you with code, student count and status
+              </caption>
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Student</th>
-                  <th>Problems Solved</th>
-                  <th>Avg. Time</th>
-                  <th>Accuracy</th>
+                  <th scope="col">Batch</th>
+                  <th scope="col">Code</th>
+                  <th scope="col">Students</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" aria-label="Actions"></th>
                 </tr>
               </thead>
               <tbody>
-                {topStudents.map((student, idx) => (
-                  <tr key={student.id}>
-                    <td>{idx + 1}</td>
+                {batches.slice(0, 5).map((batch) => (
+                  <tr key={batch.id}>
+                    <th scope="row" className="trainer-table__row-head">
+                      <Link to={`/trainer/batches/${batch.id}`} className="trainer-table__link">
+                        {batch.name || NOT_AVAILABLE}
+                      </Link>
+                    </th>
+                    <td className="trainer-table__muted">{batch.code || NOT_AVAILABLE}</td>
+                    <td>{formatCount(Number(batch.studentCount) || 0)}</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                        <span className="trainer-avatar trainer-avatar--student">
-                          {student.name?.charAt(0) || 'S'}
-                        </span>
-                        <span style={{ textAlign: 'left' }}>{student.name || '—'}</span>
-                      </div>
+                      <span className={`trainer-badge trainer-badge--${statusBadgeVariant(batch.status)}`}>
+                        {statusLabel(batch.status)}
+                      </span>
                     </td>
-                    <td>{formatNumber(student.problemsSolved || 0)}</td>
-                    <td>{student.avgTime || '—'}</td>
-                    <td>{student.accuracy?.toFixed(0) || '—'}%</td>
+                    <td>
+                      <Link to={`/trainer/batches/${batch.id}`} className="btn btn-secondary">
+                        View
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          ) : (
-            <div className="trainer-empty">
-              <h2>No leaderboard data yet</h2>
-              <p>Student performance will appear here</p>
-            </div>
-          )}
-        </div>
-      </section>
+          </div>
+        )}
+      </TrainerSectionCard>
+
+      {/* Top Performing Students */}
+      <TrainerSectionCard
+        icon="trophy"
+        title="Top Performing Students"
+        subtitle={selectedBatch ? `Leaderboard for ${selectedBatch.name}` : 'Current batch leaderboard'}
+        actionLabel="View all"
+        actionTo="/trainer/analytics"
+        headingId={ids.leaderboard}
+      >
+        {batchesLoading ? (
+          <TrainerLoadingState label="Loading leaderboard…" />
+        ) : analyticsError ? (
+          <TrainerErrorState
+            title="Couldn't load leaderboard"
+            message={analyticsError}
+            onRetry={() => loadAnalytics(selectedBatch?.id || '')}
+          />
+        ) : batches.length === 0 ? (
+          <TrainerEmptyState
+            title="No batch selected"
+            description="Assign a batch to view student rankings."
+            icon="trophy"
+          />
+        ) : leaderboard.length === 0 ? (
+          <TrainerEmptyState
+            title="No leaderboard data yet"
+            description="Student rankings will appear once they start completing problems."
+            icon="trophy"
+          />
+        ) : (
+          <ul className="trainer-list-rows">
+            {leaderboard.slice(0, 5).map((student, index) => (
+              <li key={student.studentId} className="trainer-list-row">
+                <span className="trainer-list-row__marker" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <span className="trainer-list-row__body">
+                  <p className="trainer-list-row__title">{student.name || NOT_AVAILABLE}</p>
+                  <p className="trainer-list-row__meta">
+                    {formatCount(student.solvedProblems)} solved ·{' '}
+                    {formatPercent(student.completionPercentage)}
+                  </p>
+                </span>
+                <span className="trainer-list-row__aside">
+                  <Link
+                    to={`/trainer/batches/${selectedBatch.id}/students/${student.studentId}`}
+                    className="btn btn-secondary"
+                  >
+                    View
+                  </Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </TrainerSectionCard>
     </div>
   );
 }

@@ -202,9 +202,101 @@ async function getCompletionMap(studentId, assignmentIds) {
   return map;
 }
 
+/** Completions for a set of assignments, across every student. */
+async function findCompletionsForAssignments(assignmentIds) {
+  const ids = (assignmentIds || []).filter(isValidId);
+  if (ids.length === 0) return [];
+  return AssignmentCompletion.find({ assignment: { $in: ids } })
+    .select('assignment student verdict completedAt')
+    .lean();
+}
+
+/**
+ * Ordering used to pick one representative row per problem. A null
+ * availableFrom sorts first, matching how Mongo orders the feed's existing
+ * `{ availableFrom: 1, createdAt: 1 }` sort, so the same record is chosen
+ * everywhere.
+ */
+function compareForCanonical(a, b) {
+  const at = a.availableFrom ? new Date(a.availableFrom).getTime() : Number.NEGATIVE_INFINITY;
+  const bt = b.availableFrom ? new Date(b.availableFrom).getTime() : Number.NEGATIVE_INFINITY;
+  if (at !== bt) return at - bt;
+  return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+}
+
+/**
+ * Read an id from a raw ObjectId or a populated document.
+ *
+ * Both shapes occur: the student feed populates `problem` and `batch`, the
+ * trainer list populates only `problem`. Calling `.toString()` directly on a
+ * populated document yields "[object Object]" and would silently merge every
+ * problem in a batch into a single group, so the id is read from `_id` first.
+ */
+function refId(value) {
+  if (!value) return '';
+  return (value._id ?? value).toString();
+}
+
+/**
+ * Collapse Assignment rows to one entry per (batch, problem).
+ *
+ * WHY: `availableFrom` is part of an Assignment's identity, so the same problem
+ * can legitimately be scheduled more than once in one batch. Those rows are
+ * separate RECORDS, not separate pieces of work — a student meets one problem
+ * once. Reporting per record gives them the same problem on two cards and
+ * makes trainer percentages read as 2/24 when the real figure is 1/12.
+ *
+ * This collapses at READ time only. No Assignment or AssignmentCompletion row
+ * is created, merged, updated or deleted, so completion history and the
+ * ability to re-schedule a problem later both survive untouched.
+ *
+ * Batches stay independent: the same problem in two different batches is two
+ * groups, because a trainer schedules per batch.
+ *
+ * Representative row selection is order-independent — the caller may pass
+ * documents in any order — so the student feed and the trainer's list always
+ * agree on which record represents a problem.
+ *
+ * @param {Array}  assignments  lean Assignment documents
+ * @param {Array}  completions  lean AssignmentCompletion documents covering them
+ * @returns {Array<{assignment, completion, students}>} one entry per
+ *          (batch, problem). `completion` is the first completion found in the
+ *          group (null when none); `students` is the set of DISTINCT students
+ *          holding one, because one student can hold a completion on several
+ *          duplicate rows.
+ */
+function collapseByProblem(assignments, completions) {
+  const byAssignment = new Map();
+  for (const completion of completions || []) {
+    byAssignment.set(completion.assignment.toString(), completion);
+  }
+
+  const groups = new Map();
+  for (const assignment of assignments || []) {
+    const key = `${refId(assignment.batch)}|${refId(assignment.problem)}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { assignment, completion: null, students: new Set() };
+      groups.set(key, group);
+    } else if (compareForCanonical(assignment, group.assignment) < 0) {
+      group.assignment = assignment;
+    }
+
+    const completion = byAssignment.get(assignment._id.toString());
+    if (completion) {
+      if (!group.completion) group.completion = completion;
+      group.students.add(completion.student.toString());
+    }
+  }
+
+  return [...groups.values()];
+}
+
 module.exports = {
   SKIP_REASONS,
+  collapseByProblem,
   findCompletableAssignments,
+  findCompletionsForAssignments,
   getActiveEnrolledBatchIds,
   getCompletionMap,
   recordAssignmentCompletion,

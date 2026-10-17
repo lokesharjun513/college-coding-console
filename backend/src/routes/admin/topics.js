@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../middleware/auth');
 const { requireRole } = require('../../middleware/role');
+const { loadAdminTopic } = require('./scope');
 const mongoose = require('mongoose');
 const Topic = require('../../models/Topic');
 const Collection = require('../../models/Collection');
@@ -29,9 +30,9 @@ router.get('/:topicId/problems', requireAuth, requireRole('ADMIN'), async (req, 
       return res.status(400).json({ success: false, message: 'Invalid topic id' });
     }
     const { page = 1, limit = 50 } = req.query;
-    const topic = await Topic.findById(topicId).lean();
-    if (!topic) {
-      return res.status(404).json({ success: false, message: 'Topic not found' });
+    const { topic, error: topicError } = await loadAdminTopic(topicId);
+    if (topicError) {
+      return res.status(topicError.status).json({ success: false, message: topicError.message });
     }
     const links = await ProblemTopic.find({ topic: topicId })
       .sort({ order: 1 })
@@ -57,9 +58,9 @@ router.put('/:topicId/problems', requireAuth, requireRole('ADMIN'), async (req, 
     if (!mongoose.Types.ObjectId.isValid(topicId)) {
       return res.status(400).json({ success: false, message: 'Invalid topic id' });
     }
-    const topic = await Topic.findById(topicId);
-    if (!topic) {
-      return res.status(404).json({ success: false, message: 'Topic not found' });
+    const { topic, error: topicError } = await loadAdminTopic(topicId);
+    if (topicError) {
+      return res.status(topicError.status).json({ success: false, message: topicError.message });
     }
     const { problems } = req.body;
     if (!Array.isArray(problems)) {
@@ -122,12 +123,14 @@ router.get('/:topicId', requireAuth, requireRole('ADMIN'), async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(topicId)) {
       return res.status(400).json({ success: false, message: 'Invalid topic id' });
     }
-    const topic = await Topic.findById(topicId).lean();
-    if (!topic) {
-      return res.status(404).json({ success: false, message: 'Topic not found' });
+    const { topic, error: topicError } = await loadAdminTopic(topicId);
+    if (topicError) {
+      return res.status(topicError.status).json({ success: false, message: topicError.message });
     }
     const collection = await Collection.findById(topic.collection).lean();
-    return res.json({ success: true, data: { ...topic, collection } });
+    // loadAdminTopic returns a live document (other routes save it), so it must
+    // be converted before being spread into the payload.
+    return res.json({ success: true, data: { ...topic.toObject(), collection } });
   } catch (err) {
     console.error('Error getting topic:', err);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -145,6 +148,13 @@ router.patch('/:topicId', requireAuth, requireRole('ADMIN'), async (req, res) =>
       return res.status(400).json({ success: false, message: 'Invalid topic id' });
     }
     const { name, description, order, status: newStatus, cascade } = req.body;
+
+    // Refuse before any update branch runs, so a trainer-owned topic cannot be
+    // renamed, reordered or archived through the admin namespace.
+    const scopeCheck = await loadAdminTopic(topicId);
+    if (scopeCheck.error) {
+      return res.status(scopeCheck.error.status).json({ success: false, message: scopeCheck.error.message });
+    }
 
     // Use transaction if supported
     if (mongoose.__transactionSupport) {
@@ -282,9 +292,9 @@ router.delete('/:topicId', requireAuth, requireRole('ADMIN'), async (req, res) =
     if (!mongoose.Types.ObjectId.isValid(topicId)) {
       return res.status(400).json({ success: false, message: 'Invalid topic id' });
     }
-    const topic = await Topic.findById(topicId);
-    if (!topic) {
-      return res.status(404).json({ success: false, message: 'Topic not found' });
+    const { topic, error: topicError } = await loadAdminTopic(topicId);
+    if (topicError) {
+      return res.status(topicError.status).json({ success: false, message: topicError.message });
     }
     if (topic.status === 'ARCHIVED') {
       // Hard delete permanently with transaction if supported

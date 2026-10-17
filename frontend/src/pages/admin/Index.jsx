@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Layers, ArrowRight, Play, Activity, Server, Database, ShieldCheck, Code2, BarChart3, Users, FileCode2, UserRound, Clock3, TrendingUp, TrendingDown, Circle, CalendarDays, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Skeleton from '../../components/ui/Skeleton';
-import Icon from '../../components/ui/Icon';
 import Modal from '../../components/ui/Modal';
 import Toast from '../../components/ui/Toast';
 import { getBatches, getAdminSystemHealth, getAdminPlatformActivity, getAdminRecentActivity, getTrainers, updateBatch } from '../../api/admin';

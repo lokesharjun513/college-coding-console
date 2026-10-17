@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "framer-motion": "^14.2.0"
+  },
+  "name": "college",
+  "version": "1.0.0",
+  "description": "",
+  "main": "tmp_test.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lokesharjun513/college-coding-console.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lokesharjun513/college-coding-console/issues"
+  },
+  "homepage": "https://github.com/lokesharjun513/college-coding-console#readme"
+}

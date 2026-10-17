@@ -1,0 +1,284 @@
+/* frontend/src/pages/student/OneCompilerEmbed.css
+ *
+ * TEMPORARY EXPERIMENT — styling for the OneCompiler embed on /student/onecompiler.
+ *
+ * Scoped to `.ocx*` plus the `.ocx-page` wrapper applied only by that route, so
+ * deleting this file and its component removes the experiment without touching
+ * Free Console. Inherits the same `--student-*` design tokens the rest of the
+ * student pages use, and adds no global selectors.
+ *
+ * HOW THE EDITER GETS ITS HEIGHT
+ *
+ * The student shell is already viewport-locked: `.app-shell` is `100dvh` with
+ * `overflow: hidden`, `.header` is 64px, and `.app-content` is the scroll
+ * container at `flex: 1`. So the space actually available to a page is
+ * `100dvh - 64px`, and the shell owns all scrolling — the page never needs to
+ * set its own `100dvh`, and must not, or it double-counts the header.
+ *
+ * Sizing is therefore flex-driven rather than a magic number:
+ *   .ocx-page        fills .app-content
+ *     .fc-inner      fills the page
+ *       .ocx         takes the remaining space
+ *         .ocx__frame-wrap   takes what the notice leaves
+ *           .ocx__frame      fills that, and only that
+ *
+ * `min-height: 0` on each flex child is what actually lets them shrink: without
+ * it a flex item refuses to go below its content's intrinsic size. The
+ * `--ocx-frame-min` / `--ocx-frame-max` pair then brackets the result — a floor
+ * so the editor stays usable on a short viewport, and a ceiling expressed in
+ * `dvh` that bounds the frame even if this panel is ever mounted outside the
+ * flex shell.
+ *
+ * The editor/console split lives INSIDE the cross-origin frame. OneCompiler
+ * publishes no query parameter for it, and parent CSS cannot reach into another
+ * document, so nothing here tries: the parent only guarantees the frame is
+ * `width: 100%` with a `min-width: 0` parent, and that its height is never so
+ * small that the internal layout is forced to collapse. */
+
+.ocx {
+  --ocx-gap-1: 8px;
+  --ocx-gap-2: 12px;
+  --ocx-border: var(--fc-border, var(--student-border, #CDD6DD));
+
+  /* `.header` height, from styles/header.css. Matches the real rendered value,
+     not the unused `--header-height: 72px` token. */
+  --ocx-header-h: 64px;
+
+  /* Page chrome that is NOT the editor: .fc-inner padding, the column gaps, the
+     breadcrumb and this panel's notice. Only used for the `max-height` ceiling;
+     the flex layout measures this for real, so being slightly out here does not
+     mis-size the editor. */
+  --ocx-chrome: 164px;
+
+  --ocx-frame-min: 300px;
+  --ocx-frame-max: calc(100dvh - var(--ocx-header-h) - var(--ocx-chrome));
+
+  width: 100%;
+  /* `min-width: 0` is what actually stops a flex child from being widened by
+     its content; the parent's `overflow-x: clip` is only the backstop. */
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ocx-gap-2);
+  box-sizing: border-box;
+}
+
+.ocx *,
+.ocx *::before,
+.ocx *::after {
+  box-sizing: border-box;
+}
+
+/* -- body --------------------------------------------------------------- */
+
+/* The title/"Temporary test" bar and the explanatory paragraph were removed to
+   give the editor their height. Nothing here styles them any more; if they come
+   back, their rules need restoring too. */
+
+/* The wrapper exists only to give the frame a bordered, dark well and a
+   `min-width: 0` parent. It clips rather than scrolls so the frame can never
+   introduce a second scrollbar around the page. */
+.ocx__frame-wrap {
+  width: 100%;
+  /* `min-width: 0` lets this shrink inside a flex/grid track. Without it a wide
+     descendant (the frame, or a long unbroken string in the footer) can widen
+     the track past the viewport and start a horizontal scrollbar. */
+  min-width: 0;
+  max-width: 100%;
+  /* Clips rather than scrolls, so the frame can never introduce a second
+     scrollbar around the page. */
+  overflow: hidden;
+  border: 1px solid var(--ocx-border);
+  border-radius: 6px;
+  background: #0d1117;
+  /* Stops the frame's own dark background flashing white on a light page. */
+  color-scheme: dark;
+}
+
+.ocx__frame {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  /* Default for the ordinary, naturally-flowing context — i.e. the flag-gated
+     copy inside Free Console, which this work deliberately leaves as it was.
+     `.ocx-page` overrides this to fill the viewport; nothing else does. */
+  height: 600px;
+  border: 0;
+}
+
+/* -- fallback ----------------------------------------------------------- */
+
+.ocx__fallback {
+  width: 100%;
+  min-width: 0;
+  padding: var(--ocx-gap-2);
+  border: 1px solid var(--ocx-border);
+  border-radius: 6px;
+  background: var(--student-surface, #fff);
+  flex: 1 1 auto;
+}
+
+.ocx__fallback-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--student-text-primary, #0f2441);
+}
+
+/* Deliberately says nothing about whether OneCompiler's run service is
+   reachable. All this knows is that the frame did not load. */
+.ocx__fallback-body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--student-text-secondary, #4a5c70);
+}
+
+/* -- slow-load advisory --------------------------------------------------
+   Advisory only. The frame stays mounted underneath it, so a slow-but-working
+   embed costs a line of text that then removes itself — it never costs the
+   student their editor. */
+
+.ocx__slow {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid #e8c98a;
+  border-radius: 6px;
+  background: #fff8e8;
+  color: #7a4b00;
+  font-size: 11px;
+  line-height: 1.45;
+  flex: 0 0 auto;
+}
+
+/* ========================================================================
+   Viewport-filling behaviour — ONLY on the standalone /student/onecompiler
+   route. Each selector is a two-class compound so it outranks the single-class
+   `.fc-page` / `.fc-inner` rules it needs to adjust, whatever order the two
+   stylesheets end up in after bundling.
+   ======================================================================== */
+
+.ocx-page {
+  /* Fill .app-content, whose height the shell has already reduced by the
+     64px header. Deliberately NOT 100dvh — that would re-add the header. */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ocx-page .fc-inner {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* The editor absorbs this height, so the chrome stays trim. */
+  gap: 10px;
+}
+
+/* The panel itself must GROW to take what the breadcrumb and back link leave.
+   A flex item defaults to `flex: 0 1 auto`, which would size the panel to its
+   content and leave the frame at its intrinsic height — the exact bug being
+   fixed. `min-height: 0` then lets it shrink below content size on a short
+   viewport instead of overflowing the page. */
+.ocx-page .ocx {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The breadcrumb is chrome above the editor and must not absorb any of it. */
+.ocx-page .student-breadcrumb {
+  flex: 0 0 auto;
+}
+
+/* Opt this panel's frame into the viewport-fill chain. Scoped to `.ocx-page` so
+   the Free Console copy keeps its ordinary 600px box and its natural flow. */
+.ocx-page .ocx__frame-wrap {
+  flex: 1 1 auto;
+  /* `min-height: 0` is what lets this shrink below its content inside the flex
+     column; the floor is re-applied deliberately just below. */
+  min-height: var(--ocx-frame-min);
+  /* Ceiling in `dvh`, which only binds if the panel is ever mounted outside the
+     flex shell — e.g. if `.app-content` stops constraining its height. */
+  max-height: var(--ocx-frame-max);
+}
+
+.ocx-page .ocx__frame {
+  /* Fills whatever the flex layout negotiated, rather than a fixed box. */
+  height: 100%;
+  min-height: 0;
+}
+
+/* -- tablet -------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  .ocx {
+    /* The notice wraps to more lines, so the chrome estimate grows. */
+    --ocx-chrome: 132px;
+  }
+
+  .ocx-page .fc-inner {
+    padding: 16px;
+  }
+}
+
+/* -- mobile --------------------------------------------------------------
+   Note what is NOT here: there is no rule that switches the embedded editor
+   and console to a vertical layout. That split is OneCompiler's, drawn inside a
+   cross-origin document, and this page has no control over it. All this side can
+   do is stop making it worse — give the frame the full width, and keep enough
+   height that the internal layout is not forced to collapse. */
+
+@media (max-width: 767px) {
+  .ocx {
+    --ocx-chrome: 134px;
+    --ocx-frame-min: 240px;
+  }
+
+  /* Edge to edge. The gutter goes to zero so the editor gets the whole screen
+     width, and the gap tightens to hand a little more height back. The bottom
+     padding is NOT zeroed: `.mobile-nav` is `position: fixed; bottom: 0` at
+     64px tall here, so without that reserve the frame would sit underneath it. */
+  .ocx-page .fc-inner {
+    padding: 0 0 calc(64px + env(safe-area-inset-bottom, 0px));
+    gap: 4px;
+  }
+
+  /* The frame's dark well goes with the gutter. Keeping a 1px border and a 6px
+     radius would cost 2px of width and read as a floating card rather than a
+     full-bleed editor, which is the native-app shape we want on a phone. */
+  .ocx__frame-wrap {
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+/* -- short viewports -----------------------------------------------------
+   A laptop with a short window still gets the editor floor, and `.app-content`
+   scrolls the remainder rather than clipping it. */
+
+@media (max-height: 640px) {
+  .ocx {
+    --ocx-frame-min: 220px;
+  }
+}
+
+/* Very short desktop windows: give the height back to the editor. */
+@media (max-height: 520px) {
+  .ocx {
+    --ocx-chrome: 190px;
+    --ocx-frame-min: 180px;
+  }
+
+  .ocx__notice {
+    display: none;
+  }
+}
+
+/* -- motion -------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ocx__frame {
+    transition: none;
+  }
+}

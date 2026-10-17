@@ -1,133 +1,707 @@
+/* ==========================================================================
+   Student — Problem Detail (/student/problems/:id)
+   --------------------------------------------------------------------------
+   Premium SaaS two-pane coding workspace:
+
+     [ bar · breadcrumb · difficulty ]   [ Language · Run · Submit ]
+     [ statement body (scrolls)      ] │ [ Monaco editor (dark theme)   ]
+                                         [ results / test cases          ]
+
+   Design system: inherits the shared `--student-*` tokens from
+   `styles/student.css` (the same tokens Free Console and Practice use) and
+   mirrors Free Console's visual vocabulary — pane cards with a bar header,
+   colored status pills, a single 40px control height, blue accent actions and
+   a dark terminal/editor surface — so this page reads as part of the Student
+   module rather than a one-off.
+
+   Everything new here is scoped under `.problem-detail-container` or
+   `.coding-panel`; nothing adds a bare element rule or a new global class.
+
+   Height model: Student routes mount with layoutMode="fullscreen", so
+   `.app-shell` is 100dvh (overflow hidden), `.header` is 64px, and
+   `.app-content` is the flex:1 scroll container with padding:0. The usable
+   height is therefore `100%` of `.app-content` — this page must NEVER subtract
+   the header again (no 100vh/100dvh here), and it owns its own gutter and the
+   fixed bottom-nav clearance.
+
+   A note on section 13: `.badge`, `.tabs`, `.panel-content` and `.read-only-*`
+   are generic names also used by `ExecutionPanel` on other screens. This
+   stylesheet loads last, so its versions win app-wide; they are preserved
+   verbatim so no other screen changes. The premium look for these elements on
+   THIS page is layered separately in section 15 under `.coding-panel`.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Page tokens
+   ========================================================================== */
 .problem-detail-container {
-  display: grid;
-  grid-template-columns: minmax(360px, 42%) minmax(0, 58%);
-  gap: 12px;
-  padding: 12px;
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
-  height: calc(100vh - var(--header-height, 60px));
-  overflow: hidden;
-  transition: grid-template-columns var(--duration-slow, 300ms) var(--ease-standard, cubic-bezier(.2, .8, .2, 1));
-  position: relative;
-  background: var(--surface-page, #FCFDFD);
+  --pd-gap: 14px;
+  /* Match the gutters Free Console / Practice use, so the workspace breathes
+     instead of hugging the shell edges. */
+  --pd-pad: var(--student-page-padding, clamp(16px, 3vw, 32px));
+
+  /* One control height, like Free Console, so the select and the buttons share
+     a baseline instead of drifting apart. */
+  --pd-control-h: 40px;
+
+  --pd-panel-radius: var(--student-card-radius, 12px);
+  --pd-radius-sm: var(--radius-sm, 8px);
+  --pd-radius-md: var(--radius-md, 12px);
+  --pd-panel-border: var(--student-border, #CDD6DD);
+  --pd-border-subtle: var(--student-border-subtle, #EDEFF3);
+  --pd-border-input: rgba(159, 160, 181, 0.62);
+  --pd-panel-shadow: var(--student-shadow-sm, 0 2px 8px rgba(15, 36, 65, 0.06));
+
+  --pd-surface: var(--student-surface, #FFFFFF);
+  --pd-surface-muted: var(--student-surface-muted, #F8FAFB);
+  --pd-bg-subtle: var(--student-bg-subtle, #F0F4F7);
+  --pd-canvas: var(--student-canvas, #FCFDFD);
+
+  --pd-accent: var(--student-accent, #2F7EDA);
+  --pd-accent-hover: var(--student-accent-hover, #255FA8);
+  --pd-accent-soft: var(--student-accent-soft, rgba(47, 126, 218, 0.08));
+  --pd-accent-border: var(--student-accent-border, rgba(47, 126, 218, 0.25));
+  --pd-focus-ring: var(--student-focus-ring, 0 0 0 3px rgba(47, 126, 218, 0.15));
+
+  --pd-text-primary: var(--student-text-primary, #0F2441);
+  --pd-text-secondary: var(--student-text-secondary, #555663);
+  --pd-text-muted: var(--student-text-muted, #9FA0B5);
+
+  --pd-transition: var(--student-transition, 150ms cubic-bezier(0.25, 0.1, 0.25, 1));
+
+  /* Fraction of the content width given to the statement column. Unitless so
+     the grid and the seam handle can share it (a percentage cannot be
+     multiplied by a percentage inside calc()). */
+  --problem-panel-factor: 0.42;
 }
 
-.mobile-workspace-nav { display: none; }
+/* ==========================================================================
+   2. Main container (grid)
+   ========================================================================== */
+.problem-detail-container {
+  display: grid;
+  grid-template-columns: minmax(0, calc(var(--problem-panel-factor) * 100%)) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--pd-gap);
+  padding: var(--pd-pad);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  background: var(--pd-canvas);
+  color: var(--pd-text-primary);
+}
 
+/* Statement collapsed: the workspace owns the full width. */
 .problem-detail-container--collapsed {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Results closed: the editor owns the whole height of the coding panel. */
 .problem-detail-container--results-closed .coding-panel {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
+.problem-detail-container--results-closed .coding-panel--expanded {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.mobile-workspace-nav { display: none; }
+
+/* ==========================================================================
+   3. Statement panel — a pane card with a fixed bar + a scrolling body
+   ========================================================================== */
 .problem-panel {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: var(--surface-card, #FFFFFF);
-  border-radius: var(--radius-md, 12px);
-  border: 1px solid var(--border-default, #C6D1D7);
-  padding: 24px;
-  box-shadow: 0 8px 24px rgba(15, 36, 65, 0.04);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--pd-panel-border);
+  border-radius: var(--pd-panel-radius);
+  background: var(--pd-surface);
+  box-shadow: var(--pd-panel-shadow);
 }
 
+/* Bar header — mirrors Free Console's `.fc-pane__bar`: label left, meta right,
+   a hairline underneath. */
+.problem-panel__bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--pd-border-subtle);
+  background: var(--pd-surface);
+}
+
+.problem-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(18px, 2vw, 24px);
+}
+
+/* ==========================================================================
+   4. Statement content — breadcrumb, heading, difficulty, sections, examples
+   ========================================================================== */
+.problem-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.problem-breadcrumb__link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pd-text-muted);
+  text-decoration: none;
+  transition: color var(--pd-transition);
+}
+
+.problem-breadcrumb__link:hover {
+  color: var(--pd-accent);
+  text-decoration: none;
+}
+
+.problem-breadcrumb__sep {
+  color: var(--pd-text-muted);
+  opacity: 0.6;
+}
+
+.problem-breadcrumb__current {
+  flex: none;
+  color: var(--pd-text-primary);
+}
+
+/* Difficulty pill — colored by level, like Free Console's status pills. */
+.pd-difficulty {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--pd-border-subtle);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--pd-surface-muted);
+  color: var(--pd-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+.pd-difficulty[data-difficulty="easy"] {
+  border-color: rgba(33, 110, 78, 0.22);
+  background: rgba(33, 110, 78, 0.1);
+  color: #216E4E;
+}
+
+.pd-difficulty[data-difficulty="medium"] {
+  border-color: rgba(232, 158, 35, 0.3);
+  background: rgba(232, 158, 35, 0.13);
+  color: #A86A08;
+}
+
+.pd-difficulty[data-difficulty="hard"] {
+  border-color: rgba(180, 35, 24, 0.22);
+  background: rgba(180, 35, 24, 0.09);
+  color: #B42318;
+}
+
+.problem-header-meta h2 {
+  margin: 0 0 12px;
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--pd-text-primary);
+}
+
+.meta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+/* Topic tag — accent-soft, so it complements the difficulty pill. */
+.pd-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--pd-accent-border);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--pd-accent-soft);
+  color: var(--pd-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.problem-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.problem-section { margin: 0; }
+
+/* Section label — an uppercase eyebrow with a hairline, matching the Student
+   module's label style (Free Console / Practice). */
+.problem-section__title {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--pd-border-subtle);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pd-text-primary);
+}
+
+.problem-section__content {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--pd-text-secondary);
+}
+
+.problem-section__content p { margin: 0 0 12px; }
+.problem-section__content p:last-child { margin-bottom: 0; }
+
+/* Examples read as distinct cards, not a run-on list. */
+.example-item {
+  padding: 14px 16px;
+  border: 1px solid var(--pd-border-subtle);
+  border-radius: var(--pd-radius-md);
+  background: var(--pd-surface);
+}
+
+.example-item + .example-item { margin-top: 12px; }
+
+.example-header {
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pd-text-muted);
+}
+
+/* ==========================================================================
+   5. Code / pre blocks (page-scoped refinement of the shared `.read-only-*`)
+   Runs on the statement examples AND on ExecutionPanel's test cases, since
+   both render inside this page.
+   ========================================================================== */
+.problem-detail-container .read-only-section { margin-bottom: 12px; }
+
+.problem-detail-container .read-only-section:last-child { margin-bottom: 0; }
+
+.problem-detail-container .read-only-section strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pd-text-muted);
+}
+
+.problem-detail-container .read-only-box {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--pd-border-subtle);
+  border-radius: var(--pd-radius-sm);
+  background: var(--pd-bg-subtle);
+  color: var(--pd-text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   6. Coding workspace
+   ========================================================================== */
+.coding-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* Editor takes the remaining height; the results panel is capped at 42% so
+     it can never expand to its content height and swallow the editor. Its own
+     content scrolls inside .panel-content (section 13). */
+  grid-template-rows: minmax(0, 1fr) minmax(0, 42%);
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--pd-panel-border);
+  border-radius: var(--pd-panel-radius);
+  background: var(--pd-surface);
+  box-shadow: var(--pd-panel-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Statement collapsed: editor and results sit side by side. */
+.coding-panel--expanded {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* ==========================================================================
+   7. Editor area and toolbar
+   ========================================================================== */
+.editor-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--pd-surface);
+}
+
+.editor-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--pd-border-subtle);
+  background: var(--pd-surface);
+}
+
+.pd-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pd-field__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pd-text-muted);
+  white-space: nowrap;
+}
+
+.editor-toolbar select {
+  min-width: 150px;
+  height: var(--pd-control-h);
+  padding: 0 12px;
+  border: 1px solid var(--pd-border-input);
+  border-radius: var(--pd-radius-md);
+  background: var(--pd-surface);
+  color: var(--pd-text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--pd-transition), box-shadow var(--pd-transition);
+}
+
+.editor-toolbar select:hover { border-color: var(--pd-text-muted); }
+
+.editor-toolbar select:focus-visible {
+  outline: none;
+  border-color: var(--pd-accent);
+  box-shadow: var(--pd-focus-ring);
+}
+
+.pd-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Actions adopt the Student accent (blue) instead of the platform's dark ink
+   primary, so Run/Submit match Free Console / Practice. Scoped to the toolbar
+   so the shared `.btn` primitives stay untouched. */
+.editor-toolbar .btn {
+  gap: 8px;
+  height: var(--pd-control-h);
+  padding: 0 18px;
+  border-radius: var(--pd-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.editor-toolbar .btn > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor-toolbar .btn svg { flex: none; }
+
+.editor-toolbar .btn-secondary {
+  border-color: var(--pd-panel-border);
+  background: var(--pd-surface);
+  color: var(--pd-text-secondary);
+}
+
+.editor-toolbar .btn-secondary:hover:not(:disabled) {
+  border-color: var(--pd-accent);
+  background: var(--pd-accent-soft);
+  color: var(--pd-accent);
+}
+
+.editor-toolbar .btn-primary {
+  border-color: var(--pd-accent);
+  background: var(--pd-accent);
+  color: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(47, 126, 218, 0.28);
+}
+
+.editor-toolbar .btn-primary:hover:not(:disabled) {
+  border-color: var(--pd-accent-hover);
+  background: var(--pd-accent-hover);
+  box-shadow: 0 2px 6px rgba(47, 126, 218, 0.3);
+}
+
+/* Subtle pressed feedback; transform only, so nothing reflows. */
+.editor-toolbar .btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.editor-toolbar .btn:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.editor-toolbar .btn:focus-visible {
+  outline: none;
+  box-shadow: var(--pd-focus-ring);
+}
+
+/* ==========================================================================
+   8. Monaco editor wrapper
+   ========================================================================== */
+.monaco-wrapper {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  /* Match the editor theme while Monaco boots, so there is no white flash. */
+  background: #151A23;
+}
+
+/* ==========================================================================
+   9. Execution / results panel (page context)
+   NOTE: `.execution-panel` is a shared component (ExecutionPanel). Only the
+   page-specific seam is set here; the component's own look stays in
+   ExecutionPanel.css and is refined in section 15.
+   ========================================================================== */
+.coding-panel .execution-panel {
+  min-width: 0;
+  min-height: 0;
+  border-top: 1px solid var(--pd-border-subtle);
+}
+
+.coding-panel--expanded .execution-panel {
+  border-top: none;
+  border-left: 1px solid var(--pd-border-subtle);
+}
+
+/* ==========================================================================
+   10. Custom input controls
+   ========================================================================== */
+.run-controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-top: 1px solid var(--pd-border-subtle);
+  background: var(--pd-surface);
+}
+
+.run-custom-input-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pd-text-secondary);
+}
+
+.run-custom-input-label:hover { color: var(--pd-text-primary); }
+
+.run-custom-input-label:focus-within { color: var(--pd-accent); }
+
+/* Make the enabled state unmistakable without relying on the checkbox glyph. */
+.run-custom-input-label:has(input[type="checkbox"]:checked) {
+  color: var(--pd-accent);
+}
+
+.run-custom-input-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  accent-color: var(--pd-accent);
+  cursor: pointer;
+}
+
+.run-custom-input-label input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: var(--pd-focus-ring);
+}
+
+.custom-input-section {
+  flex: none;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--pd-border-subtle);
+  background: var(--pd-surface-muted);
+}
+
+.custom-input-section label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pd-text-muted);
+}
+
+.custom-input-section textarea {
+  width: 100%;
+  min-height: 80px;
+  max-height: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--pd-border-input);
+  border-radius: var(--pd-radius-sm);
+  background: var(--pd-surface);
+  color: var(--pd-text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color var(--pd-transition), box-shadow var(--pd-transition);
+}
+
+.custom-input-section textarea:hover { border-color: var(--pd-text-muted); }
+
+.custom-input-section textarea:focus {
+  outline: none;
+  border-color: var(--pd-accent);
+  box-shadow: var(--pd-focus-ring);
+}
+
+/* ==========================================================================
+   11. Expand / collapse controls
+   ========================================================================== */
+/* Statement seam handle — centred on the boundary between the statement column
+   (--problem-panel-factor of the content box) and the workspace. */
 .problem-panel-toggle {
   position: absolute;
-  left: 42%;
+  left: calc(
+    var(--pd-pad)
+    + (100% - 2 * var(--pd-pad)) * var(--problem-panel-factor)
+    + var(--pd-gap) / 2
+  );
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 32px;
+  width: 26px;
   height: 46px;
-  background: var(--surface-card, #FFFFFF);
-  border: 1px solid var(--border-default, #C6D1D7);
-  border-radius: 8px;
-  cursor: pointer;
-  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary, #7e808f);
-  box-shadow: 0 4px 12px rgba(15, 36, 65, 0.08);
-  transition: left var(--duration-slow, 300ms) var(--ease-standard, cubic-bezier(.2, .8, .2, 1)), border-color var(--duration-fast, 150ms), color var(--duration-fast, 150ms);
-}
-
-.results-panel-toggle {
-  position: absolute;
-  left: 57.5%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 46px;
   z-index: 20;
-  border: 1px solid var(--border-default, #c6d1d7);
-  border-radius: 8px;
-  background: var(--surface-card, #fff);
-  color: var(--color-text-secondary, #7e808f);
-  box-shadow: 0 4px 12px rgba(15,36,65,.08);
+  border: 1px solid var(--pd-panel-border);
+  border-radius: var(--pd-radius-sm);
+  background: var(--pd-surface);
+  color: var(--pd-text-muted);
+  box-shadow: var(--student-shadow-md, 0 4px 16px rgba(15, 36, 65, 0.08));
   cursor: pointer;
+  transition:
+    left var(--duration-slow, 300ms) var(--ease-standard, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    border-color var(--pd-transition),
+    color var(--pd-transition),
+    background-color var(--pd-transition);
 }
-
-.coding-panel .results-panel-toggle {
-  left: 57.5%;
-}
-
-.problem-detail-container--results-closed .coding-panel .results-panel-toggle {
-  left: 100%;
-  transform: translate(-100%, -50%);
-}
-
-.results-panel-toggle:hover,.results-panel-toggle:focus-visible,.problem-panel-toggle:focus-visible { color: var(--color-brand,#2f7eda); border-color: var(--color-brand,#2f7eda); outline: 3px solid rgba(47,126,218,.18); outline-offset: 2px; }
 
 .problem-detail-container--collapsed .problem-panel-toggle {
   left: 0;
   transform: translate(0, -50%);
 }
 
-.problem-panel-toggle:hover {
-  border-color: var(--color-brand, #2F7EDA);
-  color: var(--color-brand, #2F7EDA);
-  background: var(--surface-subtle, #EDEFF3);
-}
-
-.problem-breadcrumb {
-  font-size: 13px;
-  color: var(--color-text-muted, #9FA0B5);
-  margin-bottom: 16px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--surface-card, #FFFFFF);
-  padding-bottom: 8px;
-}
-
-.problem-breadcrumb a {
-  color: var(--color-text-muted, #9FA0B5);
-  text-decoration: none;
-  transition: color var(--duration-fast, 150ms);
-}
-
-.problem-breadcrumb a:hover {
-  color: var(--color-brand, #2F7EDA);
-}
-
-.problem-header-meta h2 {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--color-heading, #0F2441);
-  margin-bottom: 12px;
-  letter-spacing: -0.01em;
-}
-
-.meta-badges {
+/* Results handle — flush to the trailing edge of the coding panel so it reads
+   as a handle on the panel edge in every layout. */
+.results-panel-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 46px;
   display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  border: 1px solid var(--pd-panel-border);
+  border-right: none;
+  border-radius: var(--pd-radius-sm) 0 0 var(--pd-radius-sm);
+  background: var(--pd-surface);
+  color: var(--pd-text-muted);
+  box-shadow: -4px 0 12px rgba(15, 36, 65, 0.08);
+  cursor: pointer;
+  transition: border-color var(--pd-transition), color var(--pd-transition), background-color var(--pd-transition);
 }
 
+/* ==========================================================================
+   12. Loading and error states
+   (Declared after `.problem-detail-container` so it wins the display: flex.)
+   ========================================================================== */
+.problem-detail-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.problem-detail-error p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--pd-text-secondary);
+}
+
+.problem-detail-error a {
+  font-weight: 600;
+  color: var(--pd-accent);
+}
+
+/* ==========================================================================
+   13. SHARED COMPONENT STYLES — GLOBAL, DO NOT RE-SCOPE
+   --------------------------------------------------------------------------
+   These generic names are used outside this page too (`.tabs`, `.panel-content`,
+   `.read-only-box`, `.read-only-section`, `.badge` are rendered by
+   ExecutionPanel and by other student/admin screens). Because this stylesheet
+   is bundled last, its declarations currently win the cascade app-wide; scoping
+   or reordering them here would change those screens. They are preserved
+   verbatim. The premium look for THIS page is layered in section 14.
+   ========================================================================== */
 .badge {
   padding: 4px 12px;
   border-radius: 999px;
@@ -135,35 +709,6 @@
   font-weight: 500;
   background: var(--surface-subtle, #EDEFF3);
   color: var(--color-text-primary, #555663);
-}
-
-.problem-section {
-  margin-bottom: 28px;
-}
-
-.problem-section__title {
-  font-size: 18px;
-  font-weight: 650;
-  color: var(--color-heading, #0F2441);
-  margin-bottom: 12px;
-  letter-spacing: -0.005em;
-}
-
-.problem-section__content {
-  font-size: 14.5px;
-  line-height: 1.65;
-  color: var(--color-text-primary, #555663);
-}
-
-.example-item {
-  margin-bottom: 24px;
-}
-
-.example-header {
-  margin-bottom: 8px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--color-heading, #0F2441);
 }
 
 .read-only-section {
@@ -190,77 +735,6 @@
   line-height: 1.5;
   color: var(--color-heading, #0F2441);
   white-space: pre-wrap;
-}
-
-.coding-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
-  min-height: 0;
-  background: var(--surface-card, #FFFFFF);
-  border-radius: var(--radius-md, 12px);
-  border: 1px solid var(--border-default, #C6D1D7);
-  overflow: hidden;
-  box-shadow: 0 8px 24px rgba(15, 36, 65, 0.04);
-  position: relative;
-}
-
-.coding-panel--expanded {
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  grid-template-rows: 1fr;
-}
-
-.editor-area {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background: var(--surface-card, #FFFFFF);
-}
-
-.editor-toolbar {
-  height: 52px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border-subtle, #EDEFF3);
-  background: var(--surface-card, #FFFFFF);
-}
-
-.editor-toolbar select {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-default, #C6D1D7);
-  background: var(--surface-card, #FFFFFF);
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--color-text-primary, #555663);
-  outline: none;
-  cursor: pointer;
-  transition: border-color var(--duration-fast, 150ms);
-}
-
-.editor-toolbar select:focus {
-  border-color: var(--color-brand, #2F7EDA);
-}
-
-.monaco-wrapper {
-  flex: 1;
-  min-height: 300px;
-}
-
-.execution-panel {
-  min-height: 250px;
-  border-top: 1px solid var(--border-default, #C6D1D7);
-  display: flex;
-  flex-direction: column;
-  background: var(--surface-card, #FFFFFF);
-}
-
-.coding-panel--expanded .execution-panel {
-  border-top: none;
-  border-left: 1px solid var(--border-default, #C6D1D7);
-  height: 100%;
 }
 
 .tabs {
@@ -296,95 +770,262 @@
   overscroll-behavior: contain;
 }
 
-@media (max-width: 1024px) {
+/* ==========================================================================
+   14. Results panel — premium layer (page-scoped under `.coding-panel`)
+   ========================================================================== */
+.coding-panel .tabs {
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--pd-border-subtle);
+  background: var(--pd-surface);
+}
+
+.coding-panel .tabs button {
+  padding: 13px 8px;
+  margin-bottom: -1px;
+  color: var(--pd-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--pd-radius-sm) var(--pd-radius-sm) 0 0;
+  transition: color var(--pd-transition), border-color var(--pd-transition);
+}
+
+.coding-panel .tabs button:hover {
+  color: var(--pd-text-primary);
+  background: none;
+}
+
+.coding-panel .tabs button:focus-visible {
+  outline: none;
+  box-shadow: var(--pd-focus-ring);
+}
+
+.coding-panel .tabs button[aria-selected="true"] {
+  color: var(--pd-accent);
+  border-bottom-color: var(--pd-accent);
+}
+
+.coding-panel .panel-content {
+  padding: 18px;
+  background: var(--pd-surface);
+}
+
+.coding-panel .text-muted {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  padding: 24px;
+  color: var(--pd-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Match the terminal surface to Free Console's dark output. */
+.coding-panel .output-box {
+  border-color: #2C3545;
+  background: #151A23;
+}
+
+/* ==========================================================================
+   15. Focus / hover states (page-scoped)
+   ========================================================================== */
+.problem-panel-toggle svg,
+.results-panel-toggle svg { flex: none; }
+
+.problem-panel-toggle:hover,
+.results-panel-toggle:hover {
+  color: var(--pd-accent);
+  border-color: var(--pd-accent);
+  background: var(--pd-accent-soft);
+}
+
+.problem-panel-toggle:active,
+.results-panel-toggle:active {
+  background: var(--pd-accent-soft);
+}
+
+.problem-panel-toggle:focus-visible,
+.results-panel-toggle:focus-visible {
+  outline: none;
+  border-color: var(--pd-accent);
+  box-shadow: var(--pd-focus-ring);
+}
+
+/* ==========================================================================
+   16. Tablet breakpoint — stack the panes; the page scrolls
+   (1199 matches Free Console: below this there is no width for a readable
+   statement column beside the workspace.)
+   ========================================================================== */
+@media (max-width: 1199px) {
   .problem-detail-container {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
     height: auto;
-    overflow-y: auto;
+    min-height: 100%;
+    overflow: visible;
   }
+
+  /* No vertical seam anymore, so the seam handles are removed. */
+  .problem-panel-toggle,
+  .results-panel-toggle { display: none; }
+
+  /* The page scrolls here, so let the statement panel grow with its content
+     instead of scrolling inside its own body. */
+  .problem-panel { min-height: 320px; overflow: visible; }
+  .problem-panel__body { overflow: visible; }
+
+  .coding-panel {
+    min-height: 560px;
+    grid-template-rows: minmax(0, 1fr) minmax(200px, 42%);
+  }
+
   .coding-panel--expanded {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(400px, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(200px, 42%);
   }
 }
 
-@media (max-width: 768px) {
-  .problem-detail-container { display: block; height: calc(100dvh - var(--header-height, 60px)); padding: 8px; padding-top: 52px; overflow: hidden; }
-  .mobile-workspace-nav { position: absolute; display: grid; grid-template-columns: repeat(3, 1fr); top: 8px; left: 8px; right: 8px; z-index: 30; padding: 3px; border: 1px solid var(--border-default,#c6d1d7); border-radius: 10px; background: var(--surface-card,#fff); box-shadow: 0 4px 12px rgba(15,36,65,.08); }
-  .mobile-workspace-nav button { border: 0; border-radius: 7px; background: transparent; color: var(--color-text-muted,#9fa0b5); padding: 8px 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
-  .mobile-workspace-nav button.is-active { background: var(--surface-subtle,#edeff3); color: var(--color-heading,#0f2441); }
-  .problem-panel,.coding-panel { height: 100%; display: none; }
+/* ==========================================================================
+   17. Mobile breakpoint — intentional single-pane workspace.
+   The shell is fullscreen here (`.app-content { padding: 0 }`), so this page
+   owns BOTH the gutter and the clearance for the fixed 64px bottom navigation.
+   ========================================================================== */
+@media (max-width: 767px) {
+  .problem-detail-container {
+    display: block;
+    height: 100%;
+    min-height: 0;
+    padding: 8px;
+    padding-top: 52px; /* clears the in-page workspace switcher */
+    padding-bottom: calc(64px + 24px + env(safe-area-inset-bottom, 0px)); /* clears .mobile-nav */
+    overflow: hidden;
+  }
+
+  .mobile-workspace-nav {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--pd-panel-border);
+    border-radius: var(--pd-radius-md);
+    background: var(--pd-surface);
+    box-shadow: var(--student-shadow-sm, 0 2px 8px rgba(15, 36, 65, 0.06));
+  }
+
+  .mobile-workspace-nav button {
+    min-width: 0;
+    padding: 8px 4px;
+    border: 0;
+    border-radius: var(--pd-radius-sm);
+    background: transparent;
+    color: var(--pd-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--pd-transition), color var(--pd-transition);
+  }
+
+  .mobile-workspace-nav button.is-active {
+    background: var(--pd-accent-soft);
+    color: var(--pd-accent);
+  }
+
+  /* One pane at a time. */
+  .problem-panel,
+  .coding-panel {
+    height: 100%;
+    min-height: 0;
+    display: none;
+  }
+
+  .problem-panel { overflow: hidden; }
+  .problem-panel__body { overflow-y: auto; }
+
   .mobile-view-problem .problem-panel { display: flex; }
-  .mobile-view-code .coding-panel,.mobile-view-results .coding-panel { display: flex; }
-  .mobile-view-code .execution-panel,.mobile-view-results .editor-area { display: none; }
-  .mobile-view-results .execution-panel { display: flex; }
+
+  .mobile-view-code .coding-panel,
+  .mobile-view-results .coding-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-view-code .execution-panel,
+  .mobile-view-results .editor-area { display: none; }
+
+  .mobile-view-results .execution-panel {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   .problem-detail-container--results-closed .execution-panel { display: none; }
-  .problem-panel-toggle,.results-panel-toggle { display: none; }
-  .problem-header-meta { padding-top: 38px; }
-  .coding-panel { grid-template-rows: minmax(0,1fr) auto; }
-  .coding-panel--expanded { grid-template-columns: 1fr; grid-template-rows: minmax(0,1fr) auto; }
-  .coding-panel--expanded .execution-panel { border-left: 0; border-top: 1px solid var(--border-default,#c6d1d7); }
-  .editor-toolbar { padding: 0 12px; }
+
+  .problem-panel-toggle,
+  .results-panel-toggle { display: none; }
+
+  .coding-panel { grid-template-rows: minmax(0, 1fr) auto; }
+  .coding-panel--expanded {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .coding-panel--expanded .execution-panel {
+    border-left: 0;
+    border-top: 1px solid var(--pd-panel-border);
+  }
+
+  .editor-toolbar { padding: 10px 12px; }
   .monaco-wrapper { min-height: 0; }
 }
 
-@media (prefers-reduced-motion: reduce) { .problem-detail-container,.problem-panel-toggle,.results-panel-toggle { transition: none; } }
+/* Very narrow phones: the language select takes its own row and Run/Submit
+   split the row beneath it, so neither is squeezed off the toolbar. */
+@media (max-width: 480px) {
+  .editor-toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 
-.run-controls {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border-subtle, #EDEFF3);
-  background: var(--surface-card, #FFFFFF);
+  .pd-field { flex: 1 1 100%; }
+
+  .editor-toolbar select {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .pd-actions { flex: 1 1 100%; }
+
+  .pd-actions .btn { flex: 1 1 0; }
 }
 
-.custom-input-section {
-  padding: 16px 20px;
-  background: var(--surface-card, #FFFFFF);
-  border-top: 1px solid var(--border-subtle, #EDEFF3);
+/* ==========================================================================
+   18. Accessibility — hover capability and reduced motion
+   ========================================================================== */
+@media (hover: hover) {
+  .mobile-workspace-nav button:not(.is-active):hover {
+    background: var(--pd-surface-muted);
+    color: var(--pd-text-primary);
+  }
 }
 
-.custom-input-section label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted, #9FA0B5);
-}
+@media (prefers-reduced-motion: reduce) {
+  .problem-detail-container,
+  .problem-panel-toggle,
+  .results-panel-toggle,
+  .mobile-workspace-nav button,
+  .editor-toolbar .btn,
+  .coding-panel .tabs button,
+  .run-custom-input-label {
+    transition: none;
+  }
 
-.custom-input-section textarea {
-  width: 100%;
-  min-height: 80px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-default, #C6D1D7);
-  border-radius: 8px;
-  background: var(--surface-input, #FFFFFF);
-  font-family: var(--font-mono, monospace);
-  font-size: 13px;
-  resize: vertical;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.custom-input-section textarea:focus {
-  outline: none;
-  border-color: var(--color-brand, #2F7EDA);
-  box-shadow: 0 0 0 3px var(--color-focus-ring, rgba(47, 126, 218, 0.25));
-}
-
-.run-custom-input-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--color-text-primary, #555663);
-}
-
-.run-custom-input-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--color-brand, #2F7EDA);
-  cursor: pointer;
-  border-radius: 4px;
+  .editor-toolbar .btn:active:not(:disabled) {
+    transform: none;
+  }
 }

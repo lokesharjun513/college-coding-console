@@ -5,8 +5,9 @@ import {
   Building2, CalendarRange, LayoutGrid, ChevronDown,
 } from 'lucide-react';
 import Button from '../ui/Button';
+import StatusBadge from '../../components/trainer/StatusBadge';
 import { getInitials } from '../../utils/initials';
-import { readYears, academicBatchLabel, currentYearLabel } from '../../utils/academicBatch';
+import { readYears } from '../../utils/academicBatch';
 import '../../styles/pages/admin-enroll-modal.css';
 
 /**
@@ -178,6 +179,16 @@ export default function EnrollStudentsModal({
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someFilteredSelected;
   }, [someFilteredSelected]);
+
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('modal-open');
+      return () => {
+        document.body.classList.remove('modal-open');
+      };
+    }
+  }, [isOpen]);
 
   const selectedCount = activeSelectedIds.length;
   const eligibleCount = eligibleStudents.length;
@@ -406,18 +417,14 @@ export default function EnrollStudentsModal({
                         onChange={() => onToggleAll(filteredIds)}
                       />
                     </th>
-                    <th className="is-index" scope="col">#</th>
                     <th scope="col">Student</th>
                     <th scope="col">Roll Number</th>
                     <th scope="col">Email</th>
-                    <th scope="col">Department</th>
-                    <th scope="col">Academic Batch</th>
-                    <th scope="col">Section</th>
-                    <th scope="col">Current Year</th>
+                    <th scope="col">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((student, idx) => {
+                  {filtered.map((student) => {
                     const isSelected = selectedSet.has(student.id);
                     return (
                       <tr key={student.id} className={isSelected ? 'is-selected' : undefined}>
@@ -429,7 +436,6 @@ export default function EnrollStudentsModal({
                             onChange={() => onToggle(student.id)}
                           />
                         </td>
-                        <td className="is-index">{idx + 1}</td>
                         <td>
                           <div className="admin-enroll-identity">
                             <div className="admin-avatar admin-avatar--student" aria-hidden="true">
@@ -440,10 +446,9 @@ export default function EnrollStudentsModal({
                         </td>
                         <td><span className="admin-enroll-cell-code">{student.rollNumber || '—'}</span></td>
                         <td><span className="admin-enroll-cell-email">{student.email || '—'}</span></td>
-                        <td>{student.department || '—'}</td>
-                        <td><span className="admin-enroll-cell-batch">{academicBatchLabel(student)}</span></td>
-                        <td>{student.section || '—'}</td>
-                        <td><span className="admin-enroll-cell-year">{currentYearLabel(student)}</span></td>
+                        <td>
+                          <StatusBadge status={student.status} />
+                        </td>
                       </tr>
                     );
                   })}

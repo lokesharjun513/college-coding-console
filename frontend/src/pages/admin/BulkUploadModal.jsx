@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, File, AlertTriangle, Download, CheckCircle, XCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Upload, File, AlertTriangle, Download, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { bulkUploadStudents, downloadStudentTemplate } from '../../api/admin';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
@@ -26,7 +26,6 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [students, setStudents] = useState([]);
   const [validationErrors, setValidationErrors] = useState([]);
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [importResult, setImportResult] = useState(null);
   const [toast, setToast] = useState(null);
@@ -38,7 +37,6 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
     setSelectedFile(null);
     setStudents([]);
     setValidationErrors([]);
-    setIsUploading(false);
     setUploadProgress(0);
     setImportResult(null);
   };
@@ -125,7 +123,6 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
 
   const handleConfirmUpload = async () => {
     setCurrentStep(5); // Uploading
-    setIsUploading(true);
     setUploadProgress(30);
 
     const formattedStudents = students.map(r => ({
@@ -158,7 +155,7 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
       setToast({ message: err?.response?.data?.message || 'Upload failed', type: 'error' });
       setCurrentStep(4); // Back to Confirm on error
     } finally {
-      setIsUploading(false);
+      // No longer needed, as we removed the isUploading state
     }
   };
 

@@ -32,10 +32,26 @@ export default function Icon({ name, size = 20, color = 'currentColor', ariaLabe
     code: 'Code',
     bell: 'Bell',
     notebook: 'Notebook',
-     checkSquare: 'SquareCheck',
-     // Add more mappings as needed.
-     key: 'Key',
-     trophy: 'Trophy',
+    checkSquare: 'SquareCheck',
+    key: 'Key',
+    trophy: 'Trophy',
+    // Trainer dashboard + shared trainer UI primitives.
+    plus: 'Plus',
+    arrowRight: 'ArrowRight',
+    upload: 'Upload',
+    book: 'BookOpen',
+    clipboard: 'ClipboardList',
+    inbox: 'Inbox',
+    alertTriangle: 'AlertTriangle',
+    refreshCw: 'RefreshCw',
+    gauge: 'Gauge',
+    trash: 'Trash2',
+    pencil: 'Pencil',
+    eye: 'Eye',
+    download: 'Download',
+    userPlus: 'UserPlus',
+    filter: 'Filter',
+    info: 'Info',
    };
 
   const componentName = iconMap[name] || name;

@@ -33,7 +33,7 @@ function redact(obj, seen = new WeakSet()) {
   const redacted = {};
   for (const [key, value] of Object.entries(obj)) {
     const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEYS.some(sk => lowerKey.includes(sk))) {
+    if (SENSITIVE_KEYS.includes(lowerKey)) {
       redacted[key] = '[REDACTED]';
     } else {
       redacted[key] = redact(value, seen);

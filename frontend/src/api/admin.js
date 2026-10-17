@@ -50,7 +50,10 @@ export const createAdminCollection = (data) => api.post('/admin/collections', da
 export const updateAdminCollection = (id, data) => api.patch(`/admin/collections/${id}`, data);
 export const deleteAdminCollection = (id) => api.delete(`/admin/collections/${id}`);
 // Topics
-export const getAdminTopics = (collectionId, params) => api.get(`/admin/topics/${collectionId}/topics`, { params });
+// The topics-of-a-collection list lives on the collections router
+// (GET /admin/collections/:collectionId/topics); the topics router is keyed by
+// topicId and has no collection-scoped list, so /admin/topics/:id/topics 404s.
+export const getAdminTopics = (collectionId, params) => api.get(`/admin/collections/${collectionId}/topics`, { params });
 export const getAdminTopic = (topicId) => api.get(`/admin/topics/${topicId}`);
 export const createAdminTopic = (collectionId, data) => api.post(`/admin/collections/${collectionId}/topics`, data);
 export const updateAdminTopic = (topicId, data) => api.patch(`/admin/topics/${topicId}`, data);

@@ -27,8 +27,8 @@
   align-items: center;
   min-height: 64px;
   height: 64px;
-  padding: 0 8px;
-  gap: 4px;
+  padding: 0 4px;
+  gap: 2px;
 }
 
 .mobile-nav__item {
@@ -38,7 +38,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 5px 4px;
+  padding: 5px 2px;
   border: 0;
   background: transparent;
   color: var(--color-text-muted);
@@ -47,7 +47,9 @@
   transition: color 180ms ease, background-color 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer;
   min-width: 0;
-  max-width: 96px;
+  /* Five Student destinations share this bar, so the 96px cap of the
+     four-item bar forced labels to truncate on 360px phones. */
+  max-width: none;
   min-height: 52px;
   -webkit-tap-highlight-color: transparent;
 }
@@ -82,8 +84,8 @@
 }
 
 .mobile-nav__label {
-  font-size: 11px;
-  line-height: 14px;
+  font-size: 10.5px;
+  line-height: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
   white-space: nowrap;
@@ -91,6 +93,25 @@
   text-overflow: ellipsis;
   width: 100%;
   text-align: center;
+}
+
+/* The bar carries up to five destinations; below 380px the type shrinks rather
+   than truncating, so every label stays readable at 360px. */
+@media (max-width: 380px) {
+  .mobile-nav__items {
+    padding: 0 2px;
+    gap: 0;
+  }
+
+  .mobile-nav__label {
+    font-size: 9.5px;
+    line-height: 12px;
+  }
+
+  .mobile-nav__icon {
+    width: 19px;
+    height: 19px;
+  }
 }
 
 .mobile-nav__item--active .mobile-nav__label {

@@ -5,6 +5,17 @@ const { compilerKeyManager } = require('./CompilerKeyManager');
 const { mapLegacyToCompiler } = require('./compilerRegistry');
 
 /**
+ * Client-side budget for one provider request, used when
+ * ONLINE_COMPILER_TIMEOUT_MS is not set.
+ *
+ * It is deliberately larger than the provider's own 30s sandbox limit: the
+ * provider can only answer once compilation AND execution have finished, so a
+ * client budget equal to that limit aborts first and throws away a legitimate
+ * provider response. A run measured inside the limit was answered at ~31.5s.
+ */
+const DEFAULT_EXECUTION_TIMEOUT_MS = 45_000;
+
+/**
  * Execute code against OnlineCompiler API for Free Console.
  * @param {Object} options
  * @param {string} options.source - Source code to execute
@@ -41,7 +52,13 @@ async function execute({ source, language, stdin, compilerId }) {
     input: stdin || '',
   };
 
-  const timeoutMs = Number(process.env.ONLINE_COMPILER_TIMEOUT_MS) || 30000;
+  // The provider's sandbox caps a single execution at 30s, but it can only
+  // answer AFTER compilation and after execution finishes. Java alone costs
+  // ~1.7s to compile, and a run measured inside that 30s execution limit was
+  // still answered at ~31.5s. A 30s client abort therefore fired FIRST and
+  // discarded a real provider response, reporting a client timeout instead.
+  // ONLINE_COMPILER_TIMEOUT_MS overrides the default when set.
+  const timeoutMs = Number(process.env.ONLINE_COMPILER_TIMEOUT_MS) || DEFAULT_EXECUTION_TIMEOUT_MS;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -68,7 +85,9 @@ async function execute({ source, language, stdin, compilerId }) {
     const durationMs = Date.now() - start;
 
     if (!response.ok) {
-      const text = await response.text();
+      // Drain the body so the socket can be released. The text itself is never
+      // kept: it is provider output and may echo back request material.
+      await response.text().catch(() => '');
       logger.error('OnlineCompiler upstream error', {
         event: 'onlinecompiler.execution.error',
         statusCode: response.status,
@@ -81,7 +100,16 @@ async function execute({ source, language, stdin, compilerId }) {
         await compilerKeyManager.updateLimit(key.keyIndex, key.currentRequestCount);
       }
 
-      throw new Error(`OnlineCompiler error ${response.status}: ${text}`);
+      // The upstream body is logged, never attached to the error: it is provider
+      // output and may echo request material. `upstreamStatus` is a bare integer
+      // and carries no provider text, so the caller can still tell a rejected
+      // request (4xx) apart from an unavailable service (5xx) without ever
+      // forwarding the provider's words to a client.
+      const error = new Error(`OnlineCompiler error ${response.status}`);
+      error.code = 'ONLINE_COMPILER_UPSTREAM';
+      error.upstreamStatus = response.status;
+      error.retryAfter = response.headers.get('retry-after');
+      throw error;
     }
 
     const result = await response.json();
@@ -119,4 +147,4 @@ async function execute({ source, language, stdin, compilerId }) {
   }
 }
 
-module.exports = { execute };
+module.exports = { execute, DEFAULT_EXECUTION_TIMEOUT_MS };

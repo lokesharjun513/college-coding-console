@@ -1,30 +1,31 @@
 import React from 'react';
-import SaasLayout from '../../components/common/SaasLayout';
-import { useAuth } from '../../context/AuthContext';
-import Card from '../../components/ui/Card';
+import Profile from '../Profile';
+import TrainerBreadcrumb from '../../components/trainer/TrainerBreadcrumb';
 import PageHeader from '../../components/ui/PageHeader';
-import Button from '../../components/ui/Button';
 
+/**
+ * TrainerProfile — /trainer/profile
+ * Uses the shared Profile component but adds a Trainer‑specific breadcrumb
+ * and page header to match the rest of the Trainer UI.
+ */
 export default function TrainerProfile() {
-  const { user, logout } = useAuth();
-
-  if (!user) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <SaasLayout>
-      <PageHeader
-        title="Trainer Profile"
-        description="Your account and trainer profile information"
-        actions={<Button onClick={logout}>Log out</Button>}
+    <div className="trainer-page">
+      {/* Breadcrumb navigation */}
+      <TrainerBreadcrumb
+        items={[
+          { label: 'Trainer', to: '/trainer' },
+          { label: 'Profile' },
+        ]}
       />
-      <Card elevation="card" style={{ padding: 'var(--space-6)' }}>
-        <p><strong>Name:</strong> {user.name}</p>
-        <p><strong>Email:</strong> {user.email || 'N/A'}</p>
-        <p><strong>Role:</strong> {user.role}</p>
-        <p><strong>Status:</strong> {user.status}</p>
-      </Card>
-    </SaasLayout>
+      {/* Page header */}
+      <PageHeader
+        title="My Profile"
+        description="Manage your personal information and account details."
+        breadcrumb={<span className="admin-breadcrumb__current">Profile</span>}
+      />
+      {/* Profile content – read‑only view */}
+      <Profile showStatus />
+    </div>
   );
 }

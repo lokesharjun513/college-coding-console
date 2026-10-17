@@ -154,10 +154,23 @@ describe('Trainer assignment routes', () => {
     expect(stored.availableFrom.toISOString()).toBe('2026-10-01T00:00:00.000Z');
   });
 
-  test('trainer can assign their own batch-scoped problem', async () => {
-    const res = await track(await post(batchA._id, trainerAToken)({ problemId: ownBatchProblem._id.toString() }));
-    expect(res.status).toBe(201);
-    expect(res.body.data.availableFrom).toBeNull();
+  test('a problem already part of the batch is refused instead of duplicated', async () => {
+    // Adding a problem to a batch IS the batch association, so assigning the
+    // same problem again would give the same (batch, problem) pair two parallel
+    // representations and let a student meet it twice.
+    const res = await post(batchA._id, trainerAToken)({ problemId: ownBatchProblem._id.toString() });
+
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.code).toBe('ALREADY_BATCH_ASSOCIATED');
+    expect(res.body.message).toMatch(/already part of this batch/i);
+
+    // Nothing was written.
+    expect(await Assignment.countDocuments({
+      batch: batchA._id,
+      problem: ownBatchProblem._id,
+      deleted: false,
+    })).toBe(0);
   });
 
   test('client cannot override the trainer id', async () => {
@@ -492,10 +505,13 @@ describe('Trainer assignment routes', () => {
     expect(res.status).toBe(200);
     const ids = res.body.data.map((p) => p.id);
     expect(ids).toContain(globalPub._id.toString());
-    expect(ids).toContain(ownBatchPub._id.toString());
+    // Already part of this batch: offering it would duplicate the association.
+    expect(ids).not.toContain(ownBatchPub._id.toString());
     expect(ids).not.toContain(otherTrainerInBatchB._id.toString());
     expect(ids).not.toContain(draft._id.toString());
     expect(ids).not.toContain(archived._id.toString());
+    // Every offered problem is a PUBLISHED GLOBAL one — the only assignable kind.
+    expect(res.body.data.every((p) => p.scope === 'GLOBAL' && p.status === 'PUBLISHED')).toBe(true);
     // Payload is the same light shape used everywhere else.
     expect(Object.keys(res.body.data[0]).sort()).toEqual(['difficulty', 'id', 'scope', 'slug', 'status', 'title']);
   });

@@ -29,6 +29,10 @@ const AssignmentCompletion = require('../../models/AssignmentCompletion');
 const BatchStudent = require('../../models/BatchStudent');
 const Problem = require('../../models/Problem');
 const { assertTrainerOwnsBatch } = require('../../services/trainerAuth');
+const {
+  collapseByProblem,
+  findCompletionsForAssignments,
+} = require('../../services/assignmentCompletion');
 
 const handle = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 
@@ -72,6 +76,12 @@ function parseOptionalDate(input) {
 /**
  * Decide whether `trainerId` may assign `problem` to `batchId`.
  * Throws { status } errors, following services/trainerAuth.js conventions.
+ *
+ * Only GLOBAL problems are assignable. A problem whose `batch` is already this
+ * batch is *already associated* with it — adding it to the batch was the
+ * association — so offering it here would create a second, parallel
+ * representation of the same thing and let a student meet it twice: once on the
+ * training/problem list and once on the assignment feed.
  */
 function assertProblemAssignable(trainerId, batchId, problem) {
   if (!problem) {
@@ -103,7 +113,13 @@ function assertProblemAssignable(trainerId, batchId, problem) {
       err.status = 403;
       throw err;
     }
-    return;
+    // Already part of this batch. Refuse rather than duplicate the association.
+    const err = new Error(
+      'This problem is already part of this batch. Batch problems reach students through the batch itself, so no assignment is needed.'
+    );
+    err.status = 409;
+    err.code = 'ALREADY_BATCH_ASSOCIATED';
+    throw err;
   }
 
   const err = new Error('Unsupported problem scope');
@@ -217,6 +233,20 @@ router.post('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) =>
 /**
  * LIST ASSIGNMENTS FOR A BATCH
  * GET /api/trainer/batches/:batchId/assignments?includeDeleted=true
+ *
+ * RESPONSE CONTRACT
+ * -----------------
+ * `data` contains ONE row per unique (batch, problem), not one per Assignment
+ * record. A problem scheduled twice via different `availableFrom` values is
+ * reported once, with the earliest-available record as its representative and
+ * the union of its rows' completions.
+ *
+ * Unavoidable consequences, both intended:
+ *   - the row count drops when duplicates exist;
+ *   - a non-representative row's id is no longer listed, though PATCH and
+ *     DELETE still accept it, so a trainer can still edit or retire it if they
+ *     know the id (for example from `?includeDeleted=true`).
+ * Every other field, including the whole `monitoring` object, is unchanged.
  */
 router.get('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) => {
   const { batchId } = req.params;
@@ -232,23 +262,24 @@ router.get('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) => 
     .lean();
 
   // Trainer monitoring: how many students completed vs are still pending.
+  //
+  // Reported at PROBLEM level. A problem can hold several Assignment rows
+  // because `availableFrom` is part of its identity, and one student then holds
+  // a completion on each of them. Summing those would count one piece of work
+  // as several and make the percentage read as 2/24 when it is 1/12, so rows
+  // are collapsed per problem and students are counted once. Every stored
+  // Assignment and AssignmentCompletion is left untouched.
   const assignmentIds = assignments.map((a) => a._id);
   const enrolledStudents = assignmentIds.length > 0
     ? await BatchStudent.countDocuments({ batch: batchId, status: 'ACTIVE' })
     : 0;
 
-  const completionCounts = assignmentIds.length > 0
-    ? await AssignmentCompletion.aggregate([
-      { $match: { assignment: { $in: assignmentIds } } },
-      { $group: { _id: '$assignment', completed: { $sum: 1 } } },
-    ])
+  const completions = assignmentIds.length > 0
+    ? await findCompletionsForAssignments(assignmentIds)
     : [];
-  const completedByAssignment = new Map(
-    completionCounts.map((row) => [row._id.toString(), row.completed])
-  );
 
-  const data = assignments.map((assignment) => {
-    const completed = completedByAssignment.get(assignment._id.toString()) || 0;
+  const data = collapseByProblem(assignments, completions).map(({ assignment, students }) => {
+    const completed = students.size;
     return assignmentPayload(assignment, {
       monitoring: {
         enrolledStudents,
@@ -266,8 +297,11 @@ router.get('/', requireAuth, requireRole('TRAINER'), handle(async (req, res) => 
  * GET /api/trainer/batches/:batchId/assignments/problems
  *
  * Registered before "/:assignmentId" so the literal path is not read as an id.
- * Mirrors assertProblemAssignable exactly: PUBLISHED problems that are either
- * GLOBAL, or BATCH-scoped to this batch AND created by this trainer.
+ * Mirrors assertProblemAssignable exactly: PUBLISHED GLOBAL problems only.
+ *
+ * Batch-scoped problems are deliberately excluded. A problem whose `batch` is
+ * this batch is already associated with it, so listing it here would offer the
+ * trainer a second representation of a relationship that already exists.
  */
 router.get('/problems', requireAuth, requireRole('TRAINER'), handle(async (req, res) => {
   const { batchId } = req.params;
@@ -275,10 +309,7 @@ router.get('/problems', requireAuth, requireRole('TRAINER'), handle(async (req, 
 
   const problems = await Problem.find({
     status: 'PUBLISHED',
-    $or: [
-      { scope: 'GLOBAL' },
-      { scope: 'BATCH', batch: batchId, createdBy: req.user.id },
-    ],
+    scope: 'GLOBAL',
   })
     .select(PROBLEM_FIELDS)
     .sort({ title: 1 })
@@ -408,7 +439,13 @@ router.delete('/:assignmentId', requireAuth, requireRole('TRAINER'), handle(asyn
 // JSON error mapper for thrown helper errors
 router.use((error, req, res, next) => {
   if (error && error.status) {
-    return res.status(error.status).json({ success: false, message: error.message });
+    // `code` lets the client distinguish "you already have this" from the
+    // generic duplicate-assignment conflict without parsing the message.
+    return res.status(error.status).json({
+      success: false,
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
   if (error && error.code === DUPLICATE_KEY) {
     return res.status(409).json({ success: false, message: 'Assignment already exists' });

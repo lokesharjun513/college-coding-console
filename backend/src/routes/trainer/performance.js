@@ -35,12 +35,16 @@ router.get('/batch/:batchId', requireAuth, requireRole('TRAINER'), async (req, r
     const totalProblems = problemIds.length;
     const submissions = await Submission.find({ problem: { $in: problemIds } });
     const totalSubmissions = submissions.length;
+    // Counted per problem, not per submission: a batch is only "solved" for a
+    // problem once, no matter how many students (or attempts) cleared it.
     const solvedProblemIds = new Set();
     submissions.forEach(s => {
       if (s.verdict === 'ACCEPTED') solvedProblemIds.add(s.problem.toString());
     });
     const solvedProblems = solvedProblemIds.size;
-    const progress = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : 0;
+    // A batch with no problems has no measurable progress. Reporting 0% would
+    // read as "the students did nothing"; null reads as "not measurable".
+    const progress = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : null;
     const data = {
       batchId,
       totalStudents,
@@ -82,8 +86,23 @@ router.get('/student/:studentId', requireAuth, requireRole('TRAINER'), async (re
     if (!enrollment.batch || !enrollment.batch.trainer || enrollment.batch.trainer.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    const problemFilter = batchId ? { batch: batchId } : {};
-    const problems = await Problem.find(problemFilter).select('_id');
+
+    // Scope the metrics to the batches this trainer owns that the student is
+    // actually enrolled in. Without this, omitting ?batchId degraded to
+    // Problem.find({}) — every problem on the platform — and reported the
+    // student's activity in other trainers' batches.
+    let scopedBatchIds;
+    if (batchId) {
+      scopedBatchIds = [batchId];
+    } else {
+      const enrollments = await BatchStudent.find({ student: studentId, status: 'ACTIVE' })
+        .populate({ path: 'batch', select: 'trainer' });
+      scopedBatchIds = enrollments
+        .filter((e) => e.batch && e.batch.trainer && e.batch.trainer.toString() === req.user.id.toString())
+        .map((e) => e.batch._id.toString());
+    }
+
+    const problems = await Problem.find({ batch: { $in: scopedBatchIds } }).select('_id');
     const problemIds = problems.map(p => p._id);
     const submissions = await Submission.find({ student: studentId, problem: { $in: problemIds } });
     const attemptedProblems = new Set();
@@ -127,6 +146,10 @@ router.get('/problem/:problemId', requireAuth, requireRole('TRAINER'), async (re
     }
     const submissions = await Submission.find({ problem: problemId });
     const totalSubmissions = submissions.length;
+    // `solvedCount` is the raw number of ACCEPTED submissions (a student may
+    // clear the same problem more than once). `solvedStudents` is the number of
+    // distinct students who ever cleared it, so completion is never
+    // double-counted when a student retries.
     const solvedCount = submissions.filter(s => s.verdict === 'ACCEPTED').length;
     const studentMap = {};
     submissions.forEach(s => {
@@ -136,10 +159,13 @@ router.get('/problem/:problemId', requireAuth, requireRole('TRAINER'), async (re
       if (s.verdict === 'ACCEPTED') studentMap[sid].solved = true;
     });
     const studentProgress = Object.entries(studentMap).map(([id, info]) => ({ id, ...info }));
+    const solvedStudents = studentProgress.filter(p => p.solved).length;
     const data = {
       problemId,
       totalSubmissions,
       solvedCount,
+      solvedStudents,
+      studentCount: studentProgress.length,
       studentProgress,
     };
     return res.json({ success: true, data });

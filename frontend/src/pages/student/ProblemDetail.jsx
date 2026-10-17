@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
+import { Play, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getStudentProblem, runStudentTests, runStudentProblem, createSubmission } from '../../api/student';
 import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
@@ -45,15 +46,50 @@ export default function ProblemDetail() {
     fetchProblem();
   }, [fetchProblem]);
 
+  // Define the same dark editor theme Free Console uses so the code surface is
+  // visually identical across the student area instead of Monaco's stock vs-dark.
+  useEffect(() => {
+    loader.init().then((monaco) => {
+      monaco.editor.defineTheme('student-console-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.background': '#151A23',
+          'editor.foreground': '#CCD0D5',
+          'editorLineNumber.foreground': '#9FA0B5',
+          'editorCursor.foreground': '#2F7EDA',
+          'editorIndentGuide.background1': '#2C3545',
+          'editor.lineHighlightBackground': '#1B2230',
+        },
+      });
+    });
+  }, []);
+
   const handleEditorDidMount = (editor) => {
     editorRef.current = editor;
   };
 
+  // Collapsing/expanding a pane animates the grid for ~300ms. Monaco's
+  // automaticLayout is throttled, so nudge a relayout once the transition
+  // settles and the editor never keeps a stale width for a frame.
+  useEffect(() => {
+    const timer = setTimeout(() => editorRef.current?.layout?.(), 320);
+    return () => clearTimeout(timer);
+  }, [isProblemPanelOpen, isResultsOpen]);
+
+  // `selectedLanguage` is the problem's own language key (e.g. 'python') taken
+  // from `allowedLanguages`. The server resolves the compiler from it via
+  // `problem.compilers.get(language)`; sending a compiler id (e.g. 'python-3.14')
+  // fails the `allowedLanguages.includes(language)` guard with a 400, so the raw
+  // key is the only value these endpoints accept.
   const handleRun = async () => {
+    if (running || submitting) return;
     setRunning(true);
     setResult(null);
     setIsResultsOpen(true);
-    setActiveResultTab('tests');
+    // A custom-input run reports through the Output tab; a test run through Tests.
+    setActiveResultTab(runCustomInput ? 'output' : 'tests');
     setMobileView('results');
     try {
       if (runCustomInput) {
@@ -67,12 +103,16 @@ export default function ProblemDetail() {
       }
     } catch (err) {
       setResult({ type: 'error', data: err.response?.data || { message: 'Run failed' } });
+      // The Tests/Submission tabs never render a request error, so a failed run
+      // would otherwise look like the button did nothing. The Output tab shows it.
+      setActiveResultTab('output');
     } finally {
       setRunning(false);
     }
   };
 
   const handleSubmit = async () => {
+    if (running || submitting) return;
     setSubmitting(true);
     setResult(null);
     setIsResultsOpen(true);
@@ -83,13 +123,22 @@ export default function ProblemDetail() {
       setResult({ type: 'submit', data: res.data.data });
     } catch (err) {
       setResult({ type: 'error', data: err.response?.data || { message: 'Submission failed' } });
+      setActiveResultTab('output');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // A batch-assigned problem belongs to the Assigned Problems list; a global
+  // one belongs to Practice. Sending a student back to the wrong list used to
+  // dump every global-practice student onto the assigned-problems page. Before
+  // the statement has loaded there is no scope to read, so the assigned list is
+  // the default destination.
+  const backHref = problem?.scope === 'GLOBAL' ? '/student/practice' : '/student/problems';
+  const backLabel = problem?.scope === 'GLOBAL' ? 'Back to Practice' : 'Back to Assigned Problems';
+
   if (loading) return <div className="container" style={{ padding: '60px', textAlign: 'center' }}><Spinner /></div>;
-  if (error) return <div className="problem-detail-container problem-detail-error" role="alert"><p>{error}</p><Link to="/student/practice">Back to Practice</Link></div>;
+  if (error) return <div className="problem-detail-container problem-detail-error" role="alert"><p>{error}</p><Link to={backHref}>{backLabel}</Link></div>;
   if (!problem) return <div className="container">Problem not found.</div>;
 
   return (
@@ -101,15 +150,27 @@ export default function ProblemDetail() {
       </nav>
       {isProblemPanelOpen && (
         <div className="problem-panel">
-          <div className="problem-breadcrumb">
-            <Link to="/student/practice">Practice</Link> &gt; <span>Problem</span>
-          </div>
+          <header className="problem-panel__bar">
+            <nav className="problem-breadcrumb" aria-label="Breadcrumb">
+              <Link className="problem-breadcrumb__link" to={backHref}>{backLabel}</Link>
+              <span className="problem-breadcrumb__sep" aria-hidden="true">/</span>
+              <span className="problem-breadcrumb__current" aria-current="page">Problem</span>
+            </nav>
+            {problem.difficulty && (
+              <span className="pd-difficulty" data-difficulty={String(problem.difficulty).toLowerCase()}>
+                {problem.difficulty}
+              </span>
+            )}
+          </header>
+
+          <div className="problem-panel__body">
           <div className="problem-header-meta">
             <h2>{problem.title}</h2>
-            <div className="meta-badges">
-              <span className="badge difficulty">{problem.difficulty}</span>
-              <span className="badge topic">{problem.topic}</span>
-            </div>
+            {problem.topic && (
+              <div className="meta-badges">
+                <span className="pd-tag">{problem.topic}</span>
+              </div>
+            )}
           </div>
 
           <div className="problem-content">
@@ -163,6 +224,7 @@ export default function ProblemDetail() {
               </section>
             )}
           </div>
+          </div>
         </div>
       )}
 
@@ -170,21 +232,43 @@ export default function ProblemDetail() {
         type="button"
         className="problem-panel-toggle"
         onClick={() => setIsProblemPanelOpen(!isProblemPanelOpen)}
-        aria-label={isProblemPanelOpen ? 'Collapse problem statement' : 'Expand problem statement'}
+        aria-label={isProblemPanelOpen ? 'Collapse problem description' : 'Expand problem description'}
+        title={isProblemPanelOpen ? 'Collapse problem description' : 'Expand problem description'}
         aria-expanded={isProblemPanelOpen}
       >
-        {isProblemPanelOpen ? '◀' : '▶'}
+        {isProblemPanelOpen ? <ChevronLeft size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
       </button>
 
       <div className={`coding-panel ${!isProblemPanelOpen ? 'coding-panel--expanded' : ''}`}>
         <div className="editor-area">
           <div className="editor-toolbar">
-            <select value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)}>
-              {(problem.allowedLanguages || []).map(lang => <option key={lang} value={lang}>{lang}</option>)}
-            </select>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button onClick={handleRun} disabled={running}>Run</Button>
-              <Button onClick={handleSubmit} disabled={submitting} variant="primary">Submit</Button>
+            <label className="pd-field" htmlFor="pd-language">
+              <span className="pd-field__label">Language</span>
+              <select id="pd-language" value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)}>
+                {(problem.allowedLanguages || []).map(lang => <option key={lang} value={lang}>{lang}</option>)}
+              </select>
+            </label>
+            <div className="pd-actions">
+              <Button
+                onClick={handleRun}
+                disabled={running || submitting}
+                loading={running}
+                variant="secondary"
+                aria-label="Run"
+              >
+                <Play size={14} aria-hidden="true" />
+                Run
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting || running}
+                loading={submitting}
+                variant="primary"
+                aria-label="Submit"
+              >
+                <CheckCircle2 size={14} aria-hidden="true" />
+                Submit
+              </Button>
             </div>
           </div>
           <div className="monaco-wrapper">
@@ -192,10 +276,17 @@ export default function ProblemDetail() {
               height="100%"
               language={selectedLanguage}
               value={code}
-              theme="vs-dark"
+              theme="student-console-dark"
               onMount={handleEditorDidMount}
               onChange={setCode}
-              options={{ fontSize: 14, minimap: { enabled: false } }}
+              options={{
+                automaticLayout: true,
+                fontSize: 13,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                tabSize: 4,
+                padding: { top: 12, bottom: 12 },
+              }}
             />
           </div>
           <div className="run-controls">
@@ -221,8 +312,8 @@ export default function ProblemDetail() {
             </div>
           )}
         </div>
-        <button type="button" className="results-panel-toggle" onClick={() => setIsResultsOpen((open) => !open)} aria-label={isResultsOpen ? 'Close results panel' : 'Open results panel'} aria-expanded={isResultsOpen}>
-          {isResultsOpen ? '◀' : '▶'}
+        <button type="button" className="results-panel-toggle" onClick={() => setIsResultsOpen((open) => !open)} aria-label={isResultsOpen ? 'Collapse results panel' : 'Expand results panel'} title={isResultsOpen ? 'Collapse results panel' : 'Expand results panel'} aria-expanded={isResultsOpen}>
+          {isResultsOpen ? <ChevronRight size={16} aria-hidden="true" /> : <ChevronLeft size={16} aria-hidden="true" />}
         </button>
         {isResultsOpen && <ExecutionPanel result={result} isRunning={running || submitting} problem={problem} activeTab={activeResultTab} onActiveTabChange={setActiveResultTab} />}
       </div>

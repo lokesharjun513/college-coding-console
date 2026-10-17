@@ -21,4 +21,3 @@ export { SidebarProvider, useSidebar } from './SidebarProvider';
 export { SidebarHeader, SidebarContent, SidebarFooter } from './SidebarComponents';
 export { SidebarGroup, SidebarGroupLabel } from './SidebarGroup';
 export { SidebarMenu, SidebarMenuItem } from './SidebarMenu';
-export { SidebarMenuButton } from './SidebarMenuButton';

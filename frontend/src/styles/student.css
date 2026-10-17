@@ -26,7 +26,7 @@
   --student-accent-border: rgba(47, 126, 218, 0.25);
 
   /* Borders */
-  --student-border:        #C6D1D7;
+  --student-border:        #CDD6DD;
   --student-border-subtle: #EDEFF3;
   --student-border-width:  1px;
 
@@ -192,7 +192,7 @@
 
 .kpi-card {
   background: var(--student-surface);
-  border: var(--student-border-width) solid var(--student-border-subtle);
+  border: var(--student-border-width) solid var(--student-border);
   border-radius: var(--student-card-radius);
   padding: 24px;
   box-shadow: var(--student-shadow-sm);
@@ -311,7 +311,7 @@
 
 .practice-card {
   position: relative;
-  border: var(--student-border-width) solid var(--student-border-subtle);
+  border: var(--student-border-width) solid var(--student-border);
   border-radius: var(--student-card-radius);
   padding: 0;
   background: var(--student-surface);
@@ -698,7 +698,7 @@
 
 .practice-skeleton {
   background: var(--student-surface);
-  border: var(--student-border-width) solid var(--student-border-subtle);
+  border: var(--student-border-width) solid var(--student-border);
   border-radius: var(--student-card-radius);
   height: 200px;
   padding: 24px;
@@ -712,21 +712,21 @@
 .practice-skeleton i {
   width: 60px;
   height: 12px;
-  background: var(--student-border);
+  background: var(--student-border-subtle);
   border-radius: 4px;
 }
 
 .practice-skeleton b {
   width: 80%;
   height: 24px;
-  background: var(--student-border);
+  background: var(--student-border-subtle);
   border-radius: 4px;
 }
 
 .practice-skeleton em {
   width: 100%;
   height: 16px;
-  background: var(--student-border);
+  background: var(--student-border-subtle);
   border-radius: 4px;
 }
 
@@ -748,6 +748,220 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   SHARED STUDENT PRIMITIVES
+   Reused across Student pages (Assigned Problems, and future Student
+   listings). Deliberately generic: no page-specific naming, and every value
+   comes from the --student-* tokens above.
+   ────────────────────────────────────────────────────────────────────── */
+
+.student-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--student-breadcrumb-size);
+}
+
+.student-breadcrumb__link {
+  color: var(--student-text-muted);
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  transition: color var(--student-transition);
+}
+
+.student-breadcrumb__link:hover { color: var(--student-accent); }
+
+.student-breadcrumb__separator {
+  color: var(--student-text-muted);
+  font-size: 10px;
+}
+
+.student-breadcrumb__current {
+  color: var(--student-text-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.student-breadcrumb__link:focus-visible {
+  outline: none;
+  border-radius: var(--radius-xs, 4px);
+  box-shadow: var(--student-focus-ring);
+}
+
+/* Status pill — the label always carries the meaning, colour is supporting
+   decoration only, so status is never communicated by colour alone. */
+.student-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid transparent;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.student-status-pill--solved {
+  background: rgba(33, 110, 78, 0.1);
+  color: #216e4e;
+  border-color: rgba(33, 110, 78, 0.22);
+}
+
+.student-status-pill--attempted {
+  background: var(--student-accent-soft);
+  color: var(--student-accent);
+  border-color: var(--student-accent-border);
+}
+
+.student-status-pill--not-started {
+  background: var(--student-surface-muted);
+  color: var(--student-text-secondary);
+  border-color: var(--student-border);
+}
+
+.student-difficulty {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid transparent;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.student-difficulty--easy {
+  background: rgba(33, 110, 78, 0.1);
+  color: #216e4e;
+  border-color: rgba(33, 110, 78, 0.2);
+}
+
+.student-difficulty--medium {
+  background: rgba(232, 158, 35, 0.12);
+  color: #a86a08;
+  border-color: rgba(232, 158, 35, 0.28);
+}
+
+.student-difficulty--hard {
+  background: rgba(180, 35, 24, 0.08);
+  color: #b42318;
+  border-color: rgba(180, 35, 24, 0.2);
+}
+
+.student-difficulty--unspecified {
+  background: var(--student-surface-muted);
+  color: var(--student-text-muted);
+  border-color: var(--student-border);
+}
+
+/* Filter controls */
+.student-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.student-filter-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.student-filter-input,
+.student-filter-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: var(--student-border-width) solid var(--student-border);
+  border-radius: var(--radius-md, 12px);
+  background: var(--student-surface);
+  color: var(--student-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  transition: border-color var(--student-transition), box-shadow var(--student-transition);
+}
+
+.student-filter-select {
+  flex: 0 1 168px;
+  min-height: 40px;
+  cursor: pointer;
+}
+
+.student-filter-input::placeholder { color: var(--student-text-muted); }
+
+.student-filter-input:focus,
+.student-filter-select:focus {
+  outline: none;
+  border-color: var(--student-accent);
+  box-shadow: var(--student-focus-ring);
+}
+
+.student-filter-reset {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--student-border);
+  border-radius: var(--radius-md, 12px);
+  background: var(--student-surface);
+  color: var(--student-text-secondary);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--student-transition), border-color var(--student-transition);
+}
+
+.student-filter-reset:hover {
+  color: var(--student-accent);
+  border-color: var(--student-accent);
+}
+
+.student-filter-input:focus-visible,
+.student-filter-select:focus-visible,
+.student-filter-reset:focus-visible {
+  outline: none;
+  box-shadow: var(--student-focus-ring);
+}
+
+/* Accessible progress bar */
+.student-progress {
+  height: 10px;
+  width: 100%;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--student-progress-track);
+  overflow: hidden;
+}
+
+.student-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--student-progress-fill);
+  transition: width 350ms var(--apple-ease);
+}
+
+.student-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ──────────────────────────────────────────────────────────────────────

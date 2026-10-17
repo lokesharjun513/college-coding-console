@@ -5,6 +5,7 @@
 
 const mongoose = require('mongoose');
 const Batch = require('../models/Batch');
+const Collection = require('../models/Collection');
 
 /**
  * Assert the batch exists and is assigned to the trainer.
@@ -58,4 +59,40 @@ async function assertTrainerOwnsProblem(trainerId, batchId, problemId) {
   return { problem, batch: problem.batch };
 }
 
-module.exports = { assertTrainerOwnsBatch, assertTrainerOwnsProblem };
+/**
+ * Assert the collection exists and is trainer curriculum the caller owns.
+ *
+ * 400 invalid id | 404 unknown | 403 GLOBAL (admin) or another trainer's.
+ *
+ * The scope check is what keeps Admin–Trainer isolation intact on every surface
+ * that links problems into a Training: a GLOBAL collection is admin curriculum
+ * and is refused even if a trainer somehow appears as its creator. This lives
+ * here rather than in one route so the collection and problem routes cannot
+ * drift into applying different rules.
+ */
+async function assertTrainerOwnsCollection(trainerId, collectionId) {
+  if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+    const err = new Error('Invalid collection id');
+    err.status = 400;
+    throw err;
+  }
+  const collection = await Collection.findById(collectionId);
+  if (!collection) {
+    const err = new Error('Collection not found');
+    err.status = 404;
+    throw err;
+  }
+  if (collection.scope !== 'BATCH') {
+    const err = new Error('Access denied');
+    err.status = 403;
+    throw err;
+  }
+  if (!collection.createdBy || collection.createdBy.toString() !== trainerId.toString()) {
+    const err = new Error('Access denied');
+    err.status = 403;
+    throw err;
+  }
+  return collection;
+}
+
+module.exports = { assertTrainerOwnsBatch, assertTrainerOwnsProblem, assertTrainerOwnsCollection };
