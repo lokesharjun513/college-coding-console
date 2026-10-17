@@ -38,3 +38,8 @@ memory/
 
 # Local scratch prototype (unreferenced)
 /test/
+
+# Root documentation (kept locally, not tracked)
+/docs/
+/PYTHON_SYNTAX_DIAGNOSTICS_PROPOSAL.md
+/STUDENT_PRACTICE_API_CONTRACT.md
