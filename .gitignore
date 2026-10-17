@@ -22,3 +22,6 @@ backend/test_50_problems.json
 
 # Local reports and scratch files
 memory/
+
+# Local agent worktrees (generated)
+.claude/worktrees/

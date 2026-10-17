@@ -13,3 +13,6 @@ database-backups/
 
 
 .env.test
+
+# Local mongodb-memory-server data (generated)
+.tmp/
