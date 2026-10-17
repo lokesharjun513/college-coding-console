@@ -25,3 +25,9 @@ memory/
 
 # Local agent worktrees (generated)
 .claude/worktrees/
+
+# Local compiler diagnostic script
+/comptest.js
+
+# Local test output artifacts
+/test_output.txt

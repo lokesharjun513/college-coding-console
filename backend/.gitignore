@@ -16,3 +16,11 @@ database-backups/
 
 # Local mongodb-memory-server data (generated)
 .tmp/
+
+# Local diagnostic output and scratch configuration
+/_b.log
+/_mem.log
+/testoutput.txt
+/_bare.config.js
+/tests/zzBare.test.js
+/tests/zzDiagMem.test.js
